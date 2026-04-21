@@ -1,0 +1,88 @@
+﻿# Baobaobao Vault 配置文件
+
+server:
+  port: "8080"
+  read_timeout: 30
+  write_timeout: 30
+  mode: debug  # debug, release, test
+  allow_public_bootstrap: false  # false: 关闭公开租户注册
+  auto_bootstrap_platform_admin: true
+  platform_admin_tenant_code: "platform"  # 可选：为空时也会自动使用 platform 并自动创建该租户
+  platform_admin_email: "admin@example.com"
+  platform_admin_password: "Admin@123456"
+  platform_admin_username: "platform_admin"
+  platform_admin_nickname: "平台超级管理员"
+
+cors:
+  enabled: true
+  allow_origins:
+    - "http://localhost:5173"
+    - "http://127.0.0.1:5173"
+    - "http://localhost:4173"
+    - "http://127.0.0.1:4173"
+    - "http://localhost:3000"
+    - "http://127.0.0.1:3000"
+  allow_methods:
+    - GET
+    - POST
+    - PUT
+    - PATCH
+    - DELETE
+    - OPTIONS
+  allow_headers:
+    - Authorization
+    - Content-Type
+    - X-Requested-With
+    - X-Timestamp
+  expose_headers:
+    - Content-Disposition
+    - Content-Length
+    - ETag
+  allow_credentials: false
+  max_age: 86400
+
+database:
+  host: 192.168.30.130
+  port: 5432
+  user: postgres
+  password: postgres
+  dbname: baobaobaivault
+  sslmode: disable
+  max_open_conns: 100
+  max_idle_conns: 10
+  conn_max_lifetime: 3600  # seconds
+
+redis:
+  host: 192.168.30.130
+  port: 6379
+  password: ""
+  db: 0
+
+jwt:
+  secret: "baobaobaivaultsecretkey"
+  expire_time: 24h
+  issuer: baobaobaivault
+
+storage:
+  default_provider: local  # local, s3, minio
+  temp_dir: /tmp/baobaobaivault
+  max_file_size: 10737418240  # 10GB in bytes
+
+baidu:
+  enabled: false
+  client_id: ""
+  client_secret: ""
+  redirect_uri: "http://127.0.0.1:8080/api/v1/connectors/baidu/callback"
+  scope: "basic,netdisk"
+  auth_url: "https://openapi.baidu.com/oauth/2.0/authorize"
+  token_url: "https://openapi.baidu.com/oauth/2.0/token"
+  pan_api_base_url: "https://pan.baidu.com/rest/2.0"
+  pan_upload_url: "https://d.pcs.baidu.com/rest/2.0/pcs/superfile2"
+  default_path_prefix: "/apps/baobaobaiphone/backups"
+  state_secret: ""
+  token_encrypt_secret: ""
+  http_timeout_seconds: 30
+
+log:
+  level: info  # debug, info, warn, error
+  format: json  # json, console
