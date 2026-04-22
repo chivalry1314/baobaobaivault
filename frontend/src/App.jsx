@@ -14,6 +14,7 @@ import AuditPage from "./pages/AuditPage";
 import SettingsPage from "./pages/SettingsPage";
 import TenantPage from "./pages/TenantPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import ForbiddenPage from "./pages/ForbiddenPage";
 import { formatAuditValue, parseAuditDetail } from "./utils/data";
 import { readUiSettings } from "./utils/uiSettings";
 import { filterNavItemsByAccess, isPlatformAdmin } from "./utils/access";
@@ -36,9 +37,31 @@ function App() {
   const [tenantOptions, setTenantOptions] = useState([]);
   const { busy, act } = useAsyncAction(setNotice);
   const isPlatformAdminUser = useMemo(() => isPlatformAdmin(user), [user]);
+  const knownRoutePageKeys = useMemo(() => {
+    return allNavItems.flatMap((item) => {
+      const children = Array.isArray(item?.children) ? item.children : [];
+      if (children.length > 0) {
+        return children.map((child) => child.key);
+      }
+      return [item.key];
+    });
+  }, []);
   const visibleNavItems = useMemo(() => filterNavItemsByAccess(allNavItems, user), [user]);
-  const validPages = useMemo(() => [...visibleNavItems.map((item) => item.key), "not-found"], [visibleNavItems]);
-  const defaultAppRoute = visibleNavItems[0]?.to || "/app/not-found";
+  const accessibleRoutePageKeys = useMemo(() => {
+    return visibleNavItems.flatMap((item) => {
+      const children = Array.isArray(item?.children) ? item.children : [];
+      if (children.length > 0) {
+        return children.map((child) => child.key);
+      }
+      return [item.key];
+    });
+  }, [visibleNavItems]);
+  const defaultAppRoute = useMemo(() => {
+    const firstDirectRoute = visibleNavItems.find((item) => item?.to)?.to;
+    if (firstDirectRoute) return firstDirectRoute;
+    const firstChildRoute = visibleNavItems.flatMap((item) => (Array.isArray(item?.children) ? item.children : [])).find((child) => child?.to)?.to;
+    return firstChildRoute || "/app/not-found";
+  }, [visibleNavItems]);
   const activeTenantID = tenant?.id || "";
 
   function onSettingsSaved(nextSettings) {
@@ -129,8 +152,12 @@ function App() {
     return <Navigate to={defaultAppRoute} replace />;
   }
 
-  if (token && !validPages.includes(appPage)) {
-    return <Navigate to={defaultAppRoute} replace />;
+  if (token && ![...knownRoutePageKeys, "not-found", "forbidden"].includes(appPage)) {
+    return <Navigate to="/app/not-found" replace />;
+  }
+
+  if (token && !["not-found", "forbidden"].includes(appPage) && !accessibleRoutePageKeys.includes(appPage)) {
+    return <Navigate to="/app/forbidden" replace />;
   }
 
   return (
@@ -195,11 +222,13 @@ function App() {
             />
           ) : null}
 
-          {appPage === "iam" ? (
+          {(["iam-users", "iam-roles", "iam-namespaces"].includes(appPage)) ? (
             <IamPage
+              activeTab={appPage}
               users={iam.users}
               userForm={iam.userForm}
               setUserForm={iam.setUserForm}
+              editingUserID={iam.editingUserID}
               roles={iam.roles}
               permissions={iam.permissions}
               namespaces={iam.namespaces}
@@ -209,21 +238,29 @@ function App() {
               editingRoleID={iam.editingRoleID}
               namespaceForm={iam.namespaceForm}
               setNamespaceForm={iam.setNamespaceForm}
+              editingNamespaceID={iam.editingNamespaceID}
               busy={busy}
               toggleID={iam.toggleID}
               onCreateUser={iam.onCreateUser}
+              onEditUser={iam.onEditUser}
+              onUpdateUser={iam.onUpdateUser}
+              onCancelUserEdit={iam.onCancelUserEdit}
               onDeleteUser={iam.onDeleteUser}
               onSubmitRole={iam.onSubmitRole}
               onCancelRoleEdit={iam.onCancelRoleEdit}
               onDeleteRole={iam.onDeleteRole}
               onEditRole={iam.onEditRole}
               onCreateNamespace={iam.onCreateNamespace}
+              onEditNamespace={iam.onEditNamespace}
+              onUpdateNamespace={iam.onUpdateNamespace}
+              onCancelNamespaceEdit={iam.onCancelNamespaceEdit}
               onDeleteNamespace={iam.onDeleteNamespace}
             />
           ) : null}
 
-          {appPage === "storage" ? (
+          {(["storage-config", "storage-objects"].includes(appPage)) ? (
             <StoragePage
+              activeTab={appPage}
               storageConfigs={storage.storageConfigs}
               storageForm={storage.storageForm}
               setStorageForm={storage.setStorageForm}
@@ -297,6 +334,8 @@ function App() {
               onRefreshNow={() => void workspace.refreshAll()}
             />
           ) : null}
+
+          {appPage === "forbidden" ? <ForbiddenPage fallbackRoute={defaultAppRoute} /> : null}
 
           {appPage === "not-found" ? <NotFoundPage /> : null}
         </>

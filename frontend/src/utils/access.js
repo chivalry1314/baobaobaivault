@@ -46,8 +46,11 @@ const pagePermissionMap = {
   overview: [],
   profile: [],
   account: [],
-  iam: ["user:list", "user:admin", "user:update"],
-  storage: ["storage:list", "storage:admin", "object:list", "object:admin", "namespace:list"],
+  "iam-users": ["user:list", "user:admin", "user:update"],
+  "iam-roles": ["user:admin", "user:update"],
+  "iam-namespaces": ["namespace:list", "namespace:admin", "user:admin"],
+  "storage-config": ["storage:list", "storage:admin"],
+  "storage-objects": ["object:list", "object:admin", "namespace:list"],
   audit: ["tenant:read", "tenant:admin"],
   tenant: ["tenant:read", "tenant:update", "tenant:admin"],
   settings: [],
@@ -56,10 +59,28 @@ const pagePermissionMap = {
 export function canAccessPage(user, pageKey) {
   const key = String(pageKey || "").trim();
   if (!key) return false;
-  return hasAnyPermission(user, pagePermissionMap[key] || []);
+  if (!(key in pagePermissionMap)) return false;
+  return hasAnyPermission(user, pagePermissionMap[key]);
 }
 
 export function filterNavItemsByAccess(items, user) {
   const source = Array.isArray(items) ? items : [];
-  return source.filter((item) => canAccessPage(user, item?.key));
+  return source
+    .map((item) => {
+      const children = Array.isArray(item?.children) ? item.children : [];
+      if (children.length === 0) {
+        return canAccessPage(user, item?.key) ? item : null;
+      }
+
+      const visibleChildren = children.filter((child) => canAccessPage(user, child?.key));
+      if (visibleChildren.length === 0) {
+        return null;
+      }
+
+      return {
+        ...item,
+        children: visibleChildren,
+      };
+    })
+    .filter(Boolean);
 }

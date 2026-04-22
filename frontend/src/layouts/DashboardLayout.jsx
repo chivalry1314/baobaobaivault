@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { NavLink } from "react-router-dom";
+import * as Icons from "lucide-react";
 
 function resolveRoleLabel(user, isPlatformAdminUser) {
   if (isPlatformAdminUser) return "平台超级管理员";
@@ -17,6 +19,12 @@ function formatTenantLabel(item) {
   return name || code || String(item?.id || "");
 }
 
+const Icon = ({ name, ...props }) => {
+  const LucideIcon = Icons[name];
+  if (!LucideIcon) return null;
+  return <LucideIcon {...props} />;
+};
+
 export default function DashboardLayout({
   token,
   user,
@@ -33,6 +41,18 @@ export default function DashboardLayout({
   children,
 }) {
   const roleLabel = resolveRoleLabel(user, isPlatformAdmin);
+  const [expandedKeys, setExpandedKeys] = useState(() => {
+    // 默认展开当前激活页面所在的父菜单
+    return (navItems || []).filter(item => 
+      item.children?.some(child => window.location.pathname === child.to)
+    ).map(item => item.key);
+  });
+
+  const toggleExpand = (key) => {
+    setExpandedKeys(prev => 
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  };
 
   return (
     <div className="app-shell">
@@ -41,67 +61,100 @@ export default function DashboardLayout({
         {token ? (
           <aside className="side-nav">
             <div className="side-nav-brand">
-              <strong>{compactNav ? "导航" : "管理导航"}</strong>
-              {!compactNav && <small>{tenant?.code || "当前租户"}</small>}
+              <div className="brand-logo">
+                <Icons.Box size={20} />
+              </div>
+              <div className="brand-text">
+                <strong>宝宝宝存储</strong>
+                <small>{tenant?.code || "DEFAULT"}</small>
+              </div>
             </div>
 
-            {!compactNav ? <div className="side-nav-role">{roleLabel}</div> : null}
-
             <nav className="side-nav-links">
-              {(Array.isArray(navItems) ? navItems : []).map((item) => (
-                <NavLink key={item.key} className={({ isActive }) => `side-link ${isActive ? "active" : ""}`} to={item.to} title={item.label}>
-                  {compactNav ? item.icon : item.label}
-                </NavLink>
-              ))}
+              {(Array.isArray(navItems) ? navItems : []).map((item) => {
+                const hasChildren = item.children && item.children.length > 0;
+                const isExpanded = expandedKeys.includes(item.key);
+
+                if (hasChildren) {
+                  return (
+                    <div key={item.key} className="nav-group">
+                      <div 
+                        className={`side-link nav-group-header ${isExpanded ? "expanded" : ""}`}
+                        onClick={() => toggleExpand(item.key)}
+                      >
+                        <div className="link-content">
+                          <Icon name={item.iconName} size={18} />
+                          <span>{item.label}</span>
+                        </div>
+                        <Icons.ChevronDown className="group-arrow" size={14} />
+                      </div>
+                      {isExpanded && (
+                        <div className="nav-group-children">
+                          {item.children.map((child) => (
+                            <NavLink 
+                              key={child.key} 
+                              className={({ isActive }) => `side-link child-link ${isActive ? "active" : ""}`} 
+                              to={child.to}
+                            >
+                              <Icon name={child.iconName} size={16} />
+                              <span>{child.label}</span>
+                            </NavLink>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                return (
+                  <NavLink key={item.key} className={({ isActive }) => `side-link ${isActive ? "active" : ""}`} to={item.to}>
+                    <Icon name={item.iconName} size={18} />
+                    <span>{item.label}</span>
+                  </NavLink>
+                );
+              })}
             </nav>
 
-            {isPlatformAdmin && !compactNav ? (
-              <div className="tenant-switcher">
-                <label htmlFor="tenant-switch-select">租户视角</label>
-                <select
-                  id="tenant-switch-select"
-                  value={activeTenantID || ""}
-                  onChange={(event) => onTenantSwitch?.(event.target.value)}
-                  disabled={!Array.isArray(tenantOptions) || tenantOptions.length === 0}
-                >
-                  {(Array.isArray(tenantOptions) ? tenantOptions : []).map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {formatTenantLabel(item)}
-                    </option>
-                  ))}
-                </select>
-                <small>切换后，列表和配置页面会加载目标租户的数据。</small>
+            <div className="side-nav-footer">
+              <div className="user-profile-summary">
+                <div className="avatar">
+                  {user?.username?.charAt(0).toUpperCase() || "U"}
+                </div>
+                <div className="user-info">
+                  <strong>{user?.username || "用户"}</strong>
+                  <small>{roleLabel}</small>
+                </div>
               </div>
-            ) : null}
+
+              {isPlatformAdmin && (
+                <div className="tenant-switcher" style={{ marginTop: '12px', padding: '0 8px' }}>
+                  <select
+                    id="tenant-switch-select"
+                    value={activeTenantID || ""}
+                    onChange={(event) => onTenantSwitch?.(event.target.value)}
+                    style={{ fontSize: '0.8rem', padding: '6px' }}
+                  >
+                    {(Array.isArray(tenantOptions) ? tenantOptions : []).map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {formatTenantLabel(item)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
           </aside>
         ) : null}
 
         <main className="app-main">
-          {token ? (
-            <header id="section-overview" className="hero">
-              <p className="hero-kicker">云存储统一管理平台</p>
-              <h1>宝宝宝云存储控制台</h1>
-              <p className="hero-subtitle">面向租户、身份、命名空间、存储适配器与对象操作的一体化管理后台。</p>
-              <div className="hero-meta">
-                <span>接口地址: {apiBase}</span>
-                <span>认证: JWT 令牌</span>
-                <span>角色: {roleLabel}</span>
-                {tenant ? <span>当前租户: {tenant.code || tenant.name || tenant.id}</span> : null}
-              </div>
-            </header>
-          ) : (
-            <header className="hero auth-hero">
-              <p className="hero-kicker">云存储统一管理平台</p>
-              <h1>欢迎登录管理控制台</h1>
-              <p className="hero-subtitle">请先登录，或在首次使用时完成租户注册。</p>
-            </header>
-          )}
-
           {notice.text ? (
             <div className={`notice ${notice.type || "info"}`}>
-              <span>{notice.text}</span>
-              <button type="button" onClick={() => setNotice({ type: "", text: "" })}>
-                关闭
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {notice.type === 'success' ? <Icons.CheckCircle size={18} /> : <Icons.AlertCircle size={18} />}
+                <span>{notice.text}</span>
+              </div>
+              <button className="btn small ghost" type="button" onClick={() => setNotice({ type: "", text: "" })}>
+                <Icons.X size={14} />
               </button>
             </div>
           ) : null}

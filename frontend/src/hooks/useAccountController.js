@@ -27,7 +27,6 @@ export default function useAccountController({ token, act }) {
   }
 
   async function onRevokeAksk(id) {
-    if (!window.confirm("确认吊销该密钥吗？")) return;
     const ok = await act(() => api.revokeAKSK(token, id), "AK/SK 已吊销");
     if (ok) await loadAksk();
   }

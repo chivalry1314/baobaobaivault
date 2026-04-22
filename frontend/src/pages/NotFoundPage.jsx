@@ -10,7 +10,7 @@ export default function NotFoundPage() {
           <Link className="btn ghost" to="/app/overview">
             返回总览
           </Link>
-          <Link className="btn ghost" to="/app/storage">
+          <Link className="btn ghost" to="/app/storage-objects">
             前往存储对象
           </Link>
           <Link className="btn ghost" to="/app/audit">

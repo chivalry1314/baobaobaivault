@@ -66,7 +66,7 @@ type Namespace struct {
 	Status      NSStatus `gorm:"type:varchar(20);default:'active'" json:"status"`
 	IsDefault   bool     `gorm:"default:false" json:"is_default"`
 
-	StorageConfigID string `gorm:"type:uuid" json:"storage_config_id"`
+	StorageConfigID *string `gorm:"type:uuid" json:"storage_config_id,omitempty"`
 	PathPrefix      string `gorm:"type:varchar(500)" json:"path_prefix"`
 
 	MaxStorage  *int64 `json:"max_storage,omitempty"`

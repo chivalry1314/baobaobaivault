@@ -1,0 +1,87 @@
+# Baobaobao Vault configuration template
+#
+# Usage:
+#   1) Copy this file to `backend/config/config.yaml`
+#   2) Fill in your own values (DO NOT commit real secrets)
+#
+# Config search paths (see `backend/internal/config/config.go`):
+#   - current working directory
+#   - ./config
+#   - /etc/baobaobaivault
+
+server:
+  port: "8080"
+  read_timeout: 30
+  write_timeout: 30
+  mode: debug # debug, release, test
+  allow_public_bootstrap: false
+  auto_bootstrap_platform_admin: false
+  platform_admin_tenant_code: "platform"
+  platform_admin_email: ""
+  platform_admin_password: ""
+  platform_admin_username: "platform_admin"
+  platform_admin_nickname: "platform admin"
+
+cors:
+  enabled: true
+  allow_origins:
+    - "http://localhost:5173"
+    - "http://127.0.0.1:5173"
+    - "http://localhost:4173"
+    - "http://127.0.0.1:4173"
+    - "http://localhost:3000"
+    - "http://127.0.0.1:3000"
+  allow_methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+  allow_headers: ["Authorization", "Content-Type", "X-Requested-With", "X-Timestamp"]
+  expose_headers: ["Content-Disposition", "Content-Length", "ETag"]
+  allow_credentials: false
+  max_age: 86400
+
+database:
+  host: "localhost"
+  port: 5432
+  user: "postgres"
+  password: "postgres"
+  dbname: "baobaobaivault"
+  sslmode: "disable"
+  max_open_conns: 100
+  max_idle_conns: 10
+  conn_max_lifetime: 3600 # seconds
+
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  db: 0
+
+jwt:
+  secret: "your-secret-key-change-in-production"
+  expire_time: 24h
+  issuer: "baobaobaivault"
+
+storage:
+  default_provider: "local" # local, s3, minio
+  temp_dir: "/tmp/baobaobaivault"
+  max_file_size: 10737418240 # 10GB in bytes
+
+# Baidu netdisk connector (optional)
+baidu:
+  enabled: false
+  api_key: "" # OAuth client_id
+  secret_key: "" # OAuth client_secret
+  redirect_uri: "http://127.0.0.1:8080/api/v1/connectors/baidu/callback"
+  scope: "basic,netdisk"
+  auth_url: "https://openapi.baidu.com/oauth/2.0/authorize"
+  auth_extra_params: {}
+  token_url: "https://openapi.baidu.com/oauth/2.0/token"
+  pan_api_base_url: "https://pan.baidu.com/rest/2.0"
+  pan_upload_url: "https://d.pcs.baidu.com/rest/2.0/pcs/superfile2"
+  default_path_prefix: "/apps/baobaobaiphone/backups"
+  state_secret: "" # random string, used for OAuth state signing
+  token_encrypt_secret: "" # random string, used to encrypt stored tokens
+  http_timeout_seconds: 30
+
+log:
+  level: "info" # debug, info, warn, error
+  format: "json" # json, console
+

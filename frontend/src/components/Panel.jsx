@@ -1,12 +1,17 @@
-export default function Panel({ title, subtitle, children, delay = 0 }) {
+export default function Panel({ title, subtitle, children, delay = 0, style, className = "" }) {
+  const animationStyle = delay > 0 ? { animation: `slideDown 0.4s ease-out ${delay}ms both` } : {};
+
   return (
-    <section className="card" style={{ animationDelay: `${delay}ms` }}>
-      <header className="card-head">
-        <h2>{title}</h2>
-        {subtitle ? <p>{subtitle}</p> : null}
-      </header>
+    <div className={`card ${className}`} style={{ ...animationStyle, ...style }}>
+      {(title || subtitle) && (
+        <div className="card-head">
+          <div>
+            <h2>{title}</h2>
+            {subtitle && <p>{subtitle}</p>}
+          </div>
+        </div>
+      )}
       <div className="card-body">{children}</div>
-    </section>
+    </div>
   );
 }
-

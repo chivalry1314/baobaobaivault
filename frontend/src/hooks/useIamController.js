@@ -14,18 +14,22 @@ export default function useIamController({ token, tenantID, isPlatformAdmin, act
   const [permissions, setPermissions] = useState([]);
   const [namespaces, setNamespaces] = useState([]);
   const [userForm, setUserForm] = useState(emptyUserForm);
+  const [editingUserID, setEditingUserID] = useState("");
   const [roleForm, setRoleForm] = useState(emptyRoleForm);
   const [editingRoleID, setEditingRoleID] = useState("");
   const [namespaceForm, setNamespaceForm] = useState(emptyNamespaceForm);
+  const [editingNamespaceID, setEditingNamespaceID] = useState("");
 
   useEffect(() => {
     setUsers([]);
     setRoles([]);
     setNamespaces([]);
     setUserForm(emptyUserForm);
+    setEditingUserID("");
     setRoleForm(emptyRoleForm);
     setEditingRoleID("");
     setNamespaceForm(emptyNamespaceForm);
+    setEditingNamespaceID("");
   }, [tenantID]);
 
   async function loadUsers() {
@@ -78,6 +82,44 @@ export default function useIamController({ token, tenantID, isPlatformAdmin, act
     }
   }
 
+  function onEditUser(user) {
+    setEditingUserID(user.id);
+    setUserForm({
+      username: user.username || "",
+      email: user.email || "",
+      password: "",
+      nickname: user.nickname || "",
+      roleIDs: (user.roles || []).map((r) => r.id),
+    });
+  }
+
+  async function onUpdateUser(event) {
+    event.preventDefault();
+    const roleIDs = Array.isArray(userForm.roleIDs) ? userForm.roleIDs : [];
+    const payload = {
+      email: userForm.email,
+      nickname: userForm.nickname,
+      role_ids: roleIDs,
+    };
+    if (userForm.password) {
+      payload.password = userForm.password;
+    }
+    const ok = await act(
+      () => api.updateUser(token, editingUserID, payload),
+      "用户已更新"
+    );
+    if (ok) {
+      setUserForm(emptyUserForm);
+      setEditingUserID("");
+      await loadUsers();
+    }
+  }
+
+  function onCancelUserEdit() {
+    setEditingUserID("");
+    setUserForm(emptyUserForm);
+  }
+
   async function onSubmitRole(event) {
     event.preventDefault();
     const payload = {
@@ -116,7 +158,6 @@ export default function useIamController({ token, tenantID, isPlatformAdmin, act
   }
 
   async function onDeleteRole(id) {
-    if (!window.confirm("确认删除该角色吗？")) return;
     const ok = await act(() => api.deleteRole(token, id, buildTenantParams(isPlatformAdmin, tenantID)), "角色已删除");
     if (ok) {
       await loadRoles();
@@ -142,7 +183,6 @@ export default function useIamController({ token, tenantID, isPlatformAdmin, act
   }
 
   async function onDeleteUser(id) {
-    if (!window.confirm("确认删除该用户吗？")) return;
     const ok = await act(() => api.deleteUser(token, id), "用户已删除");
     if (ok) await loadUsers();
   }
@@ -159,7 +199,7 @@ export default function useIamController({ token, tenantID, isPlatformAdmin, act
           {
             name: namespaceForm.name,
             description: namespaceForm.description,
-            storage_config_id: namespaceForm.storageConfigID,
+            storage_config_id: namespaceForm.storageConfigID || undefined,
             path_prefix: namespaceForm.pathPrefix,
             max_storage: maxStorage,
             max_files: maxFiles,
@@ -175,8 +215,51 @@ export default function useIamController({ token, tenantID, isPlatformAdmin, act
     }
   }
 
+  function onEditNamespace(namespace) {
+    setEditingNamespaceID(namespace.id);
+    setNamespaceForm({
+      name: namespace.name || "",
+      description: namespace.description || "",
+      storageConfigID: namespace.storage_config_id || namespace.storageConfigID || "",
+      pathPrefix: namespace.path_prefix || namespace.pathPrefix || "",
+      maxStorage: namespace.max_storage || "",
+      maxFiles: namespace.max_files || "",
+      maxFileSize: namespace.max_file_size || "",
+    });
+  }
+
+  async function onUpdateNamespace(event) {
+    event.preventDefault();
+    const maxStorage = parseOptionalPositiveInt(namespaceForm.maxStorage);
+    const maxFiles = parseOptionalPositiveInt(namespaceForm.maxFiles);
+    const maxFileSize = parseOptionalPositiveInt(namespaceForm.maxFileSize);
+    const ok = await act(
+      () =>
+        api.updateNamespace(token, editingNamespaceID, {
+          name: namespaceForm.name,
+          description: namespaceForm.description,
+          storage_config_id: namespaceForm.storageConfigID || undefined,
+          path_prefix: namespaceForm.pathPrefix || undefined,
+          max_storage: maxStorage,
+          max_files: maxFiles,
+          max_file_size: maxFileSize,
+        }),
+      "命名空间已更新"
+    );
+    if (ok) {
+      setNamespaceForm(emptyNamespaceForm);
+      setEditingNamespaceID("");
+      await loadNamespaces();
+      await loadObjects();
+    }
+  }
+
+  function onCancelNamespaceEdit() {
+    setEditingNamespaceID("");
+    setNamespaceForm(emptyNamespaceForm);
+  }
+
   async function onDeleteNamespace(id) {
-    if (!window.confirm("确认删除该命名空间吗？")) return;
     const ok = await act(() => api.deleteNamespace(token, id), "命名空间已删除");
     if (ok) {
       await loadNamespaces();
@@ -190,9 +273,11 @@ export default function useIamController({ token, tenantID, isPlatformAdmin, act
     setPermissions([]);
     setNamespaces([]);
     setUserForm(emptyUserForm);
+    setEditingUserID("");
     setRoleForm(emptyRoleForm);
     setEditingRoleID("");
     setNamespaceForm(emptyNamespaceForm);
+    setEditingNamespaceID("");
   }
 
   return {
@@ -202,6 +287,7 @@ export default function useIamController({ token, tenantID, isPlatformAdmin, act
     namespaces,
     userForm,
     setUserForm,
+    editingUserID,
     roleForm,
     setRoleForm,
     editingRoleID,
@@ -214,12 +300,18 @@ export default function useIamController({ token, tenantID, isPlatformAdmin, act
     loadNamespaces,
     toggleID,
     onCreateUser,
+    onEditUser,
+    onUpdateUser,
+    onCancelUserEdit,
+    onDeleteUser,
     onSubmitRole,
     onDeleteRole,
     onEditRole,
     onCancelRoleEdit,
-    onDeleteUser,
     onCreateNamespace,
+    onEditNamespace,
+    onUpdateNamespace,
+    onCancelNamespaceEdit,
     onDeleteNamespace,
     resetIam,
   };

@@ -884,8 +884,8 @@ func (s *StorageService) FinalizePresignedPut(
 func (s *StorageService) getProviderForNamespace(ctx context.Context, ns *model.Namespace) (storage.StorageProvider, error) {
 	var cfg *model.StorageConfig
 
-	if ns.StorageConfigID != "" {
-		found, err := s.GetStorageConfig(ctx, ns.StorageConfigID)
+	if ns.StorageConfigID != nil && *ns.StorageConfigID != "" {
+		found, err := s.GetStorageConfig(ctx, *ns.StorageConfigID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get storage config: %w", err)
 		}

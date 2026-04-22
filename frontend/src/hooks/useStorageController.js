@@ -86,7 +86,6 @@ export default function useStorageController({ token, tenantID, isPlatformAdmin,
   }
 
   async function onDeleteStorageConfig(id) {
-    if (!window.confirm("确认删除该存储配置吗？")) return;
     const ok = await act(() => api.deleteStorageConfig(token, id, buildTenantParams(isPlatformAdmin, tenantID)), "存储配置已删除");
     if (ok) await loadStorageConfigs();
   }
@@ -114,7 +113,6 @@ export default function useStorageController({ token, tenantID, isPlatformAdmin,
   }
 
   async function onDeleteObject(item) {
-    if (!window.confirm(`确认删除对象 ${item.key} 吗？`)) return;
     const ok = await act(() => api.deleteObject(token, { namespace_id: selectedNamespaceID, key: item.key }), "对象已删除");
     if (ok) {
       if (selectedObjectKey === item.key) {
@@ -150,7 +148,6 @@ export default function useStorageController({ token, tenantID, isPlatformAdmin,
 
   async function onRollbackVersion(versionID) {
     if (!selectedObjectKey) return;
-    if (!window.confirm(`确认回滚到版本 ${versionID} 吗？`)) return;
     const ok = await act(
       () => api.rollbackObjectVersion(token, { namespace_id: selectedNamespaceID, key: selectedObjectKey, version_id: versionID }),
       "版本已回滚"

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/baobaobao/baobaobaivault/internal/model"
 	"go.uber.org/zap"
@@ -50,11 +51,13 @@ func (s *NamespaceService) CreateNamespace(ctx context.Context, tenantID string,
 		Name:            req.Name,
 		Description:     req.Description,
 		Status:          model.NSStatusActive,
-		StorageConfigID: req.StorageConfigID,
 		PathPrefix:      req.PathPrefix,
 		MaxStorage:      req.MaxStorage,
 		MaxFiles:        req.MaxFiles,
 		MaxFileSize:     req.MaxFileSize,
+	}
+	if storageConfigID := strings.TrimSpace(req.StorageConfigID); storageConfigID != "" {
+		ns.StorageConfigID = &storageConfigID
 	}
 
 	if err := s.db.Create(ns).Error; err != nil {

@@ -30,8 +30,10 @@ import (
 )
 
 const (
-	baiduStateTTL   = 15 * time.Minute
-	baiduProviderID = model.CloudProviderBaiduPan
+	baiduStateTTL         = 15 * time.Minute
+	baiduProviderID       = model.CloudProviderBaiduPan
+	baiduUploadChunkSize  = 4 * 1024 * 1024 // latest Pan upload doc uses 4MB slice size
+	baiduDisconnectNotice = "断开操作仅清理本系统内的百度网盘绑定。若需彻底撤销授权，请到百度授权管理中移除该应用。"
 )
 
 type BaiduConnectorService struct {
@@ -46,14 +48,15 @@ type BaiduConnectorService struct {
 }
 
 type BaiduAccountStatus struct {
-	Connected       bool       `json:"connected"`
-	Provider        string     `json:"provider"`
-	DisplayName     string     `json:"display_name"`
-	ExternalUserID  string     `json:"external_user_id"`
-	Scope           string     `json:"scope"`
-	ExpiresAt       *time.Time `json:"expires_at,omitempty"`
-	DefaultDir      string     `json:"default_dir"`
-	AutoBackupReady bool       `json:"auto_backup_ready"`
+	Connected        bool       `json:"connected"`
+	Provider         string     `json:"provider"`
+	DisplayName      string     `json:"display_name"`
+	ExternalUserID   string     `json:"external_user_id"`
+	Scope            string     `json:"scope"`
+	ExpiresAt        *time.Time `json:"expires_at,omitempty"`
+	DefaultDir       string     `json:"default_dir"`
+	AutoBackupReady  bool       `json:"auto_backup_ready"`
+	DisconnectNotice string     `json:"disconnect_notice"`
 }
 
 type BaiduBackupObject struct {
@@ -90,9 +93,11 @@ type baiduTokenErrorResponse struct {
 }
 
 type baiduPrecreateResponse struct {
-	Errno    int    `json:"errno"`
-	Path     string `json:"path"`
-	UploadID string `json:"uploadid"`
+	Errno      int    `json:"errno"`
+	Path       string `json:"path"`
+	UploadID   string `json:"uploadid"`
+	BlockList  []any  `json:"block_list"`
+	ReturnType int    `json:"return_type"`
 }
 
 type baiduUploadBlockResponse struct {
@@ -172,8 +177,8 @@ func (s *BaiduConnectorService) BuildAuthURL(tenantID, userID, returnTo string) 
 	if !s.cfg.Enabled {
 		return "", errors.New("baidu connector is disabled")
 	}
-	if strings.TrimSpace(s.cfg.ClientID) == "" {
-		return "", errors.New("baidu client_id is not configured")
+	if strings.TrimSpace(s.cfg.APIKey) == "" {
+		return "", errors.New("baidu api_key is not configured")
 	}
 	if strings.TrimSpace(s.cfg.RedirectURI) == "" {
 		return "", errors.New("baidu redirect_uri is not configured")
@@ -196,10 +201,21 @@ func (s *BaiduConnectorService) BuildAuthURL(tenantID, userID, returnTo string) 
 
 	values := url.Values{}
 	values.Set("response_type", "code")
-	values.Set("client_id", strings.TrimSpace(s.cfg.ClientID))
+	values.Set("client_id", strings.TrimSpace(s.cfg.APIKey))
 	values.Set("redirect_uri", strings.TrimSpace(s.cfg.RedirectURI))
 	values.Set("scope", scope)
 	values.Set("state", state)
+	for key, value := range s.cfg.AuthExtraParams {
+		trimmedKey := strings.TrimSpace(key)
+		trimmedValue := strings.TrimSpace(value)
+		if trimmedKey == "" || trimmedValue == "" {
+			continue
+		}
+		if isReservedBaiduAuthParam(strings.ToLower(trimmedKey)) {
+			continue
+		}
+		values.Set(trimmedKey, trimmedValue)
+	}
 
 	return authURL + "?" + values.Encode(), nil
 }
@@ -230,10 +246,11 @@ func (s *BaiduConnectorService) GetAccountStatus(ctx context.Context, tenantID, 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &BaiduAccountStatus{
-				Connected:       false,
-				Provider:        baiduProviderID,
-				DefaultDir:      s.defaultPathPrefix(),
-				AutoBackupReady: false,
+				Connected:        false,
+				Provider:         baiduProviderID,
+				DefaultDir:       s.defaultPathPrefix(),
+				AutoBackupReady:  false,
+				DisconnectNotice: baiduDisconnectNotice,
 			}, nil
 		}
 		return nil, err
@@ -241,14 +258,15 @@ func (s *BaiduConnectorService) GetAccountStatus(ctx context.Context, tenantID, 
 
 	connected := account.Status == model.CloudAccountStatusActive
 	return &BaiduAccountStatus{
-		Connected:       connected,
-		Provider:        account.Provider,
-		DisplayName:     account.DisplayName,
-		ExternalUserID:  account.ExternalUserID,
-		Scope:           account.Scope,
-		ExpiresAt:       account.ExpiresAt,
-		DefaultDir:      s.defaultPathPrefix(),
-		AutoBackupReady: connected,
+		Connected:        connected,
+		Provider:         account.Provider,
+		DisplayName:      account.DisplayName,
+		ExternalUserID:   account.ExternalUserID,
+		Scope:            account.Scope,
+		ExpiresAt:        account.ExpiresAt,
+		DefaultDir:       s.defaultPathPrefix(),
+		AutoBackupReady:  connected,
+		DisconnectNotice: baiduDisconnectNotice,
 	}, nil
 }
 
@@ -289,9 +307,21 @@ func (s *BaiduConnectorService) UploadBackup(
 	dirPath := normalizePanPath(pathPrefix, s.defaultPathPrefix())
 	objectPath := joinPanPath(dirPath, fileName)
 
-	digest := md5.Sum(content)
-	blockMD5 := hex.EncodeToString(digest[:])
-	blockListJSON := fmt.Sprintf("[\"%s\"]", blockMD5)
+	chunks := splitContentIntoChunks(content, baiduUploadChunkSize)
+	if len(chunks) == 0 {
+		return nil, errors.New("baidu upload chunks are empty")
+	}
+
+	blockMD5List := make([]string, len(chunks))
+	for index, chunk := range chunks {
+		digest := md5.Sum(chunk)
+		blockMD5List[index] = hex.EncodeToString(digest[:])
+	}
+	blockListJSONBytes, err := json.Marshal(blockMD5List)
+	if err != nil {
+		return nil, err
+	}
+	blockListJSON := string(blockListJSONBytes)
 	contentSize := len(content)
 
 	precreateURL := s.panAPIBaseURL + "/xpan/file?method=precreate"
@@ -315,18 +345,26 @@ func (s *BaiduConnectorService) UploadBackup(
 		return nil, errors.New("baidu precreate did not return uploadid")
 	}
 
-	query := url.Values{}
-	query.Set("method", "upload")
-	query.Set("access_token", accessToken)
-	query.Set("type", "tmpfile")
-	query.Set("path", objectPath)
-	query.Set("uploadid", precreateResp.UploadID)
-	query.Set("partseq", "0")
-	uploadURL := s.panUploadURL + "?" + query.Encode()
+	partSeqList := normalizePrecreatePartSeqList(precreateResp.BlockList, len(chunks))
+	lastUploadedMD5 := ""
+	for _, partSeq := range partSeqList {
+		partContent := chunks[partSeq]
+		query := url.Values{}
+		query.Set("method", "upload")
+		query.Set("access_token", accessToken)
+		query.Set("type", "tmpfile")
+		query.Set("path", objectPath)
+		query.Set("uploadid", precreateResp.UploadID)
+		query.Set("partseq", strconv.Itoa(partSeq))
+		uploadURL := s.panUploadURL + "?" + query.Encode()
 
-	var uploadResp baiduUploadBlockResponse
-	if err := s.postMultipartSingleFile(ctx, uploadURL, "file", fileName, content, &uploadResp); err != nil {
-		return nil, err
+		var uploadResp baiduUploadBlockResponse
+		if err := s.postMultipartSingleFile(ctx, uploadURL, "file", fileName, partContent, &uploadResp); err != nil {
+			return nil, err
+		}
+		if strings.TrimSpace(uploadResp.MD5) != "" {
+			lastUploadedMD5 = strings.TrimSpace(uploadResp.MD5)
+		}
 	}
 
 	createURL := s.panAPIBaseURL + "/xpan/file?method=create"
@@ -352,7 +390,7 @@ func (s *BaiduConnectorService) UploadBackup(
 		Name:  path.Base(objectPath),
 		Size:  createResp.Size,
 		IsDir: 0,
-		MD5:   ifEmpty(strings.TrimSpace(createResp.MD5), strings.TrimSpace(uploadResp.MD5)),
+		MD5:   ifEmpty(strings.TrimSpace(createResp.MD5), ifEmpty(lastUploadedMD5, blockMD5List[0])),
 		Ctime: createResp.Ctime,
 		Mtime: createResp.Mtime,
 	}, nil
@@ -458,24 +496,37 @@ func (s *BaiduConnectorService) DeleteBackup(
 	if filePath == "" {
 		return errors.New("backup path is required")
 	}
+	filePath = normalizePanPath(filePath, "/")
+	if filePath == "/" {
+		return errors.New("backup path is invalid")
+	}
 
 	accessToken, _, err := s.ensureValidAccessToken(ctx, tenantID, userID)
 	if err != nil {
 		return err
 	}
 
-	apiURL := s.panAPIBaseURL + "/xpan/file?method=filemanager"
+	query := url.Values{}
+	query.Set("method", "filemanager")
+	query.Set("access_token", accessToken)
+	query.Set("opera", "delete")
+	query.Set("async", "2")
+	apiURL := s.panAPIBaseURL + "/xpan/file?" + query.Encode()
 	form := url.Values{}
-	form.Set("access_token", accessToken)
-	form.Set("opera", "delete")
-	form.Set("async", "0")
-	form.Set("filelist", fmt.Sprintf("[\"%s\"]", filePath))
+	form.Set("filelist", fmt.Sprintf(`[{"path":%q}]`, filePath))
 
 	var resp map[string]any
 	if err := s.postFormJSON(ctx, apiURL, form, &resp); err != nil {
 		return err
 	}
 	if errno, ok := resp["errno"].(float64); ok && int(errno) != 0 {
+		errMsg := ""
+		if value, ok := resp["errmsg"].(string); ok {
+			errMsg = strings.TrimSpace(value)
+		}
+		if errMsg != "" {
+			return fmt.Errorf("baidu delete failed: errno=%d %s", int(errno), errMsg)
+		}
 		return fmt.Errorf("baidu delete failed: errno=%d", int(errno))
 	}
 	return nil
@@ -485,8 +536,8 @@ func (s *BaiduConnectorService) exchangeAuthorizationCode(ctx context.Context, c
 	values := url.Values{}
 	values.Set("grant_type", "authorization_code")
 	values.Set("code", strings.TrimSpace(code))
-	values.Set("client_id", strings.TrimSpace(s.cfg.ClientID))
-	values.Set("client_secret", strings.TrimSpace(s.cfg.ClientSecret))
+	values.Set("client_id", strings.TrimSpace(s.cfg.APIKey))
+	values.Set("client_secret", strings.TrimSpace(s.cfg.SecretKey))
 	values.Set("redirect_uri", strings.TrimSpace(s.cfg.RedirectURI))
 
 	return s.requestToken(ctx, values)
@@ -496,8 +547,8 @@ func (s *BaiduConnectorService) refreshAccessToken(ctx context.Context, refreshT
 	values := url.Values{}
 	values.Set("grant_type", "refresh_token")
 	values.Set("refresh_token", strings.TrimSpace(refreshToken))
-	values.Set("client_id", strings.TrimSpace(s.cfg.ClientID))
-	values.Set("client_secret", strings.TrimSpace(s.cfg.ClientSecret))
+	values.Set("client_id", strings.TrimSpace(s.cfg.APIKey))
+	values.Set("client_secret", strings.TrimSpace(s.cfg.SecretKey))
 	return s.requestToken(ctx, values)
 }
 
@@ -925,6 +976,15 @@ func (s *BaiduConnectorService) defaultPathPrefix() string {
 	return normalizePanPath(s.cfg.DefaultPathPrefix, "/apps/baobaobaiphone/backups")
 }
 
+func isReservedBaiduAuthParam(key string) bool {
+	switch key {
+	case "response_type", "client_id", "redirect_uri", "scope", "state":
+		return true
+	default:
+		return false
+	}
+}
+
 func randomHex(bytesLen int) string {
 	if bytesLen <= 0 {
 		bytesLen = 8
@@ -976,6 +1036,96 @@ func ifEmpty(value string, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func splitContentIntoChunks(content []byte, chunkSize int) [][]byte {
+	if len(content) == 0 {
+		return nil
+	}
+	if chunkSize <= 0 {
+		chunkSize = baiduUploadChunkSize
+	}
+
+	chunks := make([][]byte, 0, (len(content)+chunkSize-1)/chunkSize)
+	for offset := 0; offset < len(content); offset += chunkSize {
+		end := offset + chunkSize
+		if end > len(content) {
+			end = len(content)
+		}
+		chunks = append(chunks, content[offset:end])
+	}
+	return chunks
+}
+
+func normalizePrecreatePartSeqList(raw []any, totalParts int) []int {
+	if totalParts <= 0 {
+		return nil
+	}
+	if len(raw) == 0 {
+		return buildSequentialPartSeqList(totalParts)
+	}
+
+	items := make([]int, 0, len(raw))
+	seen := make(map[int]struct{}, len(raw))
+	for _, value := range raw {
+		partSeq, ok := parsePartSeq(value)
+		if !ok {
+			continue
+		}
+		if partSeq < 0 || partSeq >= totalParts {
+			continue
+		}
+		if _, exists := seen[partSeq]; exists {
+			continue
+		}
+		seen[partSeq] = struct{}{}
+		items = append(items, partSeq)
+	}
+
+	if len(items) == 0 {
+		return buildSequentialPartSeqList(totalParts)
+	}
+	return items
+}
+
+func buildSequentialPartSeqList(total int) []int {
+	if total <= 0 {
+		return nil
+	}
+	items := make([]int, total)
+	for index := 0; index < total; index++ {
+		items[index] = index
+	}
+	return items
+}
+
+func parsePartSeq(value any) (int, bool) {
+	switch v := value.(type) {
+	case float64:
+		return int(v), true
+	case float32:
+		return int(v), true
+	case int:
+		return v, true
+	case int64:
+		return int(v), true
+	case int32:
+		return int(v), true
+	case uint64:
+		return int(v), true
+	case uint32:
+		return int(v), true
+	case uint:
+		return int(v), true
+	case string:
+		parsed, err := strconv.Atoi(strings.TrimSpace(v))
+		if err != nil {
+			return 0, false
+		}
+		return parsed, true
+	default:
+		return 0, false
+	}
 }
 
 func sanitizeReturnTo(raw string) string {

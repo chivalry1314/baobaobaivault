@@ -87,11 +87,12 @@ type StorageConfig struct {
 
 type BaiduConfig struct {
 	Enabled            bool   `mapstructure:"enabled"`
-	ClientID           string `mapstructure:"client_id"`
-	ClientSecret       string `mapstructure:"client_secret"`
+	APIKey             string `mapstructure:"api_key"`
+	SecretKey          string `mapstructure:"secret_key"`
 	RedirectURI        string `mapstructure:"redirect_uri"`
 	Scope              string `mapstructure:"scope"`
 	AuthURL            string `mapstructure:"auth_url"`
+	AuthExtraParams    map[string]string `mapstructure:"auth_extra_params"`
 	TokenURL           string `mapstructure:"token_url"`
 	PanAPIBaseURL      string `mapstructure:"pan_api_base_url"`
 	PanUploadURL       string `mapstructure:"pan_upload_url"`
@@ -191,11 +192,12 @@ func setDefaults() {
 
 	// Baidu netdisk connector
 	viper.SetDefault("baidu.enabled", false)
-	viper.SetDefault("baidu.client_id", "")
-	viper.SetDefault("baidu.client_secret", "")
+	viper.SetDefault("baidu.api_key", "")
+	viper.SetDefault("baidu.secret_key", "")
 	viper.SetDefault("baidu.redirect_uri", "http://127.0.0.1:8080/api/v1/connectors/baidu/callback")
 	viper.SetDefault("baidu.scope", "basic,netdisk")
 	viper.SetDefault("baidu.auth_url", "https://openapi.baidu.com/oauth/2.0/authorize")
+	viper.SetDefault("baidu.auth_extra_params", map[string]string{})
 	viper.SetDefault("baidu.token_url", "https://openapi.baidu.com/oauth/2.0/token")
 	viper.SetDefault("baidu.pan_api_base_url", "https://pan.baidu.com/rest/2.0")
 	viper.SetDefault("baidu.pan_upload_url", "https://d.pcs.baidu.com/rest/2.0/pcs/superfile2")

@@ -23,26 +23,26 @@ func (h *Handler) baiduOAuthCallback(c *gin.Context) {
 		if description == "" {
 			description = oauthErr
 		}
-		renderBaiduOAuthResult(c, http.StatusBadRequest, false, "Baidu authorization failed: "+description, "")
+		renderBaiduOAuthResult(c, http.StatusBadRequest, false, "百度授权失败："+description, "")
 		return
 	}
 
 	code := strings.TrimSpace(c.Query("code"))
 	state := strings.TrimSpace(c.Query("state"))
 	if code == "" || state == "" {
-		renderBaiduOAuthResult(c, http.StatusBadRequest, false, "Missing OAuth callback parameters.", "")
+		renderBaiduOAuthResult(c, http.StatusBadRequest, false, "缺少授权回调参数。", "")
 		return
 	}
 
 	tenantID, userID, returnTo, err := h.baiduService.HandleOAuthCallback(c.Request.Context(), code, state)
 	if err != nil {
 		h.logger.Warn("baidu oauth callback failed", zap.Error(err))
-		renderBaiduOAuthResult(c, http.StatusBadRequest, false, "Baidu authorization failed: "+err.Error(), "")
+		renderBaiduOAuthResult(c, http.StatusBadRequest, false, "百度授权失败："+err.Error(), "")
 		return
 	}
 
 	h.logger.Info("baidu account linked", zap.String("tenant_id", tenantID), zap.String("user_id", userID))
-	renderBaiduOAuthResult(c, http.StatusOK, true, "Baidu account connected. You can return to the app now.", returnTo)
+	renderBaiduOAuthResult(c, http.StatusOK, true, "百度网盘授权成功，正在返回应用。", returnTo)
 }
 
 func (h *Handler) getBaiduConnectorStatus(c *gin.Context) {
@@ -105,7 +105,7 @@ func (h *Handler) uploadBaiduBackup(c *gin.Context) {
 
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
-		jsonError(c, http.StatusBadRequest, errors.New("file is required"))
+		jsonError(c, http.StatusBadRequest, errors.New("请上传备份文件"))
 		return
 	}
 	defer file.Close()
@@ -144,7 +144,7 @@ func (h *Handler) downloadBaiduBackup(c *gin.Context) {
 
 	filePath := strings.TrimSpace(c.Query("path"))
 	if filePath == "" {
-		jsonError(c, http.StatusBadRequest, errors.New("path is required"))
+		jsonError(c, http.StatusBadRequest, errors.New("缺少备份路径参数"))
 		return
 	}
 
@@ -178,7 +178,7 @@ func (h *Handler) deleteBaiduBackup(c *gin.Context) {
 
 	filePath := strings.TrimSpace(c.Query("path"))
 	if filePath == "" {
-		jsonError(c, http.StatusBadRequest, errors.New("path is required"))
+		jsonError(c, http.StatusBadRequest, errors.New("缺少备份路径参数"))
 		return
 	}
 
@@ -205,23 +205,26 @@ func (h *Handler) disconnectBaiduConnector(c *gin.Context) {
 		jsonError(c, http.StatusInternalServerError, err)
 		return
 	}
-	jsonSuccess(c, gin.H{"disconnected": true})
+	jsonSuccess(c, gin.H{
+		"disconnected": true,
+		"notice":       "已断开当前系统与百度网盘的本地绑定。如需重新弹出完整授权确认，请先到百度授权管理中撤销该应用。",
+	})
 }
 
 func authSubjectFromContext(c *gin.Context) (string, string, error) {
 	tenantID := strings.TrimSpace(getTenantID(c))
 	userID := strings.TrimSpace(getUserID(c))
 	if tenantID == "" || userID == "" {
-		return "", "", errors.New("invalid auth context")
+		return "", "", errors.New("无效的登录上下文")
 	}
 	return tenantID, userID, nil
 }
 
 func renderBaiduOAuthResult(c *gin.Context, status int, success bool, message, returnTo string) {
-	title := "Baidu Authorization Failed"
+	title := "百度授权失败"
 	accent := "#dc2626"
 	if success {
-		title = "Baidu Authorization Completed"
+		title = "百度授权成功"
 		accent = "#16a34a"
 	}
 
@@ -242,22 +245,23 @@ func renderBaiduOAuthResult(c *gin.Context, status int, success bool, message, r
 	escapedTitle := html.EscapeString(title)
 	escapedMessage := html.EscapeString(strings.TrimSpace(message))
 	if escapedMessage == "" {
-		escapedMessage = "Done."
+		escapedMessage = "操作完成。"
 	}
 	escapedReturnTo := html.EscapeString(safeReturnTo)
 	scriptPayload := string(payloadBytes)
 
 	doc := fmt.Sprintf(`<!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>%s</title>
 </head>
-<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#f8fafc;margin:0;padding:24px;">
-  <div style="max-width:560px;margin:40px auto;padding:20px 22px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;">
+<body style="font-family:'PingFang SC','Microsoft YaHei',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:linear-gradient(180deg,#f8fafc 0%%,#eef2ff 100%%);margin:0;padding:24px;">
+  <div style="max-width:560px;margin:40px auto;padding:22px 24px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 16px 40px rgba(15,23,42,0.08);">
     <h1 style="margin:0 0 10px;font-size:20px;color:%s;">%s</h1>
-    <p style="margin:0;color:#334155;line-height:1.6;">%s</p>
+    <p style="margin:0;color:#334155;line-height:1.7;">%s</p>
+    <p style="margin:10px 0 0;color:#64748b;font-size:13px;line-height:1.6;">此窗口会自动关闭，如未关闭可手动返回应用。</p>
     %s
   </div>
   <script>
@@ -285,7 +289,7 @@ func buildReturnLinkHTML(escapedReturnTo string) string {
 	if strings.TrimSpace(escapedReturnTo) == "" {
 		return ""
 	}
-	return fmt.Sprintf(`<p style="margin:14px 0 0;"><a href="%s" style="color:#2563eb;text-decoration:none;">Return to the app now</a></p>`, escapedReturnTo)
+	return fmt.Sprintf(`<p style="margin:14px 0 0;"><a href="%s" style="color:#2563eb;text-decoration:none;font-weight:600;">立即返回应用</a></p>`, escapedReturnTo)
 }
 
 func sanitizeOAuthReturnTo(raw string) string {
