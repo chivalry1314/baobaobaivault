@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/baobaobao/baobaobaivault/internal/model"
+	"github.com/baobaobai/baobaobaivault/internal/model"
 )
 
 // Registry keeps provider instances keyed by storage config id.

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/baobaobao/baobaobaivault/internal/config"
+	"github.com/baobaobai/baobaobaivault/internal/config"
 	"github.com/golang-jwt/jwt/v5"
 )
 

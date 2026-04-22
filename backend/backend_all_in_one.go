@@ -19,16 +19,16 @@ package main
 // 	"syscall"
 // 	"time"
 // 
-// 	"github.com/baobaobao/baobaobaivault/internal/api"
-// 	"github.com/baobaobao/baobaobaivault/internal/config"
-// 	"github.com/baobaobao/baobaobaivault/pkg/database"
-// 	"github.com/baobaobao/baobaobaivault/pkg/redis"
+// 	"github.com/baobaobai/baobaobaivault/internal/api"
+// 	"github.com/baobaobai/baobaobaivault/internal/config"
+// 	"github.com/baobaobai/baobaobaivault/pkg/database"
+// 	"github.com/baobaobai/baobaobaivault/pkg/redis"
 // 	"go.uber.org/zap"
 // )
 // 
-// // @title Baobaobao Vault API
+// // @title Baobaobai Vault API
 // // @version 1.0
-// // @description 浜戝瓨鍌ㄧ粺涓€绠＄悊骞冲彴 API
+// // @description 包包白存储服务 API
 // // @termsOfService http://swagger.io/terms/
 // 
 // // @contact.name API Support
@@ -192,9 +192,9 @@ package main
 // 	"strings"
 // 	"time"
 // 
-// 	"github.com/baobaobao/baobaobaivault/internal/model"
-// 	"github.com/baobaobao/baobaobaivault/internal/service"
-// 	authpkg "github.com/baobaobao/baobaobaivault/pkg/auth"
+// 	"github.com/baobaobai/baobaobaivault/internal/model"
+// 	"github.com/baobaobai/baobaobaivault/internal/service"
+// 	authpkg "github.com/baobaobai/baobaobaivault/pkg/auth"
 // 	"github.com/gin-gonic/gin"
 // 	"gorm.io/gorm"
 // )
@@ -398,11 +398,11 @@ package main
 // 	"strings"
 // 	"time"
 // 
-// 	"github.com/baobaobao/baobaobaivault/internal/config"
-// 	"github.com/baobaobao/baobaobaivault/internal/model"
-// 	"github.com/baobaobao/baobaobaivault/internal/service"
-// 	"github.com/baobaobao/baobaobaivault/internal/storage"
-// 	authpkg "github.com/baobaobao/baobaobaivault/pkg/auth"
+// 	"github.com/baobaobai/baobaobaivault/internal/config"
+// 	"github.com/baobaobai/baobaobaivault/internal/model"
+// 	"github.com/baobaobai/baobaobaivault/internal/service"
+// 	"github.com/baobaobai/baobaobaivault/internal/storage"
+// 	authpkg "github.com/baobaobai/baobaobaivault/pkg/auth"
 // 	"github.com/gin-gonic/gin"
 // 	goredis "github.com/redis/go-redis/v9"
 // 	"go.uber.org/zap"
@@ -1721,7 +1721,7 @@ package main
 // 	"errors"
 // 	"fmt"
 // 
-// 	"github.com/baobaobao/baobaobaivault/internal/model"
+// 	"github.com/baobaobai/baobaobaivault/internal/model"
 // 	"go.uber.org/zap"
 // 	"gorm.io/gorm"
 // )
@@ -1898,8 +1898,8 @@ package main
 // 	"strings"
 // 	"time"
 // 
-// 	"github.com/baobaobao/baobaobaivault/internal/model"
-// 	"github.com/baobaobao/baobaobaivault/internal/storage"
+// 	"github.com/baobaobai/baobaobaivault/internal/model"
+// 	"github.com/baobaobai/baobaobaivault/internal/storage"
 // 	"go.uber.org/zap"
 // 	"gorm.io/gorm"
 // )
@@ -2260,7 +2260,7 @@ package main
 // 	"errors"
 // 	"fmt"
 // 
-// 	"github.com/baobaobao/baobaobaivault/internal/model"
+// 	"github.com/baobaobai/baobaobaivault/internal/model"
 // 	"go.uber.org/zap"
 // 	"gorm.io/gorm"
 // )
@@ -2572,7 +2572,7 @@ package main
 // 	"fmt"
 // 	"time"
 // 
-// 	"github.com/baobaobao/baobaobaivault/internal/model"
+// 	"github.com/baobaobai/baobaobaivault/internal/model"
 // 	"github.com/golang-jwt/jwt/v5"
 // 	"go.uber.org/zap"
 // 	"gorm.io/gorm"
@@ -3468,7 +3468,7 @@ package main
 // 	"fmt"
 // 	"sync"
 // 
-// 	"github.com/baobaobao/baobaobaivault/internal/model"
+// 	"github.com/baobaobai/baobaobaivault/internal/model"
 // )
 // 
 // // Registry keeps provider instances keyed by storage config id.
@@ -4014,7 +4014,7 @@ package main
 // 	"strings"
 // 	"time"
 // 
-// 	"github.com/baobaobao/baobaobaivault/internal/config"
+// 	"github.com/baobaobai/baobaobaivault/internal/config"
 // 	"github.com/golang-jwt/jwt/v5"
 // )
 // 
@@ -4106,8 +4106,8 @@ package main
 // 	"fmt"
 // 	"time"
 // 
-// 	"github.com/baobaobao/baobaobaivault/internal/config"
-// 	"github.com/baobaobao/baobaobaivault/internal/model"
+// 	"github.com/baobaobai/baobaobaivault/internal/config"
+// 	"github.com/baobaobai/baobaobaivault/internal/model"
 // 	"go.uber.org/zap"
 // 	"gorm.io/driver/postgres"
 // 	"gorm.io/gorm"
@@ -4253,7 +4253,7 @@ package main
 // 	"context"
 // 	"fmt"
 // 
-// 	"github.com/baobaobao/baobaobaivault/internal/config"
+// 	"github.com/baobaobai/baobaobaivault/internal/config"
 // 	"github.com/redis/go-redis/v9"
 // 	"go.uber.org/zap"
 // )

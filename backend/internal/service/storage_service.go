@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/baobaobao/baobaobaivault/internal/model"
-	"github.com/baobaobao/baobaobaivault/internal/storage"
+	"github.com/baobaobai/baobaobaivault/internal/model"
+	"github.com/baobaobai/baobaobaivault/internal/storage"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

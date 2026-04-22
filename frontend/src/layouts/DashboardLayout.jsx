@@ -65,7 +65,7 @@ export default function DashboardLayout({
                 <Icons.Box size={20} />
               </div>
               <div className="brand-text">
-                <strong>宝宝宝存储</strong>
+                <strong>包包白存储</strong>
                 <small>{tenant?.code || "DEFAULT"}</small>
               </div>
             </div>

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/baobaobao/baobaobaivault/internal/config"
+	"github.com/baobaobai/baobaobaivault/internal/config"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )

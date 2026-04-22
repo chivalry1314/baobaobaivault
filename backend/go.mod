@@ -1,4 +1,4 @@
-module github.com/baobaobao/baobaobaivault
+module github.com/baobaobai/baobaobaivault
 
 go 1.22
 

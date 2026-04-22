@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/baobaobao/baobaobaivault/internal/model"
+	"github.com/baobaobai/baobaobaivault/internal/model"
 	"github.com/golang-jwt/jwt/v5"
 	"go.uber.org/zap"
 	"gorm.io/gorm"

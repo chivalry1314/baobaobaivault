@@ -76,7 +76,7 @@ export default function AuthPage({
                   <div className="auth-field">
                     <span>租户名称</span>
                     <input
-                      placeholder="例如：宝宝宝科技"
+                      placeholder="例如：包包白科技"
                       value={bootstrapForm.tenantName}
                       onChange={(e) => setBootstrapForm((v) => ({ ...v, tenantName: e.target.value }))}
                       required

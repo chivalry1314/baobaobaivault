@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/baobaobao/baobaobaivault/internal/model"
+	"github.com/baobaobai/baobaobaivault/internal/model"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )

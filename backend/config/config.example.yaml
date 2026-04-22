@@ -1,4 +1,4 @@
-# Baobaobao Vault configuration template
+# Baobaobai Vault configuration template
 #
 # Usage:
 #   1) Copy this file to `backend/config/config.yaml`
@@ -84,4 +84,3 @@ baidu:
 log:
   level: "info" # debug, info, warn, error
   format: "json" # json, console
-

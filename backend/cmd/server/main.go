@@ -9,16 +9,16 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/baobaobao/baobaobaivault/internal/api"
-	"github.com/baobaobao/baobaobaivault/internal/config"
-	"github.com/baobaobao/baobaobaivault/pkg/database"
-	"github.com/baobaobao/baobaobaivault/pkg/redis"
+	"github.com/baobaobai/baobaobaivault/internal/api"
+	"github.com/baobaobai/baobaobaivault/internal/config"
+	"github.com/baobaobai/baobaobaivault/pkg/database"
+	"github.com/baobaobai/baobaobaivault/pkg/redis"
 	"go.uber.org/zap"
 )
 
-// @title Baobaobao Vault API
+// @title Baobaobai Vault API
 // @version 1.0
-// @description 云存储统一管理平台 API
+// @description 包包白存储服务 API
 // @termsOfService http://swagger.io/terms/
 
 // @contact.name API Support

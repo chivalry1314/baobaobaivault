@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/baobaobao/baobaobaivault/internal/model"
-	"github.com/baobaobao/baobaobaivault/internal/service"
-	authpkg "github.com/baobaobao/baobaobaivault/pkg/auth"
+	"github.com/baobaobai/baobaobaivault/internal/model"
+	"github.com/baobaobai/baobaobaivault/internal/service"
+	authpkg "github.com/baobaobai/baobaobaivault/pkg/auth"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )

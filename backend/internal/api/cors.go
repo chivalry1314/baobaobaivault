@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/baobaobao/baobaobaivault/internal/config"
+	"github.com/baobaobai/baobaobaivault/internal/config"
 	"github.com/gin-gonic/gin"
 )
 
