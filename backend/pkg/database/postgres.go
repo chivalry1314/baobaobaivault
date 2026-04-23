@@ -61,6 +61,8 @@ func AutoMigrate(db *gorm.DB) error {
 		&model.AKSK{},
 		&model.CloudAccount{},
 		&model.AuditLog{},
+		&model.WebPushSubscription{},
+		&model.WebPushEvent{},
 	)
 }
 

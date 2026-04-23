@@ -15,6 +15,7 @@ type Config struct {
 	JWT      JWTConfig      `mapstructure:"jwt"`
 	Storage  StorageConfig  `mapstructure:"storage"`
 	Baidu    BaiduConfig    `mapstructure:"baidu"`
+	WebPush  WebPushConfig  `mapstructure:"webpush"`
 	Log      LogConfig      `mapstructure:"log"`
 }
 
@@ -107,6 +108,22 @@ type LogConfig struct {
 	Format string `mapstructure:"format"` // json, console
 }
 
+type WebPushConfig struct {
+	Enabled           bool   `mapstructure:"enabled"`
+	PublicAPIEnabled  bool   `mapstructure:"public_api_enabled"`
+	VAPIDSubject      string `mapstructure:"vapid_subject"`
+	VAPIDPublicKey    string `mapstructure:"vapid_public_key"`
+	VAPIDPrivateKey   string `mapstructure:"vapid_private_key"`
+	AllowVAPIDAutoGen bool   `mapstructure:"allow_vapid_auto_generate"`
+
+	DefaultTTLSeconds int    `mapstructure:"default_ttl_seconds"`
+	DispatchAPIKey    string `mapstructure:"dispatch_api_key"`
+
+	QueueConcurrency int    `mapstructure:"queue_concurrency"`
+	QueueBuffer      int    `mapstructure:"queue_buffer"`
+	PushProxyURL     string `mapstructure:"push_proxy_url"`
+}
+
 // Load 鍔犺浇閰嶇疆鏂囦欢
 func Load() (*Config, error) {
 	viper.SetConfigName("config")
@@ -127,6 +144,10 @@ func Load() (*Config, error) {
 
 	var cfg Config
 	if err := viper.Unmarshal(&cfg); err != nil {
+		return nil, err
+	}
+
+	if err := cfg.validate(); err != nil {
 		return nil, err
 	}
 
@@ -206,7 +227,42 @@ func setDefaults() {
 	viper.SetDefault("baidu.token_encrypt_secret", "")
 	viper.SetDefault("baidu.http_timeout_seconds", 30)
 
+	// Web Push (optional)
+	viper.SetDefault("webpush.enabled", false)
+	viper.SetDefault("webpush.public_api_enabled", false)
+	viper.SetDefault("webpush.vapid_subject", "mailto:push-admin@example.com")
+	viper.SetDefault("webpush.vapid_public_key", "")
+	viper.SetDefault("webpush.vapid_private_key", "")
+	viper.SetDefault("webpush.allow_vapid_auto_generate", false)
+	viper.SetDefault("webpush.default_ttl_seconds", 300)
+	viper.SetDefault("webpush.dispatch_api_key", "")
+	viper.SetDefault("webpush.queue_concurrency", 20)
+	viper.SetDefault("webpush.queue_buffer", 1000)
+	viper.SetDefault("webpush.push_proxy_url", "")
+
 	// Log
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("log.format", "json")
+}
+
+func (c *Config) validate() error {
+	if !c.WebPush.Enabled {
+		return nil
+	}
+	if c.WebPush.DefaultTTLSeconds <= 0 {
+		c.WebPush.DefaultTTLSeconds = 300
+	}
+	if c.WebPush.QueueConcurrency <= 0 {
+		c.WebPush.QueueConcurrency = 20
+	}
+	if c.WebPush.QueueBuffer <= 0 {
+		c.WebPush.QueueBuffer = 1000
+	}
+	if c.WebPush.VAPIDSubject == "" {
+		c.WebPush.VAPIDSubject = "mailto:push-admin@example.com"
+	}
+	if (c.WebPush.VAPIDPublicKey == "" || c.WebPush.VAPIDPrivateKey == "") && !c.WebPush.AllowVAPIDAutoGen {
+		return fmt.Errorf("webpush enabled but VAPID keys are missing (set webpush.vapid_public_key / webpush.vapid_private_key or enable webpush.allow_vapid_auto_generate)")
+	}
+	return nil
 }

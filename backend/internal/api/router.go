@@ -20,6 +20,7 @@ import (
 	"github.com/baobaobai/baobaobaivault/internal/model"
 	"github.com/baobaobai/baobaobaivault/internal/service"
 	"github.com/baobaobai/baobaobaivault/internal/storage"
+	webpushsvc "github.com/baobaobai/baobaobaivault/internal/webpush"
 	authpkg "github.com/baobaobai/baobaobaivault/pkg/auth"
 	"github.com/gin-gonic/gin"
 	goredis "github.com/redis/go-redis/v9"
@@ -39,6 +40,10 @@ type Handler struct {
 	storageService   *service.StorageService
 	baiduService     *service.BaiduConnectorService
 	registry         *storage.Registry
+
+	webPushRepo    *webpushsvc.Repository
+	webPushQueue   *webpushsvc.Queue
+	webPushService *webpushsvc.Service
 }
 
 func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, logger *zap.Logger) *gin.Engine {
@@ -66,6 +71,33 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, logger *zap
 		registry:         registry,
 	}
 
+	if cfg.WebPush.Enabled {
+		vapidPublic := strings.TrimSpace(cfg.WebPush.VAPIDPublicKey)
+		vapidPrivate := strings.TrimSpace(cfg.WebPush.VAPIDPrivateKey)
+		if (vapidPublic == "" || vapidPrivate == "") && cfg.WebPush.AllowVAPIDAutoGen {
+			publicKey, privateKey, err := webpushsvc.GenerateVAPIDKeys()
+			if err != nil {
+				logger.Warn("failed to auto-generate VAPID keys", zap.Error(err))
+			} else {
+				vapidPublic = publicKey
+				vapidPrivate = privateKey
+				cfg.WebPush.VAPIDPublicKey = publicKey
+				cfg.WebPush.VAPIDPrivateKey = privateKey
+				logger.Warn("auto-generated VAPID keys for this process; configure persistent keys for production")
+			}
+		}
+
+		h.webPushRepo = webpushsvc.NewRepository(db, logger)
+		h.webPushQueue = webpushsvc.NewQueue(cfg.WebPush.QueueConcurrency, cfg.WebPush.QueueBuffer)
+		h.webPushService = webpushsvc.NewService(webpushsvc.ServiceOptions{
+			VAPIDSubject:    cfg.WebPush.VAPIDSubject,
+			VAPIDPublicKey:  vapidPublic,
+			VAPIDPrivateKey: vapidPrivate,
+			DefaultTTL:      cfg.WebPush.DefaultTTLSeconds,
+			PushProxyURL:    cfg.WebPush.PushProxyURL,
+		}, h.webPushRepo, logger)
+	}
+
 	if _, err := h.tenantService.EnsurePlatformAdminRole(context.Background()); err != nil {
 		logger.Warn("failed to ensure platform admin role", zap.Error(err))
 	}
@@ -84,6 +116,11 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, logger *zap
 	r.GET("/healthz", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok", "time": time.Now().UTC().Format(time.RFC3339)})
 	})
+
+	if cfg.WebPush.Enabled && cfg.WebPush.PublicAPIEnabled {
+		apiGroup := r.Group("/api")
+		h.registerWebPushPublicRoutes(apiGroup)
+	}
 
 	v1 := r.Group("/api/v1")
 	{

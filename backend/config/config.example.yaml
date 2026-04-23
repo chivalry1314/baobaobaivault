@@ -81,6 +81,34 @@ baidu:
   token_encrypt_secret: "" # random string, used to encrypt stored tokens
   http_timeout_seconds: 30
 
+webpush:
+  enabled: false
+  # When enabled, exposes mimiwebpushserver-compatible endpoints under `/api/*`:
+  #   - GET  /api/health
+  #   - GET  /api/push/vapid-public-key
+  #   - POST /api/push/subscriptions
+  #   - DELETE /api/push/subscriptions
+  #   - GET  /api/push/subscriptions (optional auth)
+  #   - POST /api/push/test
+  #   - POST /api/push/dispatch (optional auth)
+  #   - GET  /api/push/events/:eventId (optional auth)
+  #   - GET  /api/push/queue (optional auth)
+  public_api_enabled: false
+
+  vapid_subject: "mailto:push-admin@example.com"
+  vapid_public_key: ""
+  vapid_private_key: ""
+  allow_vapid_auto_generate: false
+
+  default_ttl_seconds: 300
+  # Optional. If set, `GET /api/push/subscriptions`, `/api/push/dispatch`, `/api/push/events/*`, `/api/push/queue`
+  # require `x-dispatch-key` or `Authorization: Bearer <key>`.
+  dispatch_api_key: ""
+
+  queue_concurrency: 20
+  queue_buffer: 1000
+  push_proxy_url: ""
+
 log:
   level: "info" # debug, info, warn, error
   format: "json" # json, console
