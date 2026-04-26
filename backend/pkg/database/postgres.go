@@ -20,7 +20,8 @@ func NewPostgresDB(cfg config.DatabaseConfig, log *zap.Logger) (*gorm.DB, error)
 	)
 
 	gormConfig := &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger:      logger.Default.LogMode(logger.Info),
+		PrepareStmt: true, // Work around pgx + gorm postgres migrator ColumnTypes issue ("insufficient arguments")
 	}
 
 	db, err := gorm.Open(postgres.Open(dsn), gormConfig)
@@ -63,6 +64,9 @@ func AutoMigrate(db *gorm.DB) error {
 		&model.AuditLog{},
 		&model.WebPushSubscription{},
 		&model.WebPushEvent{},
+		&model.ShareExternalUser{},
+		&model.SharePlatformCard{},
+		&model.SharePlatformDownloadLog{},
 	)
 }
 

@@ -1,20 +1,36 @@
-﻿import type {
+import type {
+  AccessCodeDashboardResponse,
   ApiError,
-  BrowseResponse,
-  CardRecord,
+  CardAccessCodeConfig,
+  CardDetailResponse,
+  ContinueAuthResponse,
   DashboardResponse,
-  DownloadCodeRecord,
-  RedeemResult,
+  DiscoverCardItem,
+  ExternalSessionUser,
+  PlatformCard,
   SessionResponse,
-  SessionUser,
-  ShopMeta,
 } from "@/lib/shared";
 
-const API_ROOT = "/api/share/v1/shops";
+const API_ROOT = "/api/share";
 
-function normalizeTenantCode(tenantCode: string) {
-  return tenantCode.trim().toLowerCase();
-}
+const shareApiErrorMessages: Record<string, string> = {
+  "invalid email": "邮箱格式不正确",
+  "password must be at least 6 characters": "密码至少需要 6 位",
+  "invalid email or password": "邮箱或密码不正确",
+  "invalid request body": "请求参数不正确",
+  "email already registered": "该邮箱已经注册",
+  "nickname must be between 2 and 40 characters": "昵称需要 2 到 40 个字符",
+  "bio must be at most 100 characters": "个人简介不能超过 100 个字",
+  "phone format is invalid": "手机号格式不正确",
+  "current password is incorrect": "当前密码不正确",
+  "invalid image data": "图片数据不正确，请重新上传",
+  "image exceeds 5mb": "图片大小不能超过 5MB",
+  "invalid access code": "提取码不正确",
+  "invalid access code rules": "提取码规则不正确",
+  "access code required": "请输入提取码",
+  "access code expired": "当前提取码已过期",
+  "access code exhausted": "当前提取码已达使用上限",
+};
 
 function toErrorMessage(payload: unknown, fallback: string) {
   if (payload && typeof payload === "object" && "error" in payload) {
@@ -23,6 +39,7 @@ function toErrorMessage(payload: unknown, fallback: string) {
       return errorValue;
     }
   }
+
   return fallback;
 }
 
@@ -35,6 +52,11 @@ export class ShareApiError extends Error {
     this.status = status;
     Object.setPrototypeOf(this, ShareApiError.prototype);
   }
+}
+
+export function getShareErrorMessage(error: unknown, fallback: string) {
+  const message = error instanceof Error && error.message.trim() ? error.message.trim() : fallback;
+  return shareApiErrorMessages[message.toLowerCase()] ?? message;
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -56,31 +78,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return payload as T;
 }
 
-function shopBase(tenantCode: string) {
-  return `${API_ROOT}/${encodeURIComponent(normalizeTenantCode(tenantCode))}`;
-}
-
 export const shareApi = {
-  getShopMeta(tenantCode: string) {
-    return request<ShopMeta>(`${shopBase(tenantCode)}/meta`);
-  },
-
-  listShopCards(tenantCode: string) {
-    return request<BrowseResponse>(`${shopBase(tenantCode)}/cards`);
-  },
-
-  redeemCode(tenantCode: string, code: string) {
-    return request<RedeemResult>(`${shopBase(tenantCode)}/redeem`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ code }),
-    });
-  },
-
-  register(tenantCode: string, input: { username: string; displayName: string; password: string }) {
-    return request<{ ok: true; user: SessionUser }>(`${shopBase(tenantCode)}/auth/register`, {
+  continueAuth(input: { email: string; password: string }) {
+    return request<ContinueAuthResponse>(`${API_ROOT}/auth/continue`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -89,8 +89,8 @@ export const shareApi = {
     });
   },
 
-  login(tenantCode: string, input: { username: string; password: string }) {
-    return request<{ ok: true; user: SessionUser }>(`${shopBase(tenantCode)}/auth/login`, {
+  register(input: { email: string; nickname: string; password: string }) {
+    return request<{ ok: true; user: ExternalSessionUser }>(`${API_ROOT}/auth/register`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -99,56 +99,34 @@ export const shareApi = {
     });
   },
 
-  logout(tenantCode: string) {
-    return request<{ ok: true }>(`${shopBase(tenantCode)}/auth/logout`, {
+  login(input: { email: string; password: string }) {
+    return request<{ ok: true; user: ExternalSessionUser }>(`${API_ROOT}/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  logout() {
+    return request<{ ok: true }>(`${API_ROOT}/auth/logout`, {
       method: "POST",
     });
   },
 
-  session(tenantCode: string) {
-    return request<SessionResponse>(`${shopBase(tenantCode)}/auth/session`);
+  session() {
+    return request<SessionResponse>(`${API_ROOT}/auth/session`);
   },
 
-  creatorCards(tenantCode: string) {
-    return request<DashboardResponse>(`${shopBase(tenantCode)}/creator/cards`);
-  },
-
-  createCard(
-    tenantCode: string,
-    input: {
-      title: string;
-      description: string;
-      isPublic: boolean;
-      file: File;
-      maxUses: string;
-      expiresAt: string;
-    },
-  ) {
-    const formData = new FormData();
-    formData.append("title", input.title);
-    formData.append("description", input.description);
-    formData.append("isPublic", String(input.isPublic));
-    formData.append("file", input.file);
-
-    if (input.maxUses.trim()) {
-      formData.append("maxUses", input.maxUses.trim());
-    }
-    if (input.expiresAt.trim()) {
-      formData.append("expiresAt", input.expiresAt.trim());
-    }
-
-    return request<{ card: CardRecord; code: DownloadCodeRecord }>(`${shopBase(tenantCode)}/creator/cards`, {
-      method: "POST",
-      body: formData,
-    });
-  },
-
-  updateCard(
-    tenantCode: string,
-    cardId: string,
-    input: { title: string; description: string; isPublic: boolean },
-  ) {
-    return request<{ card: CardRecord }>(`${shopBase(tenantCode)}/creator/cards/${encodeURIComponent(cardId)}`, {
+  updateProfile(input: {
+    nickname: string;
+    avatar: string;
+    bio: string;
+    coverImage: string;
+    phone: string;
+  }) {
+    return request<{ ok: true; user: ExternalSessionUser }>(`${API_ROOT}/me/profile`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -157,17 +135,11 @@ export const shareApi = {
     });
   },
 
-  deleteCard(tenantCode: string, cardId: string) {
-    return request<{ ok: true }>(`${shopBase(tenantCode)}/creator/cards/${encodeURIComponent(cardId)}`, {
-      method: "DELETE",
-    });
-  },
-
-  createCode(
-    tenantCode: string,
-    input: { cardId: string; maxUses: number | null; expiresAt: string | null },
-  ) {
-    return request<{ card: CardRecord; code: DownloadCodeRecord }>(`${shopBase(tenantCode)}/creator/codes`, {
+  changePassword(input: {
+    oldPassword: string;
+    newPassword: string;
+  }) {
+    return request<{ ok: true }>(`${API_ROOT}/me/password`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -176,11 +148,91 @@ export const shareApi = {
     });
   },
 
-  browseCards(tenantCode: string) {
-    return request<BrowseResponse>(`${shopBase(tenantCode)}/creator/browse`);
+  discoverCards() {
+    return request<{ cards: DiscoverCardItem[] }>(`${API_ROOT}/discover/cards`);
   },
 
-  browseDownloadUrl(tenantCode: string, cardId: string) {
-    return `${shopBase(tenantCode)}/creator/browse/download?cardId=${encodeURIComponent(cardId)}`;
+  cardDetail(cardId: string) {
+    return request<CardDetailResponse>(`${API_ROOT}/cards/${encodeURIComponent(cardId)}`);
+  },
+
+  myCards() {
+    return request<DashboardResponse>(`${API_ROOT}/me/cards`);
+  },
+
+  myAccessCodes() {
+    return request<AccessCodeDashboardResponse>(`${API_ROOT}/me/access-codes`);
+  },
+
+  createCard(input: {
+    title: string;
+    description: string;
+    visibility: "private" | "public";
+    status: "draft" | "published" | "archived";
+    file: File;
+  }) {
+    const formData = new FormData();
+    formData.append("title", input.title);
+    formData.append("description", input.description);
+    formData.append("visibility", input.visibility);
+    formData.append("status", input.status);
+    formData.append("file", input.file);
+
+    return request<{ card: PlatformCard }>(`${API_ROOT}/me/cards`, {
+      method: "POST",
+      body: formData,
+    });
+  },
+
+  updateCard(
+    cardId: string,
+    input: {
+      title: string;
+      description: string;
+      visibility: "private" | "public";
+      status: "draft" | "published" | "archived";
+    },
+  ) {
+    return request<{ card: PlatformCard }>(`${API_ROOT}/me/cards/${encodeURIComponent(cardId)}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  cardAccessCode(cardId: string) {
+    return request<{ config: CardAccessCodeConfig }>(`${API_ROOT}/me/cards/${encodeURIComponent(cardId)}/access-code`);
+  },
+
+  updateCardAccessCode(
+    cardId: string,
+    input: {
+      code: string;
+      expireDays: number;
+      usageLimit: number;
+      unlimited: boolean;
+    },
+  ) {
+    return request<{ config: CardAccessCodeConfig }>(`${API_ROOT}/me/cards/${encodeURIComponent(cardId)}/access-code`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  deleteCardAccessCode(cardId: string) {
+    return request<{ ok: true }>(`${API_ROOT}/me/cards/${encodeURIComponent(cardId)}/access-code`, {
+      method: "DELETE",
+    });
+  },
+
+  deleteCard(cardId: string) {
+    return request<{ ok: true }>(`${API_ROOT}/me/cards/${encodeURIComponent(cardId)}`, {
+      method: "DELETE",
+    });
   },
 };

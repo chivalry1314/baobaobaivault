@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strconv"
@@ -40,6 +41,7 @@ type Handler struct {
 	storageService   *service.StorageService
 	baiduService     *service.BaiduConnectorService
 	registry         *storage.Registry
+	shareService     *service.ShareService
 
 	webPushRepo    *webpushsvc.Repository
 	webPushQueue   *webpushsvc.Queue
@@ -69,6 +71,7 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, logger *zap
 		storageService:   service.NewStorageService(db, logger, registry),
 		baiduService:     service.NewBaiduConnectorService(db, logger, cfg.Baidu, cfg.JWT.Secret),
 		registry:         registry,
+		shareService:     service.NewShareService(db, logger, filepath.Join("storage", "share", "files")),
 	}
 
 	if cfg.WebPush.Enabled {
@@ -104,7 +107,6 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, logger *zap
 	if err := h.autoBootstrapPlatformAdmin(context.Background()); err != nil {
 		logger.Warn("failed to auto bootstrap platform admin user", zap.Error(err))
 	}
-
 	authMiddleware := NewAuthMiddleware(db, h.userService)
 
 	r := gin.New()
@@ -121,6 +123,8 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, logger *zap
 		apiGroup := r.Group("/api")
 		h.registerWebPushPublicRoutes(apiGroup)
 	}
+
+	h.registerShareRoutes(r)
 
 	v1 := r.Group("/api/v1")
 	{

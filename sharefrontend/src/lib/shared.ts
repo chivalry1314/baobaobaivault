@@ -1,44 +1,29 @@
-﻿export type SessionUser = {
+export type ExternalSessionUser = {
   id: string;
+  email: string;
   username: string;
-  displayName: string;
+  nickname: string;
+  avatar: string;
+  bio: string;
+  coverImage: string;
+  phone: string;
   createdAt: string;
 };
 
-export type ShopMeta = {
-  tenant: {
-    id: string;
-    code: string;
-    name: string;
-    description: string;
-  };
-  settings: {
-    allowRegister: boolean;
-  };
-};
-
-export type CardRecord = {
+export type PlatformCard = {
   id: string;
   creatorId: string;
   title: string;
   description: string;
-  isPublic: boolean;
-  storedFileName: string;
+  visibility: "private" | "public";
+  status: "draft" | "published" | "archived";
   originalFileName: string;
   mimeType: string;
   size: number;
+  previewUrl: string;
+  downloadUrl: string;
   createdAt: string;
   updatedAt: string;
-};
-
-export type DownloadCodeRecord = {
-  id: string;
-  cardId: string;
-  code: string;
-  maxUses: number | null;
-  usedCount: number;
-  expiresAt: string | null;
-  createdAt: string;
 };
 
 export type CardStats = {
@@ -46,53 +31,80 @@ export type CardStats = {
   lastDownloadedAt: string | null;
 };
 
-export type DashboardCard = {
-  card: CardRecord;
-  codes: DownloadCodeRecord[];
-  stats: CardStats;
-};
-
-export type DashboardStats = {
-  totalCards: number;
-  totalCodes: number;
-  totalDownloads: number;
-  last7DaysDownloads: number;
-};
-
-export type DashboardResponse = {
-  user: SessionUser;
-  cards: DashboardCard[];
-  stats: DashboardStats;
-};
-
-export type PublicUser = {
+export type PublicCreator = {
   id: string;
   username: string;
-  displayName: string;
+  nickname: string;
+  avatar: string;
 };
 
-export type PublicCardItem = {
-  card: CardRecord;
-  creator: PublicUser;
+export type DiscoverCardItem = {
+  card: PlatformCard;
+  creator: PublicCreator;
   stats: CardStats;
-};
-
-export type BrowseResponse = {
-  cards: PublicCardItem[];
-};
-
-export type RedeemResult = {
-  card: Pick<
-    CardRecord,
-    "id" | "title" | "description" | "originalFileName" | "mimeType" | "size" | "isPublic"
-  >;
-  code: Pick<DownloadCodeRecord, "code" | "maxUses" | "usedCount" | "expiresAt">;
-  downloadUrl: string;
 };
 
 export type SessionResponse = {
   authenticated: boolean;
-  user: SessionUser | null;
+  user: ExternalSessionUser | null;
+};
+
+export type ContinueAuthResponse = {
+  ok: true;
+  created: boolean;
+  user: ExternalSessionUser;
+};
+
+export type DashboardCard = {
+  card: PlatformCard;
+  stats: CardStats;
+  hasAccessCode: boolean;
+};
+
+export type DashboardStats = {
+  totalCards: number;
+  totalPublic: number;
+  totalDownloads: number;
+};
+
+export type DashboardResponse = {
+  user: ExternalSessionUser;
+  cards: DashboardCard[];
+  stats: DashboardStats;
+};
+
+export type AccessCodeDashboardItem = {
+  card: PlatformCard;
+  stats: CardStats;
+  config: CardAccessCodeConfig;
+  isPubliclyVisible: boolean;
+};
+
+export type AccessCodeDashboardResponse = {
+  user: ExternalSessionUser;
+  items: AccessCodeDashboardItem[];
+  availableCards: PlatformCard[];
+};
+
+export type CardDetailResponse = {
+  card: PlatformCard;
+  creator: PublicCreator;
+  stats: CardStats;
+  canEdit: boolean;
+  canDownload: boolean;
+  accessCodeStatus?: "none" | "required" | "expired" | "exhausted";
+};
+
+export type CardAccessCodeConfig = {
+  cardId: string;
+  code: string;
+  expiresAt: string | null;
+  expireDays: number;
+  usageLimit: number;
+  usageCount: number;
+  unlimited: boolean;
+  isActive: boolean;
+  isExpired: boolean;
 };
 
 export type ApiError = {

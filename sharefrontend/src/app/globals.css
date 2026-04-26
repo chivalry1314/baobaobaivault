@@ -1,49 +1,220 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f3f7ef;
-  --foreground: #10211f;
-  --panel: #ffffff;
-  --panel-muted: #ecf2e6;
-  --outline: #d7e3d4;
-  --brand: #0f766e;
-  --brand-strong: #115e59;
-  --accent: #ea580c;
+  --font-be-vietnam-pro: "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+  --font-plus-jakarta-sans: "Avenir Next", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-space-grotesk: "Avenir Next", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+
+  /* Material 3 Design System Colors from _10 reference */
+  --background: #fff8f8;
+  --foreground: #26181b;
+  --on-background: #26181b;
+  --on-surface: #26181b;
+  --on-surface-variant: #4f4446;
+  
+  --surface: #fff8f8;
+  --surface-dim: #eed4d8;
+  --surface-bright: #fff8f8;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #fff0f2;
+  --surface-container: #ffe8ec;
+  --surface-container-high: #fde2e6;
+  --surface-container-highest: #f7dce0;
+  --surface-variant: #f7dce0;
+  
+  --primary: #78555e;
+  --on-primary: #ffffff;
+  --primary-container: #ffd1dc;
+  --on-primary-container: #7a5761;
+  --inverse-primary: #e7bbc6;
+  --primary-fixed: #ffd9e2;
+  --primary-fixed-dim: #e7bbc6;
+  --on-primary-fixed: #2d141c;
+  --on-primary-fixed-variant: #5e3e47;
+  
+  --secondary: #725477;
+  --on-secondary: #ffffff;
+  --secondary-container: #fad3fd;
+  --on-secondary-container: #77587c;
+  --secondary-fixed: #fcd7ff;
+  --secondary-fixed-dim: #dfbbe4;
+  --on-secondary-fixed: #2a1131;
+  --on-secondary-fixed-variant: #593d5f;
+  
+  --tertiary: #615e57;
+  --on-tertiary: #ffffff;
+  --tertiary-container: #e2dcd3;
+  --on-tertiary-container: #64605a;
+  --tertiary-fixed: #e7e2d9;
+  --tertiary-fixed-dim: #cbc6bd;
+  --on-tertiary-fixed: #1d1b16;
+  --on-tertiary-fixed-variant: #494640;
+  
+  --outline: #817476;
+  --outline-variant: #d3c3c5;
+  
+  --error: #ba1a1a;
+  --on-error: #ffffff;
+  --error-container: #ffdad6;
+  --on-error-container: #93000a;
+  
+  --inverse-surface: #3d2c30;
+  --inverse-on-surface: #ffecef;
+  --surface-tint: #78555e;
+  
+  /* Legacy aliases for compatibility */
+  --panel: rgba(255, 255, 255, 0.78);
+  --panel-muted: rgba(255, 240, 242, 0.88);
+  --panel-strong: rgba(255, 232, 236, 0.96);
+  --brand: #f15d87;
+  --brand-strong: #d84b73;
+  --brand-soft: #ffdbe5;
+  --accent: #78555e;
+  --shadow-soft: 0 26px 80px -44px rgba(180, 143, 215, 0.72);
+  --shadow-glow: 0 16px 40px -24px rgba(241, 93, 135, 0.35);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-manrope);
-  --font-display: var(--font-space-grotesk);
+  --font-sans: var(--font-be-vietnam-pro);
+  --font-display: var(--font-plus-jakarta-sans);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow-x: clip;
+  overflow-y: auto;
 }
 
 body {
   margin: 0;
-  background:
-    radial-gradient(circle at 10% 15%, #ddebd9 0%, transparent 32%),
-    radial-gradient(circle at 90% 5%, #f6dcc7 0%, transparent 34%),
-    linear-gradient(145deg, #f6f8f0 0%, #edf4e8 100%);
-  color: var(--foreground);
-  font-family: var(--font-manrope), sans-serif;
+  overflow-x: clip;
+  overflow-y: visible;
+  background: var(--background);
+  color: var(--on-background);
+  font-family: var(--font-be-vietnam-pro), sans-serif;
+}
+
+/* Prevent the Next devtools portal host from becoming a second scroll container on Windows Chromium. */
+nextjs-portal {
+  width: 0 !important;
+  height: 0 !important;
+  overflow: visible !important;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
 }
 
 a {
   color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: rgba(241, 93, 135, 0.2);
+  color: var(--accent);
+}
+
+.soft-panel {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 244, 247, 0.74) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    var(--shadow-soft);
+  backdrop-filter: blur(22px);
+}
+
+.dream-card {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 2rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(255, 245, 247, 0.82) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 20px 46px -32px rgba(180, 143, 215, 0.55);
+  backdrop-filter: blur(16px);
+}
+
+.glass-button {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    var(--shadow-glow);
+}
+
+.route-shell {
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(255, 219, 229, 0.5) 52%, rgba(245, 222, 253, 0.52) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 20px 48px -34px rgba(180, 143, 215, 0.55);
+}
+
+.text-glow {
+  text-shadow: 0 0 18px rgba(241, 93, 135, 0.14);
+}
+
+.lace-divider {
+  height: 16px;
+  background-image: radial-gradient(circle at 8px 0, rgba(245, 222, 253, 0.9) 0 8px, transparent 8.5px);
+  background-repeat: repeat-x;
+  background-size: 24px 16px;
+  opacity: 0.85;
+}
+
+.sparkle {
+  animation: floatSparkle 5.8s ease-in-out infinite;
+}
+
+.sparkle-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(36px);
+  opacity: 0.65;
 }
 
 @keyframes fadeSlideIn {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(16px) scale(0.985);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes floatSparkle {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-6px) scale(1.04);
   }
 }
 
 .fade-slide-in {
-  animation: fadeSlideIn 0.6s ease both;
+  animation: fadeSlideIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .fade-slide-in,
+  .sparkle {
+    animation: none;
+  }
 }

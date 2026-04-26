@@ -10,8 +10,8 @@ import (
 // User 用户表
 type User struct {
 	ID       string     `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	TenantID string     `gorm:"type:uuid;not null;index" json:"tenant_id"`
-	Username string     `gorm:"type:varchar(50);not null;index:idx_user_tenant_username,tenant_id" json:"username"`
+	TenantID string     `gorm:"type:uuid;not null;index;uniqueIndex:idx_user_tenant_username,priority:1" json:"tenant_id"`
+	Username string     `gorm:"type:varchar(50);not null;uniqueIndex:idx_user_tenant_username,priority:2" json:"username"`
 	Email    string     `gorm:"type:varchar(100);not null;index:idx_user_tenant_email,tenant_id" json:"email"`
 	Password string     `gorm:"type:varchar(255);not null" json:"-"`
 	Nickname string     `gorm:"type:varchar(100)" json:"nickname"`

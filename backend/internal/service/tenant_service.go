@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/baobaobai/baobaobaivault/internal/model"
@@ -91,6 +92,8 @@ func (s *TenantService) GetTenant(ctx context.Context, tenantID string) (*model.
 }
 
 func (s *TenantService) GetTenantByCode(ctx context.Context, code string) (*model.Tenant, error) {
+	code = strings.ToLower(strings.TrimSpace(code))
+
 	var tenant model.Tenant
 	if err := s.db.WithContext(ctx).First(&tenant, "code = ?", code).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -236,6 +239,9 @@ func (s *TenantService) applyCreateDefaults(req *CreateTenantRequest) *CreateTen
 	if req == nil {
 		req = &CreateTenantRequest{}
 	}
+	req.Name = strings.TrimSpace(req.Name)
+	req.Code = strings.ToLower(strings.TrimSpace(req.Code))
+	req.Description = strings.TrimSpace(req.Description)
 	if req.Plan == "" {
 		req.Plan = string(model.TenantPlanFree)
 	}
