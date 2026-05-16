@@ -322,12 +322,12 @@ export function ShareAccessCodeDashboard() {
 
   return (
     <AppShell currentPath="/creator" headerSlot={headerSlot} footerSlot={footer}>
-      <div className="relative overflow-hidden bg-[linear-gradient(180deg,#fff9f9_0%,#fffdfb_45%,#fff5f7_100%)]">
+      <div className="relative overflow-hidden bg-[linear-gradient(180deg,#f4fbff_0%,#f8fdff_45%,#f2faff_100%)]">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute left-[-10%] top-[6%] h-[26rem] w-[26rem] rounded-full bg-[rgba(255,212,223,0.36)] blur-[120px]" />
-          <div className="absolute right-[-8%] top-[18%] h-[28rem] w-[28rem] rounded-full bg-[rgba(249,216,246,0.28)] blur-[120px]" />
-          <div className="absolute bottom-[-14%] left-[12%] h-[28rem] w-[28rem] rounded-full bg-[rgba(255,226,231,0.32)] blur-[120px]" />
-          <div className="absolute bottom-[6%] right-[4%] h-16 w-16 text-[rgba(236,171,198,0.5)]">
+          <div className="absolute left-[-10%] top-[6%] h-[26rem] w-[26rem] rounded-full bg-[rgba(176,232,249,0.36)] blur-[120px]" />
+          <div className="absolute right-[-8%] top-[18%] h-[28rem] w-[28rem] rounded-full bg-[rgba(203,234,249,0.3)] blur-[120px]" />
+          <div className="absolute bottom-[-14%] left-[12%] h-[28rem] w-[28rem] rounded-full bg-[rgba(248,219,230,0.24)] blur-[120px]" />
+          <div className="absolute bottom-[6%] right-[4%] h-16 w-16 text-[rgba(100,166,194,0.45)]">
             <SparkleIcon />
           </div>
         </div>
@@ -352,7 +352,7 @@ export function ShareAccessCodeDashboard() {
             <button
               type="button"
               onClick={handleCreateNewAccessCode}
-              className="inline-flex items-center justify-center gap-3 self-start rounded-full bg-[linear-gradient(135deg,#ffb5c4_0%,#ff9ab0_100%)] px-8 py-5 text-xl font-semibold text-white shadow-[0_24px_48px_-30px_rgba(255,110,146,0.68)] transition hover:-translate-y-0.5"
+              className="inline-flex items-center justify-center gap-3 self-start rounded-full bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] px-8 py-5 text-xl font-semibold text-white shadow-[0_24px_48px_-30px_rgba(31,122,152,0.56)] transition hover:-translate-y-0.5"
             >
               <PlusIcon className="h-6 w-6" />
               <span>生成新提取码</span>
@@ -386,7 +386,7 @@ export function ShareAccessCodeDashboard() {
 
           {!loadError && totalItems === 0 ? (
             <section className="mt-10 rounded-[36px] border border-white/80 bg-white/84 px-6 py-14 text-center shadow-[0_30px_70px_-46px_rgba(120,85,94,0.28)] sm:px-10">
-              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[rgba(255,223,231,0.9)] text-[var(--brand-strong)]">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[rgba(225,243,251,0.9)] text-[var(--primary)]">
                 <KeyIcon className="h-10 w-10" />
               </div>
               <h2 className="mt-6 text-3xl font-semibold text-[var(--foreground)]">还没有提取码记录</h2>
@@ -398,7 +398,7 @@ export function ShareAccessCodeDashboard() {
                   <button
                     type="button"
                     onClick={handleCreateNewAccessCode}
-                    className="rounded-full bg-[linear-gradient(135deg,#ffb5c4_0%,#ff9ab0_100%)] px-6 py-3 text-base font-semibold text-white shadow-[0_20px_40px_-28px_rgba(255,110,146,0.68)] transition hover:-translate-y-0.5"
+                    className="rounded-full bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] px-6 py-3 text-base font-semibold text-white shadow-[0_20px_40px_-28px_rgba(31,122,152,0.56)] transition hover:-translate-y-0.5"
                   >
                     立即生成提取码
                   </button>

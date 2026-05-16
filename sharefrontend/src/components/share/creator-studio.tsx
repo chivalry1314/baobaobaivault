@@ -194,7 +194,7 @@ function Avatar({
 
   return (
     <div
-      className={`${dimension} flex items-center justify-center rounded-full bg-[linear-gradient(135deg,#ffdbe5_0%,#f6e8ff_100%)] font-semibold text-[var(--primary)] shadow-[0_16px_36px_-24px_rgba(120,85,94,0.5)] ${inner}`}
+      className={`${dimension} flex items-center justify-center rounded-full bg-[linear-gradient(135deg,#e3f4fb_0%,#f5fbff_100%)] font-semibold text-[var(--primary)] shadow-[0_16px_36px_-24px_rgba(55,98,120,0.35)] ${inner}`}
     >
       {getInitials(name)}
     </div>
@@ -216,7 +216,7 @@ function SidebarButton({
 }) {
   const className = `flex w-full items-center gap-3 rounded-full px-5 py-4 text-base transition ${
     active
-      ? "bg-[linear-gradient(135deg,#ffd3de_0%,#f7c3d4_100%)] text-[var(--primary)] shadow-[0_18px_36px_-26px_rgba(216,75,115,0.45)]"
+      ? "bg-[linear-gradient(135deg,#d7eff9_0%,#c4e5f3_100%)] text-[var(--primary)] shadow-[0_18px_36px_-26px_rgba(57,124,153,0.35)]"
       : "text-[var(--foreground)]/74 hover:bg-white/78 hover:text-[var(--primary)]"
   }`;
 
@@ -250,7 +250,7 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`border-b-2 pb-4 text-[1.15rem] transition sm:text-[1.35rem] ${
+      className={`type-h3 border-b-2 pb-4 transition ${
         active
           ? "border-[var(--primary)] text-[var(--foreground)]"
           : "border-transparent text-[var(--foreground)]/54 hover:text-[var(--foreground)]"
@@ -298,8 +298,8 @@ function EmptyState({
 }) {
   return (
     <div className="rounded-[32px] border border-white/80 bg-white/84 px-6 py-14 text-center shadow-[0_24px_56px_-38px_rgba(120,85,94,0.28)]">
-      <p className="text-2xl font-semibold text-[var(--foreground)]">{title}</p>
-      <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-[var(--foreground)]/62">{description}</p>
+      <p className="type-h2 text-[var(--foreground)]">{title}</p>
+      <p className="type-body-sm mx-auto mt-3 max-w-xl text-[var(--foreground)]/62">{description}</p>
       {actionLabel && actionHref ? (
         <Link
           href={actionHref}
@@ -355,7 +355,7 @@ function CreatorCard({
       <div className="mt-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <Link href={editHref} className="block text-[2rem] font-semibold leading-none text-[var(--foreground)]">
+            <Link href={editHref} className="type-h2 block text-[var(--foreground)]">
               {item.card.title}
             </Link>
           </div>
@@ -364,21 +364,21 @@ function CreatorCard({
           </span>
         </div>
 
-        <p className="mt-3 min-h-[84px] text-base leading-8 text-[var(--foreground)]/72">{defaultCardDescription(item.card)}</p>
+        <p className="type-body-sm mt-3 min-h-[84px] text-[var(--foreground)]/72">{defaultCardDescription(item.card)}</p>
       </div>
 
       <div className="mt-4 border-t border-dashed border-[var(--outline-variant)] pt-4">
-        <div className="rounded-[26px] bg-[linear-gradient(180deg,rgba(255,240,242,0.92),rgba(255,248,249,0.86))] px-4 py-4">
+        <div className="rounded-[26px] bg-[linear-gradient(180deg,rgba(236,248,253,0.92),rgba(248,253,255,0.9))] px-4 py-4">
           <div className="text-[11px] uppercase tracking-[0.24em] text-[var(--foreground)]/42">提取码</div>
           <div className="mt-3 flex items-center justify-between gap-3">
             <div>
-              <div className="text-[1.08rem] tracking-[0.12em] text-[var(--primary)]">{item.hasAccessCode ? "已配置" : "未设置"}</div>
+              <div className="type-body-sm tracking-[0.1em] text-[var(--primary)]">{item.hasAccessCode ? "已配置" : "未设置"}</div>
               <div className="mt-1 text-xs text-[var(--foreground)]/52">点击管理设置提取码规则</div>
             </div>
 
             <Link
               href={accessCodeHref}
-              className="rounded-full border border-[#efb8d1] bg-white px-5 py-2.5 text-sm text-[var(--primary)] transition hover:border-[var(--primary)]"
+              className="rounded-full border border-[var(--outline-variant)] bg-white px-5 py-2.5 text-sm text-[var(--primary)] transition hover:border-[var(--primary)]"
             >
               管理
             </Link>
@@ -430,7 +430,7 @@ function HistoryItem({
 
       <Link
         href={accessCodeHref}
-        className="rounded-full border border-[#efb8d1] bg-white px-5 py-2.5 text-sm text-[var(--primary)] transition hover:border-[var(--primary)] sm:shrink-0"
+        className="rounded-full border border-[var(--outline-variant)] bg-white px-5 py-2.5 text-sm text-[var(--primary)] transition hover:border-[var(--primary)] sm:shrink-0"
       >
         管理
       </Link>
@@ -465,8 +465,8 @@ function PanelSection({
   return (
     <section className="space-y-5">
       <div>
-        <h2 className="text-2xl font-semibold text-[var(--foreground)]">{title}</h2>
-        <p className="mt-2 text-sm leading-7 text-[var(--foreground)]/62">{description}</p>
+        <h2 className="type-h2 text-[var(--foreground)]">{title}</h2>
+        <p className="type-body-sm mt-2 text-[var(--foreground)]/62">{description}</p>
       </div>
       {children}
     </section>
@@ -525,7 +525,7 @@ export function CreatorStudio() {
     }
 
     return {
-      backgroundImage: `linear-gradient(135deg,rgba(255,255,255,0.84) 0%,rgba(255,239,243,0.76) 52%,rgba(255,247,235,0.86) 100%), url(${currentUser.coverImage})`,
+      backgroundImage: `linear-gradient(135deg,rgba(255,255,255,0.84) 0%,rgba(232,247,252,0.76) 52%,rgba(244,251,255,0.88) 100%), url(${currentUser.coverImage})`,
       backgroundSize: "cover",
       backgroundPosition: "center",
     };
@@ -743,11 +743,11 @@ export function CreatorStudio() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[linear-gradient(180deg,#fff9f8_0%,#fffdfb_45%,#fff5f7_100%)]">
+    <div className="relative min-h-screen overflow-x-hidden bg-[linear-gradient(180deg,#f4fbff_0%,#f9fdff_45%,#f2faff_100%)]">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-[-120px] top-12 h-80 w-80 rounded-full bg-[rgba(255,209,220,0.34)] blur-3xl" />
-        <div className="absolute right-[-80px] top-52 h-80 w-80 rounded-full bg-[rgba(250,211,253,0.28)] blur-3xl" />
-        <div className="absolute bottom-[-120px] left-1/3 h-96 w-96 rounded-full bg-[rgba(255,226,231,0.4)] blur-3xl" />
+        <div className="absolute left-[-120px] top-12 h-80 w-80 rounded-full bg-[rgba(172,228,247,0.36)] blur-3xl" />
+        <div className="absolute right-[-80px] top-52 h-80 w-80 rounded-full bg-[rgba(200,233,248,0.3)] blur-3xl" />
+        <div className="absolute bottom-[-120px] left-1/3 h-96 w-96 rounded-full bg-[rgba(248,219,230,0.26)] blur-3xl" />
       </div>
 
       <div className="relative z-10 mx-auto grid max-w-[1560px] gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[290px_minmax(0,1fr)]">
@@ -757,8 +757,8 @@ export function CreatorStudio() {
               <div className="flex items-center gap-4">
                 <Avatar user={currentUser} size="sm" />
                 <div className="min-w-0">
-                  <p className="truncate text-[1.75rem] font-semibold text-[var(--foreground)]">{displayName}</p>
-                  <p className="mt-1 text-sm text-[var(--foreground)]/54">UID: {formatUid(currentUser.id)}</p>
+                  <p className="type-h3 truncate text-[var(--foreground)]">{displayName}</p>
+                  <p className="type-body-sm mt-1 text-[var(--foreground)]/54">UID: {formatUid(currentUser.id)}</p>
                 </div>
               </div>
 
@@ -814,16 +814,16 @@ export function CreatorStudio() {
             <>
               <section className="overflow-hidden rounded-[40px] border border-white/80 bg-white/84 p-3 shadow-[0_30px_70px_-46px_rgba(120,85,94,0.35)] backdrop-blur-xl">
                 <div
-                  className="relative overflow-hidden rounded-[36px] bg-[linear-gradient(135deg,rgba(255,255,255,0.94) 0%,rgba(255,239,243,0.86) 52%,rgba(255,247,235,0.95) 100%)] px-6 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-12"
+                  className="relative overflow-hidden rounded-[36px] bg-[linear-gradient(135deg,rgba(255,255,255,0.94) 0%,rgba(233,247,252,0.86) 52%,rgba(246,252,255,0.95) 100%)] px-6 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-12"
                   style={heroSurfaceStyle}
                 >
                   <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-                    <div className="absolute left-[-2%] top-[-12%] h-44 w-44 rounded-full bg-[rgba(255,208,219,0.52)] blur-[36px]" />
+                    <div className="absolute left-[-2%] top-[-12%] h-44 w-44 rounded-full bg-[rgba(177,232,249,0.48)] blur-[36px]" />
                     <div className="absolute left-[10%] top-[6%] h-24 w-24 rounded-full bg-[rgba(255,255,255,0.9)] blur-[12px]" />
-                    <div className="absolute left-[16%] top-[18%] h-20 w-20 rounded-full bg-[rgba(252,214,225,0.55)] blur-[18px]" />
-                    <div className="absolute right-[18%] top-[8%] h-28 w-28 rounded-full bg-[rgba(255,228,236,0.55)] blur-[24px]" />
-                    <div className="absolute bottom-[10%] right-[14%] h-36 w-36 rounded-full bg-[rgba(255,246,233,0.7)] blur-[34px]" />
-                    <div className="absolute left-[6%] bottom-[14%] h-24 w-24 rounded-full bg-[rgba(255,221,230,0.44)] blur-[22px]" />
+                    <div className="absolute left-[16%] top-[18%] h-20 w-20 rounded-full bg-[rgba(209,239,251,0.55)] blur-[18px]" />
+                    <div className="absolute right-[18%] top-[8%] h-28 w-28 rounded-full bg-[rgba(214,236,250,0.55)] blur-[24px]" />
+                    <div className="absolute bottom-[10%] right-[14%] h-36 w-36 rounded-full bg-[rgba(243,251,255,0.72)] blur-[34px]" />
+                    <div className="absolute left-[6%] bottom-[14%] h-24 w-24 rounded-full bg-[rgba(247,219,230,0.34)] blur-[22px]" />
                     <div className="absolute left-[22%] top-[2%] h-16 w-8 rotate-[-26deg] rounded-full bg-[rgba(207,160,100,0.32)] blur-[2px]" />
                     <div className="absolute left-[25%] top-[5%] h-16 w-8 rotate-[18deg] rounded-full bg-[rgba(166,126,78,0.22)] blur-[2px]" />
                   </div>
@@ -837,18 +837,18 @@ export function CreatorStudio() {
                       </div>
 
                       <div className="max-w-2xl">
-                        <p className="text-sm uppercase tracking-[0.28em] text-[var(--primary)]/55">Card Share</p>
-                        <h1 className="mt-3 text-4xl font-semibold tracking-tight text-[var(--foreground)] sm:text-[3.5rem]">{displayName}</h1>
-                        <p className="mt-3 text-lg text-[var(--foreground)]/68 sm:text-xl">{getUserTagline(currentUser)}</p>
-                        <p className="mt-4 text-sm text-[var(--foreground)]/50">{accountLabel}</p>
+                        <p className="type-overline text-[var(--primary)]/55">Card Share</p>
+                        <h1 className="type-hero mt-3 text-[var(--foreground)]">{displayName}</h1>
+                        <p className="type-h3 mt-3 text-[var(--foreground)]/68">{getUserTagline(currentUser)}</p>
+                        <p className="type-body-sm mt-4 text-[var(--foreground)]/50">{accountLabel}</p>
                       </div>
                     </div>
 
                     <div className="grid gap-3 rounded-[30px] border border-white/70 bg-white/78 p-4 shadow-[0_22px_54px_-38px_rgba(120,85,94,0.35)] sm:grid-cols-3">
                       {heroStats.map((item) => (
                         <div key={item.label} className="min-w-[112px] rounded-[22px] px-4 py-4 text-center">
-                          <div className={`text-[2.25rem] font-semibold ${item.accent ? "text-[#f3a6c2]" : "text-[var(--foreground)]"}`}>{item.value}</div>
-                          <div className={`mt-1 text-sm ${item.accent ? "text-[#9b5a77]" : "text-[var(--foreground)]/62"}`}>{item.label}</div>
+                          <div className={`type-h2 ${item.accent ? "text-[var(--brand-strong)]" : "text-[var(--foreground)]"}`}>{item.value}</div>
+                          <div className={`type-body-sm mt-1 ${item.accent ? "text-[var(--brand)]" : "text-[var(--foreground)]/62"}`}>{item.label}</div>
                         </div>
                       ))}
                     </div>

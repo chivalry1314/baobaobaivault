@@ -345,13 +345,13 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
 
   const footer = useMemo(
     () => (
-      <footer className="relative z-10 border-t border-white/60 bg-[rgba(255,248,248,0.72)] px-6 py-10 backdrop-blur-md">
+      <footer className="relative z-10 border-t border-white/60 bg-[rgba(240,248,252,0.72)] px-6 py-10 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 text-center md:flex-row md:text-left">
-          <div className="text-3xl font-semibold italic tracking-tight text-[var(--brand-strong)]">CardShare</div>
+          <div className="text-3xl font-semibold italic tracking-tight text-[var(--primary)]">CardShare</div>
 
-          <div className="text-sm tracking-[0.14em] text-[var(--brand)]/55">© 2024 CARDSHARE. HANDCRAFTED WITH SAKURA DREAMS.</div>
+          <div className="text-sm tracking-[0.14em] text-[var(--primary)]/55">© 2024 CARDSHARE. HANDCRAFTED WITH SAKURA DREAMS.</div>
 
-          <div className="flex flex-wrap items-center justify-center gap-6 text-sm uppercase tracking-[0.12em] text-[var(--brand)]/48">
+          <div className="flex flex-wrap items-center justify-center gap-6 text-sm uppercase tracking-[0.12em] text-[var(--primary)]/48">
             <Link href="/discover" className="transition hover:text-[var(--brand-strong)]">
               About Us
             </Link>
@@ -444,11 +444,11 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
 
   return (
     <AppShell currentPath="/" footerSlot={footer}>
-      <div className="relative overflow-hidden bg-[linear-gradient(180deg,#fff8f9_0%,#fff7f8_48%,#fff5f7_100%)]">
+      <div className="relative overflow-hidden bg-[linear-gradient(180deg,#f4fbff_0%,#f7fcff_48%,#f2faff_100%)]">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute left-[-6%] top-[6%] h-[28rem] w-[28rem] rounded-full bg-[rgba(255,210,221,0.35)] blur-[120px]" />
-          <div className="absolute right-[-10%] top-[24%] h-[25rem] w-[25rem] rounded-full bg-[rgba(237,215,240,0.28)] blur-[120px]" />
-          <div className="absolute bottom-[-8%] left-[18%] h-[26rem] w-[26rem] rounded-full bg-[rgba(255,232,236,0.34)] blur-[120px]" />
+          <div className="absolute left-[-6%] top-[6%] h-[28rem] w-[28rem] rounded-full bg-[rgba(176,232,249,0.38)] blur-[120px]" />
+          <div className="absolute right-[-10%] top-[24%] h-[25rem] w-[25rem] rounded-full bg-[rgba(205,233,249,0.32)] blur-[120px]" />
+          <div className="absolute bottom-[-8%] left-[18%] h-[26rem] w-[26rem] rounded-full bg-[rgba(248,219,230,0.24)] blur-[120px]" />
         </div>
 
         <section className="relative z-10 mx-auto max-w-[1540px] px-4 pb-16 pt-12 sm:px-6">
@@ -470,7 +470,7 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
 
           {!loading && detail ? (
             <div className="grid gap-8 xl:grid-cols-[minmax(0,1.48fr)_minmax(360px,0.92fr)]">
-              <section className="relative overflow-hidden rounded-[42px] border border-[rgba(241,193,207,0.72)] bg-[rgba(255,251,252,0.82)] p-4 shadow-[0_30px_80px_-46px_rgba(120,85,94,0.38)] sm:p-5">
+              <section className="relative overflow-hidden rounded-[42px] border border-[rgba(193,219,232,0.72)] bg-[rgba(251,255,255,0.82)] p-4 shadow-[0_30px_80px_-46px_rgba(80,118,140,0.3)] sm:p-5">
                 <div className="relative overflow-hidden rounded-[36px] bg-[linear-gradient(135deg,#2f1f25_0%,#5d424c_100%)]">
                   <div className="absolute right-5 top-5 z-10 inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-3 text-lg font-semibold text-[var(--foreground)] shadow-[0_18px_36px_-28px_rgba(0,0,0,0.45)]">
                     <HeartIcon className="h-5 w-5 text-[var(--brand-strong)]" />
@@ -480,23 +480,23 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
                   {detail.card.mimeType.startsWith("image/") ? (
                     <img src={detail.card.previewUrl} alt={detail.card.title} className="h-full min-h-[720px] w-full object-cover" />
                   ) : (
-                    <div className="flex min-h-[720px] items-center justify-center bg-[linear-gradient(135deg,#382129_0%,#71545c_100%)] px-10 text-center text-3xl font-medium text-white/88">
+                    <div className="flex min-h-[720px] items-center justify-center bg-[linear-gradient(135deg,#382129_0%,#71545c_100%)] px-10 text-center text-xl font-medium text-white/88 sm:text-2xl">
                       {detail.card.originalFileName || detail.card.title}
                     </div>
                   )}
 
                   <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(22,12,15,0)_0%,rgba(22,12,15,0.08)_26%,rgba(22,12,15,0.72)_100%)] px-8 pb-9 pt-24 sm:px-10">
-                    <h1 className="text-4xl font-semibold tracking-tight text-white drop-shadow-[0_10px_24px_rgba(0,0,0,0.35)] sm:text-5xl">
+                    <h1 className="type-h1 text-white drop-shadow-[0_10px_24px_rgba(0,0,0,0.35)]">
                       {detail.card.title}
                     </h1>
-                    <p className="mt-3 text-2xl text-white/92">Illustration by {creatorName}</p>
+                    <p className="type-h3 mt-3 text-white/92">Illustration by {creatorName}</p>
                   </div>
                 </div>
               </section>
 
               <aside className="space-y-8">
-                <section className="relative overflow-hidden rounded-[40px] border border-[rgba(241,193,207,0.78)] bg-[rgba(255,251,252,0.88)] p-7 shadow-[0_30px_70px_-50px_rgba(120,85,94,0.32)] sm:p-8">
-                  <div aria-hidden="true" className="absolute right-6 top-[-24px] h-20 w-20 rotate-45 rounded-[24px] bg-[rgba(255,232,236,0.82)]" />
+                <section className="relative overflow-hidden rounded-[40px] border border-[rgba(193,219,232,0.78)] bg-[rgba(251,255,255,0.9)] p-7 shadow-[0_30px_70px_-50px_rgba(80,118,140,0.28)] sm:p-8">
+                  <div aria-hidden="true" className="absolute right-6 top-[-24px] h-20 w-20 rotate-45 rounded-[24px] bg-[rgba(222,241,250,0.82)]" />
 
                   <div className="relative flex items-start gap-4">
                     {detail.creator.avatar.trim() ? (
@@ -506,37 +506,37 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
                         className="h-16 w-16 rounded-full object-cover shadow-[0_16px_34px_-24px_rgba(120,85,94,0.45)]"
                       />
                     ) : (
-                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[linear-gradient(135deg,#ffdbe5_0%,#f6e8ff_100%)] text-xl font-semibold text-[var(--primary)]">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[linear-gradient(135deg,#e3f4fb_0%,#f5fbff_100%)] text-xl font-semibold text-[var(--primary)]">
                         {getInitials(creatorName)}
                       </div>
                     )}
 
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-3">
-                        <h2 className="truncate text-[2.2rem] font-semibold leading-none text-[var(--foreground)]">{creatorName}</h2>
+                        <h2 className="type-h2 truncate text-[var(--foreground)]">{creatorName}</h2>
                         {detail.canEdit ? (
                           <Link
                             href="/creator"
-                            className="inline-flex rounded-full bg-[rgba(255,212,223,0.9)] px-5 py-2 text-sm font-medium text-[var(--brand-strong)] transition hover:bg-[rgba(255,204,218,1)]"
+                            className="inline-flex rounded-full bg-[var(--brand-soft)] px-5 py-2 text-sm font-medium text-[var(--brand-strong)] transition hover:opacity-90"
                           >
                             我的卡片
                           </Link>
                         ) : (
                           <button
                             type="button"
-                            className="inline-flex rounded-full bg-[rgba(255,212,223,0.9)] px-5 py-2 text-sm font-medium text-[var(--brand-strong)] transition hover:bg-[rgba(255,204,218,1)]"
+                            className="inline-flex rounded-full bg-[var(--brand-soft)] px-5 py-2 text-sm font-medium text-[var(--brand-strong)] transition hover:opacity-90"
                           >
                             关注
                           </button>
                         )}
                       </div>
-                      <p className="mt-2 text-xl text-[var(--foreground)]/72">{creatorHandle}</p>
+                      <p className="type-body-sm mt-2 text-[var(--foreground)]/72">{creatorHandle}</p>
                     </div>
                   </div>
 
                   <div className="relative mt-10">
-                    <h3 className="text-[3rem] font-semibold tracking-tight text-[var(--foreground)]">卡片详情</h3>
-                    <p className="mt-5 text-[2rem] leading-[1.8] text-[var(--foreground)]/78">
+                    <h3 className="type-h1 text-[var(--foreground)]">卡片详情</h3>
+                    <p className="type-body mt-5 text-[var(--foreground)]/78">
                       {detail.card.description.trim() || "这是一张公开分享的卡片作品，你可以在这里查看预览并直接获取原始文件。"}
                     </p>
                   </div>
@@ -545,12 +545,12 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
                     {tags.map((tag, index) => (
                       <span
                         key={`${tag}-${index}`}
-                        className={`inline-flex rounded-full px-4 py-2 text-lg font-medium ${
+                        className={`inline-flex rounded-full px-4 py-2 text-sm font-medium ${
                           index === 0
-                            ? "bg-[#f7d3fb] text-[#7b4a7d]"
+                            ? "bg-[rgba(215,239,250,0.9)] text-[#2d728d]"
                             : index === 1
-                              ? "bg-[#ffd9df] text-[#6f3549]"
-                              : "bg-[#e6ded3] text-[#6d6356]"
+                              ? "bg-[rgba(248,219,230,0.9)] text-[#9b5b74]"
+                              : "bg-[rgba(226,240,248,0.9)] text-[#4b6470]"
                         }`}
                       >
                         {tag}
@@ -558,16 +558,16 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
                     ))}
                   </div>
 
-                  <div className="mt-10 h-2 rounded-full bg-[repeating-linear-gradient(90deg,rgba(255,216,226,0.78)_0,rgba(255,216,226,0.78)_16px,rgba(255,255,255,0)_16px,rgba(255,255,255,0)_24px)]" />
+                  <div className="mt-10 h-2 rounded-full bg-[repeating-linear-gradient(90deg,rgba(207,233,245,0.8)_0,rgba(207,233,245,0.8)_16px,rgba(255,255,255,0)_16px,rgba(255,255,255,0)_24px)]" />
                 </section>
 
-                <section className="rounded-[40px] border border-[rgba(241,193,207,0.78)] bg-[rgba(255,234,239,0.78)] p-7 shadow-[0_30px_70px_-50px_rgba(120,85,94,0.3)] sm:p-8">
+                <section className="rounded-[40px] border border-[rgba(193,219,232,0.78)] bg-[rgba(235,248,254,0.82)] p-7 shadow-[0_30px_70px_-50px_rgba(80,118,140,0.28)] sm:p-8">
                   <div className="flex justify-center text-[var(--brand-strong)]/78">
                     <KeyIcon className="h-12 w-12" />
                   </div>
 
-                  <h3 className="mt-5 text-center text-[2.3rem] font-semibold text-[var(--foreground)]">获取此卡片</h3>
-                  <p className="mt-3 text-center text-lg text-[var(--foreground)]/68">请输入提取码以解锁高清原图及附件</p>
+                  <h3 className="type-h2 mt-5 text-center text-[var(--foreground)]">获取此卡片</h3>
+                  <p className="type-body-sm mt-3 text-center text-[var(--foreground)]/68">请输入提取码以解锁高清原图及附件</p>
 
                   <div className="relative mt-8">
                     <input
@@ -581,7 +581,7 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
                       }}
                       disabled={!requiresAccessCode}
                       placeholder={unlockPlaceholder}
-                      className="w-full rounded-full border border-[rgba(210,185,191,0.78)] bg-white px-7 py-5 pr-16 text-xl text-[var(--foreground)] outline-none transition placeholder:text-[var(--foreground)]/32 disabled:cursor-not-allowed disabled:bg-[rgba(248,243,245,0.82)] disabled:text-[var(--foreground)]/42 focus:border-[var(--primary)]"
+                      className="w-full rounded-full border border-[var(--outline-variant)] bg-white px-7 py-4 pr-16 text-base text-[var(--foreground)] outline-none transition placeholder:text-[var(--foreground)]/32 disabled:cursor-not-allowed disabled:bg-[rgba(242,248,252,0.85)] disabled:text-[var(--foreground)]/42 focus:border-[var(--primary)] sm:py-5 sm:text-lg"
                     />
                     <LockIcon className="pointer-events-none absolute right-6 top-1/2 h-7 w-7 -translate-y-1/2 text-[var(--foreground)]/36" />
                   </div>
@@ -596,7 +596,7 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
                         type="button"
                         disabled={downloadPending || !normalizedUnlockCode}
                         onClick={() => void handleProtectedDownload()}
-                        className="mt-7 flex w-full items-center justify-center gap-3 rounded-full bg-[linear-gradient(135deg,#8b6679_0%,#986f81_100%)] px-6 py-5 text-[2rem] font-semibold text-white shadow-[0_24px_40px_-26px_rgba(125,90,115,0.72)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="mt-7 flex w-full items-center justify-center gap-3 rounded-full bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] px-6 py-4 text-lg font-semibold text-white shadow-[0_24px_40px_-26px_rgba(31,122,152,0.56)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 sm:py-5 sm:text-xl"
                       >
                         <span>{downloadPending ? "验证中..." : "提取此卡片"}</span>
                         <DownloadIcon className="h-7 w-7" />
@@ -604,7 +604,7 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
                     ) : (
                       <a
                         href={detail.card.downloadUrl}
-                        className="mt-7 flex w-full items-center justify-center gap-3 rounded-full bg-[linear-gradient(135deg,#8b6679_0%,#986f81_100%)] px-6 py-5 text-[2rem] font-semibold text-white shadow-[0_24px_40px_-26px_rgba(125,90,115,0.72)] transition hover:-translate-y-0.5"
+                        className="mt-7 flex w-full items-center justify-center gap-3 rounded-full bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] px-6 py-4 text-lg font-semibold text-white shadow-[0_24px_40px_-26px_rgba(31,122,152,0.56)] transition hover:-translate-y-0.5 sm:py-5 sm:text-xl"
                       >
                         <span>提取此卡片</span>
                         <DownloadIcon className="h-7 w-7" />
@@ -614,7 +614,7 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
                     <button
                       type="button"
                       disabled
-                      className="mt-7 w-full rounded-full bg-[rgba(125,90,115,0.48)] px-6 py-5 text-[2rem] font-semibold text-white/88"
+                      className="mt-7 w-full rounded-full bg-[rgba(125,90,115,0.48)] px-6 py-4 text-lg font-semibold text-white/88 sm:py-5 sm:text-xl"
                     >
                       {accessCodeStatus === "expired" ? "提取码已过期" : accessCodeStatus === "exhausted" ? "提取码已达上限" : "暂无下载权限"}
                     </button>
@@ -633,20 +633,20 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
                   </p>
                 </section>
 
-                <section className="rounded-[36px] border border-[rgba(241,193,207,0.78)] bg-[rgba(255,251,252,0.88)] p-6 shadow-[0_30px_70px_-50px_rgba(120,85,94,0.28)]">
+                <section className="rounded-[36px] border border-[rgba(193,219,232,0.78)] bg-[rgba(251,255,255,0.9)] p-6 shadow-[0_30px_70px_-50px_rgba(80,118,140,0.26)]">
                   <div className="flex items-center gap-4">
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[rgba(240,211,216,0.88)] text-[var(--brand-strong)]">
                       <InfoIcon className="h-7 w-7" />
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <p className="text-xl font-semibold text-[var(--foreground)]">包含文件</p>
-                      <p className="mt-1 text-[1.75rem] leading-tight text-[var(--foreground)]/78">
+                      <p className="type-h3 text-[var(--foreground)]">包含文件</p>
+                      <p className="type-h2 mt-1 text-[var(--foreground)]/78">
                         {fileKindLabel}（{formatBytes(detail.card.size)}）
                       </p>
                     </div>
 
-                    <span className="rounded-full bg-[#f0c8ff] px-4 py-1.5 text-lg font-medium text-[#7a5480]">
+                    <span className="rounded-full bg-[var(--brand-soft)] px-4 py-1.5 text-sm font-medium text-[var(--brand-strong)]">
                       {detail.canEdit ? "我的卡片" : "可下载"}
                     </span>
                   </div>

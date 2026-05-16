@@ -6,3 +6,4 @@ backend/config/config.local.yaml
 config.yaml
 config.local.yaml
 .env
+.codex/*

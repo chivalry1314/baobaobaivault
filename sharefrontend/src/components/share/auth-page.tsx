@@ -35,7 +35,7 @@ function Field({
 }: FieldProps) {
   return (
     <label className="block">
-      <span className="mb-2 block pl-1 text-sm font-medium text-[var(--foreground)]/72">{label}</span>
+      <span className="type-body-sm mb-2 block pl-1 font-medium text-[var(--foreground)]/72">{label}</span>
       <div className="relative">
         <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--outline)]">{icon}</span>
         <input
@@ -44,7 +44,7 @@ function Field({
           onChange={(event) => onChange(event.target.value)}
           autoComplete={autoComplete}
           placeholder={placeholder}
-          className="w-full rounded-2xl border border-[var(--outline-variant)] bg-[var(--surface-container-low)] py-3 pl-11 pr-12 text-sm text-[var(--foreground)] outline-none transition placeholder:text-[var(--outline)]/80 focus:border-[var(--primary)] focus:bg-white"
+          className="w-full rounded-2xl border border-[var(--outline-variant)] bg-[var(--surface-container-low)] py-3 pl-11 pr-12 text-[var(--type-body-sm)] text-[var(--foreground)] outline-none transition placeholder:text-[var(--outline)]/80 focus:border-[var(--primary)] focus:bg-white"
           required
         />
         {trailing ? <span className="absolute right-4 top-1/2 -translate-y-1/2">{trailing}</span> : null}
@@ -128,7 +128,7 @@ export function AuthPage({ afterSuccess = "/creator", onSuccess }: AuthPageProps
 
   if (sessionChecking) {
     return (
-      <div className="relative min-h-[100dvh] overflow-hidden bg-[linear-gradient(180deg,#fff7f8_0%,#fffdfb_42%,#fff4f7_100%)]">
+      <div className="relative min-h-[100dvh] overflow-hidden bg-[linear-gradient(180deg,#f4fbff_0%,#f8fdff_44%,#f2faff_100%)]">
         <div className="relative z-10 mx-auto flex min-h-[100dvh] max-w-6xl items-center justify-center px-4 py-6 sm:px-6">
           <section className="w-full max-w-[520px] rounded-[36px] border border-white/80 bg-white/90 p-6 text-center text-sm text-[var(--foreground)]/62 shadow-[0_26px_80px_-40px_rgba(120,85,94,0.42)] backdrop-blur-xl sm:p-8">
             正在检查登录状态...
@@ -139,15 +139,15 @@ export function AuthPage({ afterSuccess = "/creator", onSuccess }: AuthPageProps
   }
 
   return (
-    <div className="relative min-h-[100dvh] overflow-hidden bg-[linear-gradient(180deg,#fff7f8_0%,#fffdfb_42%,#fff4f7_100%)]">
+    <div className="relative min-h-[100dvh] overflow-hidden bg-[linear-gradient(180deg,#f4fbff_0%,#f8fdff_44%,#f2faff_100%)]">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-[-8%] top-[-10%] h-[24rem] w-[24rem] rounded-full bg-[rgba(255,209,220,0.34)] blur-[92px]" />
-        <div className="absolute bottom-[-14%] right-[-10%] h-[26rem] w-[26rem] rounded-full bg-[rgba(223,187,228,0.24)] blur-[112px]" />
+        <div className="absolute left-[-8%] top-[-10%] h-[24rem] w-[24rem] rounded-full bg-[rgba(170,229,248,0.36)] blur-[92px]" />
+        <div className="absolute bottom-[-14%] right-[-10%] h-[26rem] w-[26rem] rounded-full bg-[rgba(210,231,250,0.3)] blur-[112px]" />
       </div>
 
       <div className="relative z-10 mx-auto flex min-h-[100dvh] max-w-6xl items-center justify-center px-4 py-6 sm:px-6">
         <section className="w-full max-w-[520px] rounded-[36px] border border-white/80 bg-white/90 p-6 shadow-[0_26px_80px_-40px_rgba(120,85,94,0.42)] backdrop-blur-xl sm:p-8">
-          <h1 className="text-4xl font-semibold leading-none text-[var(--primary)] sm:text-5xl">CardShare</h1>
+          <h1 className="type-h1 text-[var(--primary)]">CardShare</h1>
 
           {error ? (
             <p className="mt-5 rounded-2xl border border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-sm text-[#9a3412]">{error}</p>
@@ -187,7 +187,7 @@ export function AuthPage({ afterSuccess = "/creator", onSuccess }: AuthPageProps
             <button
               type="submit"
               disabled={pending}
-              className="w-full rounded-full bg-[linear-gradient(135deg,#f4a8bc_0%,#e6b7d9_100%)] px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_-18px_rgba(224,187,224,0.9)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_38px_-18px_rgba(224,187,224,0.95)] disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-full bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] px-5 py-3 text-[var(--type-body-sm)] font-semibold text-white shadow-[0_14px_34px_-18px_rgba(76,155,188,0.62)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_38px_-18px_rgba(76,155,188,0.75)] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <span className="inline-flex items-center gap-2">
                 {pending ? "处理中..." : "继续"}

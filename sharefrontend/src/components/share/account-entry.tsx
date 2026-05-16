@@ -102,7 +102,7 @@ export function AccountEntry() {
       onClick={handleClick}
       aria-label={label}
       title={title}
-      className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-[var(--surface-container-low)] text-[var(--brand)] shadow-[0_12px_28px_-18px_rgba(241,93,135,0.55)] transition hover:scale-[1.03] hover:bg-[var(--surface-container)]"
+      className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-white/75 bg-[var(--surface-container-low)] text-[var(--brand)] shadow-[0_12px_28px_-18px_rgba(241,93,135,0.55)] transition hover:border-[var(--brand)]/35 hover:bg-white"
     >
       {user?.avatar.trim() ? (
         <img src={user.avatar} alt={getDisplayName(user)} className="h-full w-full object-cover" />

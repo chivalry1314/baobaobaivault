@@ -418,11 +418,11 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
 
   return (
     <AppShell currentPath="/creator" footerSlot={footer}>
-      <div className="relative overflow-hidden bg-[linear-gradient(180deg,#fff8f9_0%,#fff7f8_48%,#fff5f7_100%)]">
+      <div className="relative overflow-hidden bg-[linear-gradient(180deg,#f4fbff_0%,#f8fdff_48%,#f2faff_100%)]">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute left-[-8%] top-[4%] h-[28rem] w-[28rem] rounded-full bg-[rgba(255,210,221,0.35)] blur-[120px]" />
-          <div className="absolute right-[-10%] top-[18%] h-[24rem] w-[24rem] rounded-full bg-[rgba(237,215,240,0.26)] blur-[110px]" />
-          <div className="absolute left-[20%] bottom-[12%] h-[26rem] w-[26rem] rounded-full bg-[rgba(255,231,236,0.32)] blur-[120px]" />
+          <div className="absolute left-[-8%] top-[4%] h-[28rem] w-[28rem] rounded-full bg-[rgba(176,232,249,0.38)] blur-[120px]" />
+          <div className="absolute right-[-10%] top-[18%] h-[24rem] w-[24rem] rounded-full bg-[rgba(203,234,249,0.3)] blur-[110px]" />
+          <div className="absolute left-[20%] bottom-[12%] h-[26rem] w-[26rem] rounded-full bg-[rgba(248,219,230,0.22)] blur-[120px]" />
         </div>
 
         <section className="relative z-10 mx-auto max-w-[1520px] px-4 pb-16 pt-16 sm:px-6">
@@ -430,7 +430,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
             <div className="mb-6 flex justify-center sm:justify-start">
               <Link
                 href="/creator"
-                className="inline-flex rounded-full border border-[rgba(210,185,191,0.78)] bg-white/80 px-5 py-2.5 text-sm text-[var(--foreground)]/72 transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                className="inline-flex rounded-full border border-[var(--outline-variant)] bg-white/80 px-5 py-2.5 text-sm text-[var(--foreground)]/72 transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
               >
                 返回我的创作
               </Link>
@@ -451,7 +451,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
 
           <form className="mt-12 grid gap-8 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.8fr)]" onSubmit={handleSubmit}>
             <div className="space-y-8">
-              <section className="rounded-[40px] border border-[rgba(241,193,207,0.72)] bg-[rgba(255,251,252,0.82)] p-6 shadow-[0_30px_70px_-50px_rgba(120,85,94,0.28)] sm:p-8">
+              <section className="rounded-[40px] border border-[rgba(193,219,232,0.72)] bg-[rgba(251,255,255,0.9)] p-6 shadow-[0_30px_70px_-50px_rgba(80,118,140,0.26)] sm:p-8">
                 <div className="flex items-center gap-3 text-[1.1rem] font-medium text-[var(--foreground)]">
                   <ImageIcon className="h-6 w-6 text-[var(--primary)]" />
                   <span>{mode === "edit" ? "卡片封面" : "上传浪漫影像"}</span>
@@ -459,8 +459,8 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
 
                 {mode === "create" ? (
                   <label
-                    className={`mt-6 flex min-h-[320px] cursor-pointer flex-col items-center justify-center rounded-[28px] border-2 border-dashed bg-[rgba(255,248,249,0.86)] px-6 py-8 text-center transition ${
-                      dragActive ? "border-[var(--primary)] bg-[rgba(255,240,244,0.92)]" : "border-[rgba(206,186,190,0.78)]"
+                    className={`mt-6 flex min-h-[320px] cursor-pointer flex-col items-center justify-center rounded-[28px] border-2 border-dashed bg-[rgba(244,251,255,0.9)] px-6 py-8 text-center transition ${
+                      dragActive ? "border-[var(--primary)] bg-[rgba(230,246,253,0.94)]" : "border-[rgba(190,216,228,0.82)]"
                     }`}
                     onDragOver={(event) => {
                       event.preventDefault();
@@ -480,7 +480,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                       <img src={previewUrl} alt="卡片预览" className="max-h-[320px] rounded-[24px] object-cover shadow-[0_20px_40px_-32px_rgba(120,85,94,0.45)]" />
                     ) : (
                       <>
-                        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[linear-gradient(135deg,#ffdbe7_0%,#ffd0dc_100%)] text-[var(--primary)] shadow-[0_18px_40px_-28px_rgba(214,113,145,0.62)]">
+                        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[linear-gradient(135deg,#e5f5fc_0%,#d7eef9_100%)] text-[var(--primary)] shadow-[0_18px_40px_-28px_rgba(31,122,152,0.36)]">
                           <ImageAddIcon className="h-10 w-10" />
                         </div>
                         <p className="mt-8 text-[1.8rem] font-medium text-[var(--foreground)]">点击或拖拽图片到这里</p>
@@ -497,7 +497,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                     />
                   </label>
                 ) : (
-                  <div className="mt-6 min-h-[320px] rounded-[28px] border-2 border-dashed border-[rgba(206,186,190,0.78)] bg-[rgba(255,248,249,0.86)] px-6 py-8 text-center">
+                  <div className="mt-6 min-h-[320px] rounded-[28px] border-2 border-dashed border-[rgba(190,216,228,0.82)] bg-[rgba(244,251,255,0.9)] px-6 py-8 text-center">
                     {previewUrl ? (
                       <img
                         src={previewUrl}
@@ -506,7 +506,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                       />
                     ) : (
                       <>
-                        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[linear-gradient(135deg,#ffdbe7_0%,#ffd0dc_100%)] text-[var(--primary)] shadow-[0_18px_40px_-28px_rgba(214,113,145,0.62)]">
+                        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[linear-gradient(135deg,#e5f5fc_0%,#d7eef9_100%)] text-[var(--primary)] shadow-[0_18px_40px_-28px_rgba(31,122,152,0.36)]">
                           <ImageIcon className="h-10 w-10" />
                         </div>
                         <p className="mt-8 text-[1.8rem] font-medium text-[var(--foreground)]">当前卡片没有可预览的封面图片</p>
@@ -517,7 +517,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                 )}
               </section>
 
-              <section className="rounded-[40px] border border-[rgba(241,193,207,0.72)] bg-[rgba(255,251,252,0.82)] p-6 shadow-[0_30px_70px_-50px_rgba(120,85,94,0.28)] sm:p-8">
+              <section className="rounded-[40px] border border-[rgba(193,219,232,0.72)] bg-[rgba(251,255,255,0.9)] p-6 shadow-[0_30px_70px_-50px_rgba(80,118,140,0.26)] sm:p-8">
                 <div className="flex items-center gap-3 text-[1.1rem] font-medium text-[var(--foreground)]">
                   <EditIcon className="h-6 w-6 text-[var(--primary)]" />
                   <span>编辑心语</span>
@@ -584,7 +584,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
             </div>
 
             <div className="space-y-8">
-              <section className="rounded-[40px] border border-[rgba(241,193,207,0.78)] bg-[rgba(255,251,252,0.84)] p-5 shadow-[0_30px_70px_-50px_rgba(120,85,94,0.28)] sm:p-6">
+              <section className="rounded-[40px] border border-[rgba(193,219,232,0.78)] bg-[rgba(251,255,255,0.9)] p-5 shadow-[0_30px_70px_-50px_rgba(80,118,140,0.26)] sm:p-6">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-[1.1rem] font-medium text-[var(--foreground)]">实时预览</h2>
                   <EyeIcon className="h-6 w-6 text-[var(--foreground)]/24" />
@@ -615,7 +615,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                 </article>
               </section>
 
-              <section className="rounded-[40px] border border-[rgba(241,193,207,0.78)] bg-[rgba(255,251,252,0.84)] p-5 shadow-[0_30px_70px_-50px_rgba(120,85,94,0.28)] sm:p-6">
+              <section className="rounded-[40px] border border-[rgba(193,219,232,0.78)] bg-[rgba(251,255,255,0.9)] p-5 shadow-[0_30px_70px_-50px_rgba(80,118,140,0.26)] sm:p-6">
                 <label className="flex items-center gap-3 text-xl text-[var(--foreground)]/78">
                   <input
                     type="checkbox"
@@ -629,7 +629,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                 <button
                   type="submit"
                   disabled={publishPending}
-                  className="mt-8 flex w-full items-center justify-center gap-3 rounded-full bg-[linear-gradient(135deg,#7d5a73_0%,#8d6780_100%)] px-6 py-5 text-[1.9rem] font-semibold text-white shadow-[0_24px_40px_-26px_rgba(125,90,115,0.8)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-8 flex w-full items-center justify-center gap-3 rounded-full bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] px-6 py-5 text-[1.9rem] font-semibold text-white shadow-[0_24px_40px_-26px_rgba(31,122,152,0.56)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <ArrowBurstIcon className="h-7 w-7" />
                   <span>

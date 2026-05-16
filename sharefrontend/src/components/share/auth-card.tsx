@@ -61,14 +61,14 @@ export function AuthCard({ afterSuccess = "/creator", onSuccess }: AuthCardProps
   return (
     <div className="route-shell mx-auto w-full max-w-[1080px] rounded-[36px] p-3 sm:p-5">
       <div className="grid overflow-hidden rounded-[30px] bg-white/82 md:grid-cols-[1.04fr_0.96fr]">
-        <section className="relative overflow-hidden bg-[linear-gradient(160deg,rgba(255,240,242,0.94),rgba(255,255,255,0.9),rgba(250,211,253,0.68))] px-6 py-7 sm:px-8 sm:py-8">
+        <section className="relative overflow-hidden bg-[linear-gradient(160deg,rgba(237,249,254,0.94),rgba(255,255,255,0.9),rgba(221,241,250,0.7))] px-6 py-7 sm:px-8 sm:py-8">
           <div className="absolute inset-x-8 top-6 h-px bg-[linear-gradient(90deg,transparent,rgba(120,85,94,0.36),transparent)]" />
-          <p className="mt-6 text-xs font-semibold uppercase tracking-[0.28em] text-[var(--brand-strong)]/70">创作入口</p>
-          <h2 className="mt-4 max-w-md text-3xl font-semibold leading-tight text-[var(--foreground)] sm:text-4xl">
+          <p className="type-overline mt-6 text-[var(--primary)]/70">创作入口</p>
+          <h2 className="type-h1 mt-4 max-w-md text-[var(--foreground)]">
             登录后开始
             <span className="block text-[var(--primary)]">创作与管理</span>
           </h2>
-          <p className="mt-4 max-w-md text-sm leading-7 text-[var(--foreground)]/66">
+          <p className="type-body-sm mt-4 max-w-md text-[var(--foreground)]/66">
             现在 sharefrontend 使用的是平台用户模型。普通用户进入创作中心只需要一个邮箱账号。
           </p>
 
@@ -76,7 +76,7 @@ export function AuthCard({ afterSuccess = "/creator", onSuccess }: AuthCardProps
             {featureList.map((item) => (
               <div
                 key={item}
-                className="rounded-[22px] border border-white/70 bg-white/72 px-4 py-3 text-sm leading-6 text-[var(--foreground)]/72 shadow-[0_14px_34px_-30px_rgba(120,85,94,0.48)]"
+                className="type-body-sm rounded-[22px] border border-white/70 bg-white/72 px-4 py-3 text-[var(--foreground)]/72 shadow-[0_14px_34px_-30px_rgba(120,85,94,0.48)]"
               >
                 {item}
               </div>
@@ -86,9 +86,9 @@ export function AuthCard({ afterSuccess = "/creator", onSuccess }: AuthCardProps
 
         <section className="bg-white/90 px-6 py-7 sm:px-8 sm:py-8">
           <div className="mx-auto max-w-md">
-            <div className="inline-flex rounded-full bg-[var(--surface-container-high)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--brand-strong)]/70">统一鉴权</div>
-            <h3 className="mt-4 text-2xl font-semibold text-[var(--foreground)]">继续进入创作中心</h3>
-            <p className="mt-2 text-sm leading-7 text-[var(--foreground)]/62">已有邮箱直接登录，没有账号会自动创建。</p>
+            <div className="type-overline inline-flex rounded-full bg-[var(--surface-container-high)] px-3 py-1 text-[var(--primary)]/72">统一鉴权</div>
+            <h3 className="type-h2 mt-4 text-[var(--foreground)]">继续进入创作中心</h3>
+            <p className="type-body-sm mt-2 text-[var(--foreground)]/62">已有邮箱直接登录，没有账号会自动创建。</p>
 
             {error ? (
               <p className="mt-5 rounded-2xl border border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-sm text-[#9a3412]">{error}</p>
@@ -96,12 +96,12 @@ export function AuthCard({ afterSuccess = "/creator", onSuccess }: AuthCardProps
 
             <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-[var(--foreground)]/72">邮箱</span>
+                <span className="type-body-sm mb-2 block font-medium text-[var(--foreground)]/72">邮箱</span>
                 <input
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  className="w-full rounded-2xl border border-[var(--outline-variant)] bg-[var(--surface-container-low)] px-4 py-3 text-sm outline-none transition placeholder:text-[var(--outline)]/78 focus:border-[var(--primary)] focus:bg-white"
+                  className="w-full rounded-2xl border border-[var(--outline-variant)] bg-[var(--surface-container-low)] px-4 py-3 text-[var(--type-body-sm)] outline-none transition placeholder:text-[var(--outline)]/78 focus:border-[var(--primary)] focus:bg-white"
                   placeholder="you@example.com"
                   autoComplete="email"
                   required
@@ -109,13 +109,13 @@ export function AuthCard({ afterSuccess = "/creator", onSuccess }: AuthCardProps
               </label>
 
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-[var(--foreground)]/72">密码</span>
+                <span className="type-body-sm mb-2 block font-medium text-[var(--foreground)]/72">密码</span>
                 <div className="flex items-center rounded-2xl border border-[var(--outline-variant)] bg-[var(--surface-container-low)] px-4 py-3">
                   <input
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    className="w-full bg-transparent text-sm outline-none placeholder:text-[var(--outline)]/78"
+                    className="w-full bg-transparent text-[var(--type-body-sm)] outline-none placeholder:text-[var(--outline)]/78"
                     placeholder="请输入密码"
                     autoComplete="current-password"
                     required
@@ -133,13 +133,13 @@ export function AuthCard({ afterSuccess = "/creator", onSuccess }: AuthCardProps
               <button
                 type="submit"
                 disabled={pending}
-                className="glass-button w-full rounded-full bg-[var(--primary)] px-5 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+                className="glass-button w-full rounded-full bg-[var(--primary)] px-5 py-3 text-[var(--type-body-sm)] font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {pending ? "处理中..." : "继续"}
               </button>
             </form>
 
-            <div className="mt-5 rounded-[22px] bg-[var(--surface-container-low)] px-4 py-4 text-sm leading-7 text-[var(--foreground)]/62">
+            <div className="type-body-sm mt-5 rounded-[22px] bg-[var(--surface-container-low)] px-4 py-4 text-[var(--foreground)]/62">
               首次使用该邮箱时，默认昵称会根据邮箱前缀生成。
             </div>
 

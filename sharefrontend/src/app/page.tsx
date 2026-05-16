@@ -176,17 +176,6 @@ function SearchIcon() {
   );
 }
 
-function UserIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6">
-      <path
-        d="M12 4.5a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5ZM9.75 8.25a2.25 2.25 0 1 1 4.5 0 2.25 2.25 0 0 1-4.5 0Zm2.25 5.25c-3.59 0-6.5 2.24-6.5 5v.75h13v-.75c0-2.76-2.91-5-6.5-5Zm-4.88 4.25c.48-1.58 2.39-2.75 4.88-2.75 2.49 0 4.4 1.17 4.88 2.75H7.12Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
 function HeartIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
@@ -195,18 +184,6 @@ function HeartIcon() {
         fill="currentColor"
       />
     </svg>
-  );
-}
-
-function AccountEntry() {
-  return (
-    <Link
-      href="/login"
-      aria-label="登录"
-      className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--surface-container-low)] text-[var(--brand)] shadow-[0_12px_28px_-18px_rgba(241,93,135,0.55)] transition hover:scale-[1.03] hover:bg-[var(--surface-container)]"
-    >
-      <UserIcon />
-    </Link>
   );
 }
 
@@ -321,6 +298,15 @@ export default function LandingPage() {
     });
   }, [activeChip, deferredQuery, sourceCards]);
 
+  const quickStats = useMemo(
+    () => [
+      { label: "当前展示", value: `${filteredCards.length}` },
+      { label: "数据来源", value: liveCards.length > 0 ? "实时公开卡片" : "灵感示例库" },
+      { label: "筛选标签", value: activeChip },
+    ],
+    [activeChip, filteredCards.length, liveCards.length],
+  );
+
   const footerLinks = [
     { label: "关于我们", href: "/discover" },
     { label: "隐私政策", href: "/login" },
@@ -329,11 +315,11 @@ export default function LandingPage() {
   ];
 
   const footer = (
-    <footer className="relative z-10 border-t border-white/60 bg-[rgba(255,248,248,0.72)] px-6 py-10 backdrop-blur-md">
+    <footer className="relative z-10 border-t border-white/60 bg-[rgba(240,248,252,0.72)] px-6 py-10 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 text-center md:flex-row md:text-left">
-        <div className="text-lg font-black uppercase tracking-[0.14em] text-[var(--brand)]/65">CardShare</div>
+        <div className="type-h3 text-[var(--primary)]/72">CardShare</div>
 
-        <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-[var(--brand)]/55">
+        <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-[var(--primary)]/55">
           {footerLinks.map((item) => (
             <Link key={item.label} href={item.href} className="transition hover:text-[var(--brand-strong)]">
               {item.label}
@@ -341,54 +327,91 @@ export default function LandingPage() {
           ))}
         </div>
 
-        <div className="text-sm tracking-[0.12em] text-[var(--brand)]/55">© 2026 CardShare. 平台公开卡片首页。</div>
+        <div className="text-sm tracking-[0.12em] text-[var(--primary)]/55">© 2026 CardShare. 平台公开卡片首页。</div>
       </div>
     </footer>
   );
 
   return (
     <AppShell currentPath="/" footerSlot={footer}>
-      <section className="mx-auto max-w-7xl px-4 pb-16 pt-10 sm:px-6">
-        <div className="mx-auto max-w-3xl">
-          <div className="relative mx-auto">
-            <div className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-[var(--outline)]">
-              <SearchIcon />
-            </div>
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="搜索卡片、作者或标签..."
-              className="w-full rounded-full border border-[var(--outline-variant)]/80 bg-[rgba(255,240,242,0.88)] py-5 pl-16 pr-6 text-lg text-[var(--foreground)] outline-none ring-0 transition placeholder:text-[var(--on-surface-variant)]/85 focus:border-[var(--brand)] focus:bg-white"
-            />
-          </div>
-
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            {filterChips.map((chip) => {
-              const isActive = chip === activeChip;
-
-              return (
-                <button
-                  key={chip}
-                  type="button"
-                  onClick={() => setActiveChip(chip)}
-                  className={`rounded-full border px-6 py-2.5 text-base transition ${
-                    isActive
-                      ? "border-[var(--primary)] bg-[var(--primary)] text-white shadow-[0_12px_24px_-20px_rgba(120,85,94,0.85)]"
-                      : "border-[var(--outline-variant)]/70 bg-[var(--surface-container-low)] text-[var(--foreground)] hover:border-[var(--brand)]/50 hover:bg-white"
-                  }`}
+      <section className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6">
+        <div className="route-shell overflow-hidden rounded-[38px] p-5 sm:p-7 lg:p-9">
+          <div className="grid gap-8 lg:grid-cols-[1.16fr_0.84fr] lg:items-end">
+            <div>
+              <p className="type-overline text-[var(--primary)]/68">Creative Discovery</p>
+              <h1 className="type-hero mt-3 max-w-2xl text-[var(--foreground)]">
+                探索公开卡片
+                <span className="text-glow block text-[var(--primary)]">收藏灵感并连接同频创作者</span>
+              </h1>
+              <p className="type-body mt-4 max-w-2xl text-[var(--on-surface-variant)]/85">
+                卡片内容会从平台实时同步。你可以按标签筛选、按关键词搜索，也可以直接进入创作中心发布自己的作品。
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link
+                  href="/creator"
+                  className="glass-button rounded-full bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] px-6 py-3 text-sm font-semibold text-white"
                 >
-                  {chip}
-                </button>
-              );
-            })}
+                  进入创作中心
+                </Link>
+                <Link href="/discover" className="chip-pill rounded-full px-6 py-3 text-sm font-semibold text-[var(--foreground)]/78">
+                  浏览全部公开卡片
+                </Link>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+              {quickStats.map((item) => (
+                <div key={item.label} className="metric-pill rounded-[22px] px-4 py-4 text-center sm:text-left lg:text-center">
+                  <p className="type-meta uppercase text-[var(--foreground)]/48">{item.label}</p>
+                  <p className="type-h3 mt-2 text-[var(--foreground)]">{item.value}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="mt-5 flex items-center justify-center gap-3 text-sm text-[var(--on-surface-variant)]/85">
-            <span className="rounded-full bg-white/75 px-3 py-1 shadow-[0_8px_20px_-18px_rgba(120,85,94,0.45)]">
-              {loading ? "正在同步公开卡片" : liveCards.length > 0 ? "平台公开作品" : "灵感示例"}
-            </span>
-            <span>{filteredCards.length} 张卡片</span>
+          <div className="mt-7 lace-divider" />
+
+          <div className="mx-auto mt-7 max-w-4xl">
+            <div className="input-shell relative rounded-full">
+              <div className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-[var(--outline)]">
+                <SearchIcon />
+              </div>
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="搜索卡片、作者或标签..."
+                className="w-full rounded-full bg-transparent py-4 pl-16 pr-6 text-[var(--type-body)] text-[var(--foreground)] outline-none placeholder:text-[var(--on-surface-variant)]/82 sm:py-5"
+              />
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              {filterChips.map((chip) => {
+                const isActive = chip === activeChip;
+
+                return (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => setActiveChip(chip)}
+                    className={`rounded-full px-5 py-2.5 text-sm font-medium transition sm:text-base ${
+                      isActive
+                        ? "bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] text-white shadow-[0_14px_30px_-20px_rgba(31,122,152,0.6)]"
+                        : "chip-pill text-[var(--foreground)]/74 hover:text-[var(--brand-strong)]"
+                    }`}
+                  >
+                    {chip}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-3 text-sm text-[var(--on-surface-variant)]/85">
+              <span className="metric-pill rounded-full px-4 py-1.5">
+                {loading ? "正在同步公开卡片" : liveCards.length > 0 ? "平台公开作品" : "灵感示例"}
+              </span>
+              <span className="metric-pill rounded-full px-4 py-1.5">{filteredCards.length} 张卡片</span>
+            </div>
           </div>
         </div>
 
@@ -400,8 +423,8 @@ export default function LandingPage() {
 
         {filteredCards.length === 0 ? (
           <div className="mx-auto mt-12 max-w-3xl rounded-[34px] border border-white/70 bg-white/72 px-8 py-14 text-center shadow-[0_24px_60px_-38px_rgba(120,85,94,0.28)]">
-            <p className="text-3xl font-semibold text-[var(--foreground)]">没有找到匹配的卡片</p>
-            <p className="mt-4 text-base leading-7 text-[var(--on-surface-variant)]/80">
+            <p className="type-h2 text-[var(--foreground)]">没有找到匹配的卡片</p>
+            <p className="type-body mt-4 text-[var(--on-surface-variant)]/80">
               可以试试更宽泛的关键词，或者切回“全部”继续浏览平台公开内容。
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
@@ -424,7 +447,7 @@ export default function LandingPage() {
             </div>
           </div>
         ) : (
-          <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {filteredCards.map((card, index) => {
               const isImage = card.mimeType.startsWith("image/");
 
@@ -432,10 +455,10 @@ export default function LandingPage() {
                 <Link
                   key={card.id}
                   href={card.href}
-                  className="group overflow-hidden rounded-[34px] border border-white/70 bg-[rgba(255,241,243,0.82)] shadow-[0_24px_60px_-38px_rgba(120,85,94,0.28)] backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-[0_32px_80px_-38px_rgba(120,85,94,0.38)]"
+                  className="dream-card card-hover-lift fade-slide-in group rounded-[34px] p-3"
                   style={{ animationDelay: `${index * 70}ms` }}
                 >
-                  <div className={`overflow-hidden bg-[var(--surface-container)] ${topVisualClass(index)}`}>
+                  <div className={`overflow-hidden rounded-[24px] bg-[var(--surface-container)] ${topVisualClass(index)}`}>
                     {isImage ? (
                       <img
                         src={card.imageUrl}
@@ -443,23 +466,27 @@ export default function LandingPage() {
                         className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
                       />
                     ) : (
-                      <div className="flex h-full min-h-[220px] items-center justify-center bg-[linear-gradient(160deg,#fde2e6,#fad3fd)] px-6 text-center text-sm text-[var(--on-surface-variant)]">
+                      <div className="flex h-full min-h-[220px] items-center justify-center bg-[linear-gradient(160deg,#e8f4fa,#dff0f8)] px-6 text-center text-sm text-[var(--on-surface-variant)]">
                         {card.fileLabel}
                       </div>
                     )}
                   </div>
 
-                  <div className="flex min-h-[164px] flex-col px-5 pb-5 pt-4">
+                  <div className="flex min-h-[170px] flex-col px-3 pb-3 pt-4">
                     <div className="flex-1">
-                      <h2 className="text-[1.9rem] font-semibold tracking-[-0.03em] text-[var(--foreground)]">
-                        {card.title}
-                      </h2>
-                      <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--on-surface-variant)]/78">
-                        {card.description}
-                      </p>
+                      <h2 className="type-h3 text-[var(--foreground)]">{card.title}</h2>
+                      <p className="type-body-sm mt-2 line-clamp-2 text-[var(--on-surface-variant)]/78">{card.description}</p>
                     </div>
 
-                    <div className="mt-5 flex items-center justify-between gap-3">
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {card.tags.slice(0, 2).map((tag) => (
+                        <span key={`${card.id}-${tag}`} className="rounded-full bg-white/78 px-2.5 py-1 text-xs text-[var(--foreground)]/62">
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--primary-container)] text-xs font-semibold text-[var(--on-primary-container)]">
                           {card.creatorInitials}

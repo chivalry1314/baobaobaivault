@@ -343,14 +343,14 @@ export function ShareProfileSettings({
           <p className="mt-6 rounded-2xl border border-[#d9eed6] bg-[#f3fbf1] px-4 py-3 text-sm text-[#2f6d37]">{saveSuccess}</p>
         ) : null}
 
-        <div className="mt-8 rounded-[34px] border border-[rgba(236,197,207,0.76)] bg-[rgba(255,248,249,0.74)] p-5 sm:p-6">
+        <div className="mt-8 rounded-[34px] border border-[rgba(193,219,232,0.76)] bg-[rgba(251,255,255,0.9)] p-5 sm:p-6">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-5">
               <div className="overflow-hidden rounded-full border-[5px] border-white bg-white shadow-[0_20px_42px_-30px_rgba(120,85,94,0.45)]">
                 {draft.avatar ? (
                   <img src={draft.avatar} alt={draft.nickname} className="h-[96px] w-[96px] object-cover" />
                 ) : (
-                  <div className="flex h-[96px] w-[96px] items-center justify-center bg-[linear-gradient(135deg,#ffdbe5_0%,#f6e8ff_100%)] text-3xl font-semibold text-[var(--primary)]">
+                  <div className="flex h-[96px] w-[96px] items-center justify-center bg-[linear-gradient(135deg,#e5f5fc_0%,#d7eef9_100%)] text-3xl font-semibold text-[var(--primary)]">
                     {getInitials(user)}
                   </div>
                 )}
@@ -365,7 +365,7 @@ export function ShareProfileSettings({
             <button
               type="button"
               onClick={() => avatarInputRef.current?.click()}
-              className="rounded-full border border-[rgba(204,171,180,0.72)] bg-[linear-gradient(135deg,#f9dde3_0%,#fce7ee_100%)] px-8 py-3 text-[1.05rem] text-[var(--foreground)] shadow-[0_16px_34px_-24px_rgba(120,85,94,0.35)] transition hover:-translate-y-0.5"
+              className="rounded-full border border-[var(--outline-variant)] bg-[linear-gradient(135deg,#eef8fc_0%,#e1f1f9_100%)] px-8 py-3 text-[1.05rem] text-[var(--foreground)] shadow-[0_16px_34px_-24px_rgba(80,118,140,0.25)] transition hover:-translate-y-0.5"
             >
               修改
             </button>
@@ -385,7 +385,7 @@ export function ShareProfileSettings({
           <SectionTitle icon={<HeartIcon className="h-5 w-5" />}>基本信息</SectionTitle>
         </div>
 
-        <div className="mt-5 rounded-[34px] border border-[rgba(236,197,207,0.76)] bg-[rgba(255,248,249,0.7)] p-5 sm:p-6">
+        <div className="mt-5 rounded-[34px] border border-[rgba(193,219,232,0.76)] bg-[rgba(251,255,255,0.9)] p-5 sm:p-6">
           <label className="block">
             <span className="text-[1.1rem] text-[var(--foreground)]">昵称</span>
             <input
@@ -399,7 +399,7 @@ export function ShareProfileSettings({
                 setSaveError("");
                 setSaveSuccess("");
               }}
-              className="mt-4 w-full rounded-full border border-[rgba(204,171,180,0.72)] bg-white px-6 py-4 text-[1.15rem] outline-none transition focus:border-[var(--primary)]"
+              className="mt-4 w-full rounded-full border border-[var(--outline-variant)] bg-white px-6 py-4 text-[1.15rem] outline-none transition focus:border-[var(--primary)]"
               placeholder="请输入昵称"
               maxLength={40}
             />
@@ -430,7 +430,7 @@ export function ShareProfileSettings({
           <SectionTitle icon={<LandscapeIcon className="h-5 w-5" />}>背景封面</SectionTitle>
         </div>
 
-        <div className="mt-5 rounded-[34px] border border-[rgba(236,197,207,0.76)] bg-[rgba(255,248,249,0.7)] p-5 sm:p-6">
+        <div className="mt-5 rounded-[34px] border border-[rgba(193,219,232,0.76)] bg-[rgba(251,255,255,0.9)] p-5 sm:p-6">
           <div className="relative overflow-hidden rounded-[34px] border border-dashed border-[rgba(204,171,180,0.8)] bg-[linear-gradient(135deg,#7a9ae2_0%,#9b88df_45%,#f1a4bd_100%)]">
             {draft.coverImage ? (
               <img src={draft.coverImage} alt="背景封面" className="h-[220px] w-full object-cover sm:h-[260px]" />
@@ -463,7 +463,7 @@ export function ShareProfileSettings({
           <SectionTitle icon={<LockIcon className="h-5 w-5" />}>账号安全</SectionTitle>
         </div>
 
-        <div className="mt-5 overflow-hidden rounded-[34px] border border-[rgba(236,197,207,0.76)] bg-[rgba(255,248,249,0.7)]">
+        <div className="mt-5 overflow-hidden rounded-[34px] border border-[rgba(193,219,232,0.76)] bg-[rgba(251,255,255,0.9)]">
           <SecurityRow
             icon={<KeyIcon className="h-6 w-6" />}
             title="修改密码"
@@ -503,7 +503,7 @@ export function ShareProfileSettings({
             type="button"
             disabled={savePending}
             onClick={() => void handleSaveProfile()}
-            className="rounded-full bg-[linear-gradient(135deg,#7d5a63_0%,#956e76_100%)] px-10 py-3 text-[1.1rem] font-medium text-white shadow-[0_18px_38px_-24px_rgba(120,85,94,0.55)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-full bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] px-10 py-3 text-[1.1rem] font-medium text-white shadow-[0_18px_38px_-24px_rgba(31,122,152,0.52)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {savePending ? "正在保存..." : "保存修改"}
           </button>

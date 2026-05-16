@@ -258,11 +258,11 @@ export function ShareAccessCodeCardPicker() {
 
   return (
     <AppShell currentPath="/creator" footerSlot={footer}>
-      <div className="relative overflow-hidden bg-[linear-gradient(180deg,#fffafa_0%,#fff7f8_52%,#fff4f7_100%)]">
+      <div className="relative overflow-hidden bg-[linear-gradient(180deg,#f4fbff_0%,#f8fdff_52%,#f2faff_100%)]">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute left-[-8%] top-[8%] h-[26rem] w-[26rem] rounded-full bg-[rgba(255,214,226,0.34)] blur-[120px]" />
-          <div className="absolute right-[-10%] top-[18%] h-[28rem] w-[28rem] rounded-full bg-[rgba(244,220,255,0.28)] blur-[120px]" />
-          <div className="absolute bottom-[-16%] left-[22%] h-[28rem] w-[28rem] rounded-full bg-[rgba(255,232,238,0.32)] blur-[120px]" />
+          <div className="absolute left-[-8%] top-[8%] h-[26rem] w-[26rem] rounded-full bg-[rgba(176,232,249,0.36)] blur-[120px]" />
+          <div className="absolute right-[-10%] top-[18%] h-[28rem] w-[28rem] rounded-full bg-[rgba(203,234,249,0.3)] blur-[120px]" />
+          <div className="absolute bottom-[-16%] left-[22%] h-[28rem] w-[28rem] rounded-full bg-[rgba(248,219,230,0.24)] blur-[120px]" />
         </div>
 
         <section className="relative z-10 mx-auto max-w-[1520px] px-4 pb-20 pt-10 sm:px-6">
@@ -276,7 +276,7 @@ export function ShareAccessCodeCardPicker() {
                 <span>返回</span>
               </Link>
 
-              <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/84 px-4 py-2 text-sm font-medium text-[#ef648f] shadow-[0_18px_38px_-28px_rgba(120,85,94,0.25)]">
+              <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/84 px-4 py-2 text-sm font-medium text-[var(--primary)] shadow-[0_18px_38px_-28px_rgba(80,118,140,0.22)]">
                 <SparkleIcon className="h-4.5 w-4.5" />
                 <span>创作工作室</span>
               </div>
@@ -323,7 +323,7 @@ export function ShareAccessCodeCardPicker() {
                             setFilterOpen(false);
                           }}
                           className={`flex w-full items-start gap-3 rounded-[22px] px-4 py-3 text-left transition ${
-                            active ? "bg-[rgba(255,235,241,0.96)] text-[var(--brand-strong)]" : "hover:bg-[rgba(255,244,247,0.92)]"
+                            active ? "bg-[rgba(221,241,250,0.96)] text-[var(--primary)]" : "hover:bg-[rgba(240,249,253,0.92)]"
                           }`}
                         >
                           <span
@@ -347,7 +347,7 @@ export function ShareAccessCodeCardPicker() {
                   type="button"
                   onClick={() => setViewMode("grid")}
                   className={`inline-flex h-12 w-12 items-center justify-center rounded-full transition ${
-                    viewMode === "grid" ? "bg-[rgba(255,232,238,0.96)] text-[var(--brand-strong)]" : "text-[var(--foreground)]/52"
+                    viewMode === "grid" ? "bg-[rgba(221,241,250,0.96)] text-[var(--primary)]" : "text-[var(--foreground)]/52"
                   }`}
                   aria-label="网格视图"
                 >
@@ -357,7 +357,7 @@ export function ShareAccessCodeCardPicker() {
                   type="button"
                   onClick={() => setViewMode("list")}
                   className={`inline-flex h-12 w-12 items-center justify-center rounded-full transition ${
-                    viewMode === "list" ? "bg-[rgba(255,232,238,0.96)] text-[var(--brand-strong)]" : "text-[var(--foreground)]/52"
+                    viewMode === "list" ? "bg-[rgba(221,241,250,0.96)] text-[var(--primary)]" : "text-[var(--foreground)]/52"
                   }`}
                   aria-label="列表视图"
                 >

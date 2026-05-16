@@ -207,6 +207,29 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
         unlimited,
       });
 
+      if (
+        isWizardFlow &&
+        detail &&
+        (detail.card.visibility !== "public" || detail.card.status !== "published")
+      ) {
+        const updateCardResponse = await shareApi.updateCard(cardId, {
+          title: detail.card.title,
+          description: detail.card.description,
+          visibility: "public",
+          status: "published",
+        });
+
+        setDetail((current) => {
+          if (!current) {
+            return current;
+          }
+          return {
+            ...current,
+            card: updateCardResponse.card,
+          };
+        });
+      }
+
       const nextConfig = response.config;
       setConfig(nextConfig);
       setCode(nextConfig.code);
@@ -241,18 +264,18 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
 
   return (
     <AppShell currentPath="/creator" footerSlot={footer}>
-      <div className="relative overflow-hidden bg-[linear-gradient(180deg,#fff8f9_0%,#fff7f8_48%,#fff5f7_100%)]">
+      <div className="relative overflow-hidden bg-[linear-gradient(180deg,#f4fbff_0%,#f8fdff_48%,#f2faff_100%)]">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute left-[-10%] top-[10%] h-[28rem] w-[28rem] rounded-full bg-[rgba(255,220,228,0.38)] blur-[120px]" />
-          <div className="absolute right-[-8%] top-[14%] h-[24rem] w-[24rem] rounded-full bg-[rgba(243,220,255,0.34)] blur-[120px]" />
-          <div className="absolute left-[18%] bottom-[8%] h-[24rem] w-[24rem] rounded-full bg-[rgba(255,235,240,0.3)] blur-[120px]" />
+          <div className="absolute left-[-10%] top-[10%] h-[28rem] w-[28rem] rounded-full bg-[rgba(176,232,249,0.38)] blur-[120px]" />
+          <div className="absolute right-[-8%] top-[14%] h-[24rem] w-[24rem] rounded-full bg-[rgba(203,234,249,0.34)] blur-[120px]" />
+          <div className="absolute left-[18%] bottom-[8%] h-[24rem] w-[24rem] rounded-full bg-[rgba(248,219,230,0.22)] blur-[120px]" />
         </div>
 
         <section className="relative z-10 mx-auto max-w-[1460px] px-4 pb-16 pt-10 sm:px-6">
           {isWizardFlow ? (
             <div className="mb-8 flex flex-wrap items-center gap-4 rounded-[32px] border border-white/80 bg-white/76 px-5 py-4 shadow-[0_20px_40px_-34px_rgba(120,85,94,0.24)]">
               <StepPill active={false} label="STEP01" title="选择分享卡片" icon={<HeartIcon className="h-5 w-5" />} />
-              <div className="hidden h-px w-12 bg-[rgba(223,198,206,0.9)] lg:block" />
+              <div className="hidden h-px w-12 bg-[rgba(190,216,228,0.9)] lg:block" />
               <StepPill active label="STEP02" title="配置提取规则" icon={<SettingsIcon className="h-5 w-5" />} />
             </div>
           ) : null}
@@ -260,7 +283,7 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
           <div className="flex items-start gap-4">
             <Link
               href={backHref}
-              className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[rgba(241,193,207,0.78)] bg-white/82 text-[var(--foreground)] shadow-[0_16px_36px_-28px_rgba(120,85,94,0.35)] transition hover:-translate-y-0.5 hover:border-[var(--primary)] hover:text-[var(--primary)]"
+              className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[var(--outline-variant)] bg-white/82 text-[var(--foreground)] shadow-[0_16px_36px_-28px_rgba(80,118,140,0.3)] transition hover:-translate-y-0.5 hover:border-[var(--primary)] hover:text-[var(--primary)]"
             >
               <BackIcon className="h-6 w-6" />
             </Link>
@@ -285,13 +308,13 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
 
           {!loading && detail ? (
             <div className="mt-10 grid gap-8 xl:grid-cols-[380px_minmax(0,1fr)]">
-              <section className="rounded-[38px] border border-[rgba(241,193,207,0.72)] bg-[rgba(255,251,252,0.88)] p-6 shadow-[0_30px_70px_-46px_rgba(120,85,94,0.28)]">
+              <section className="rounded-[38px] border border-[rgba(193,219,232,0.72)] bg-[rgba(251,255,255,0.9)] p-6 shadow-[0_30px_70px_-46px_rgba(80,118,140,0.26)]">
                 <div className="flex items-center gap-3 text-[1.15rem] font-medium text-[var(--foreground)]">
                   <CardIcon className="h-6 w-6 text-[var(--primary)]" />
                   <span>目标卡片</span>
                 </div>
 
-                <div className="mt-6 rounded-[32px] bg-[linear-gradient(180deg,rgba(255,248,250,0.92),rgba(255,244,247,0.98))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
+                <div className="mt-6 rounded-[32px] bg-[linear-gradient(180deg,rgba(241,250,254,0.92),rgba(247,253,255,0.98))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
                   <div className="relative overflow-hidden rounded-[34px] bg-[linear-gradient(145deg,#121826_0%,#1c2434_100%)]">
                     {detail.card.mimeType.startsWith("image/") ? (
                       <img src={detail.card.previewUrl} alt={detail.card.title} className="h-[476px] w-full object-cover" />
@@ -316,7 +339,7 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
                 </div>
               </section>
 
-              <section className="rounded-[38px] border border-[rgba(241,193,207,0.72)] bg-[rgba(255,251,252,0.88)] p-8 shadow-[0_30px_70px_-46px_rgba(120,85,94,0.28)] sm:p-10">
+              <section className="rounded-[38px] border border-[rgba(193,219,232,0.72)] bg-[rgba(251,255,255,0.9)] p-8 shadow-[0_30px_70px_-46px_rgba(80,118,140,0.26)] sm:p-10">
                 {success ? (
                   <div className="rounded-[22px] border border-[#b5dfc8] bg-[#f0fff4] px-4 py-3 text-sm text-[#166534]">{success}</div>
                 ) : null}
@@ -338,7 +361,7 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
                     <button
                       type="button"
                       onClick={() => setCode(generateAccessCode())}
-                      className="inline-flex items-center justify-center gap-3 rounded-full bg-[linear-gradient(135deg,#f4d8ff_0%,#efcaff_100%)] px-7 py-5 text-xl font-medium text-[var(--brand-strong)] shadow-[0_18px_36px_-28px_rgba(214,113,145,0.42)] transition hover:-translate-y-0.5"
+                      className="inline-flex items-center justify-center gap-3 rounded-full bg-[linear-gradient(135deg,#ecf8fd_0%,#dff2fb_100%)] px-7 py-5 text-xl font-medium text-[var(--primary)] shadow-[0_18px_36px_-28px_rgba(31,122,152,0.3)] transition hover:-translate-y-0.5"
                     >
                       <RefreshIcon className="h-6 w-6" />
                       <span>随机生成</span>
@@ -363,8 +386,8 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
                           onClick={() => setExpireDays(option.value)}
                           className={`relative rounded-[28px] border px-6 py-6 text-center transition ${
                             active
-                              ? "border-[rgba(125,90,115,0.9)] bg-[rgba(255,240,244,0.9)] shadow-[0_18px_32px_-28px_rgba(125,90,115,0.42)]"
-                              : "border-[rgba(220,195,201,0.88)] bg-white/84 hover:border-[rgba(125,90,115,0.56)]"
+                              ? "border-[rgba(31,122,152,0.85)] bg-[rgba(233,247,253,0.9)] shadow-[0_18px_32px_-28px_rgba(31,122,152,0.32)]"
+                              : "border-[rgba(190,216,228,0.88)] bg-white/84 hover:border-[rgba(31,122,152,0.56)]"
                           }`}
                         >
                           {active ? <HeartMiniIcon className="absolute right-4 top-4 h-5 w-5 text-[var(--brand-strong)]" /> : null}
@@ -386,7 +409,7 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
                         type="button"
                         onClick={() => setUnlimited((current) => !current)}
                         className={`relative h-9 w-16 rounded-full transition ${
-                          unlimited ? "bg-[rgba(244,196,210,0.88)]" : "bg-[rgba(232,225,228,0.92)]"
+                          unlimited ? "bg-[rgba(179,228,246,0.88)]" : "bg-[rgba(228,236,241,0.92)]"
                         }`}
                         aria-pressed={unlimited}
                       >
@@ -427,7 +450,7 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
                     type="button"
                     disabled={pending}
                     onClick={() => void handleSubmit()}
-                    className="inline-flex min-w-[320px] items-center justify-center gap-3 rounded-full bg-[linear-gradient(135deg,#7d5a73_0%,#8d6780_100%)] px-8 py-6 text-[2rem] font-semibold text-white shadow-[0_24px_40px_-26px_rgba(125,90,115,0.82)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex min-w-[320px] items-center justify-center gap-3 rounded-full bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] px-8 py-6 text-[2rem] font-semibold text-white shadow-[0_24px_40px_-26px_rgba(31,122,152,0.56)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <span>{pending ? "保存中..." : "确认并生成提取码"}</span>
                     <CheckIcon className="h-7 w-7" />
