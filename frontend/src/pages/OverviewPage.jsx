@@ -1,78 +1,54 @@
-﻿import { Link } from "react-router-dom";
-import * as Icons from "lucide-react";
+import { Link } from "react-router-dom";
+import { History, KeyRound, LogOut, Mail, RefreshCw, ShieldCheck, Upload, User, Users } from "lucide-react";
 import Panel from "../components/Panel";
 
-export default function OverviewPage({ user, tenant, refreshAll, logout, busy }) {
-  const StatIcon = ({ name, color }) => {
-    const LucideIcon = Icons[name];
-    return LucideIcon ? <LucideIcon size={20} color={color} /> : null;
-  };
-
-  function renderProgressBar(used, max, color) {
-    if (!max) return null;
-    const percent = Math.min(Math.round((used / max) * 100), 100);
-    return (
-      <div className="progress-wrap">
-        <div className="progress-info">
-          <span>使用率</span>
-          <span>{percent}%</span>
-        </div>
-        <div className="progress-track">
-          <div className="progress-fill" style={{ width: `${percent}%`, background: color }} />
-        </div>
-      </div>
-    );
-  }
-
+export default function OverviewPage({ user, refreshAll, logout, busy }) {
   return (
     <div className="grid one">
       <section className="grid three">
         <Panel title="快捷入口" subtitle="常用功能快速访问">
           <div className="shortcut-grid">
             <Link to="/app/storage-objects" className="btn primary">
-              <Icons.Upload size={18} />
+              <Upload size={18} />
               <span>上传对象</span>
             </Link>
             <div className="toolbar-actions">
               <button className="btn ghost" type="button" onClick={() => void refreshAll()} disabled={busy}>
-                <Icons.RefreshCw size={16} className={busy ? "spin" : ""} />
+                <RefreshCw size={16} className={busy ? "spin" : ""} />
                 刷新
               </button>
               <button className="btn danger" type="button" onClick={logout}>
-                <Icons.LogOut size={16} />
+                <LogOut size={16} />
                 退出
               </button>
             </div>
           </div>
         </Panel>
 
-        <Panel title="系统状态" subtitle="实时配额与使用情况" style={{ gridColumn: 'span 2' }}>
+        <Panel title="系统状态" subtitle="账户级运行状态" style={{ gridColumn: "span 2" }}>
           <div className="grid three mini-gap">
             <div className="stat-card">
               <div className="stat-card-header">
-                <span className="stat-label">已用存储</span>
-                <StatIcon name="HardDrive" color="var(--brand)" />
+                <span className="stat-label">当前用户</span>
+                <User size={20} color="var(--brand)" />
               </div>
-              <div className="stat-value">{(tenant?.used_storage || 0).toLocaleString()}</div>
-              {renderProgressBar(tenant?.used_storage, tenant?.max_storage, 'var(--brand)')}
+              <div className="stat-value">{user?.username || "-"}</div>
             </div>
 
             <div className="stat-card">
               <div className="stat-card-header">
-                <span className="stat-label">用户数量</span>
-                <StatIcon name="Users" color="var(--teal)" />
+                <span className="stat-label">绑定角色</span>
+                <ShieldCheck size={20} color="var(--teal)" />
               </div>
-              <div className="stat-value">{(tenant?.used_users || 0).toLocaleString()}</div>
-              {renderProgressBar(tenant?.used_users, tenant?.max_users, 'var(--teal)')}
+              <div className="stat-value">{Array.isArray(user?.roles) ? user.roles.length : 0}</div>
             </div>
 
             <div className="stat-card">
               <div className="stat-card-header">
-                <span className="stat-label">命名空间</span>
-                <StatIcon name="Layers" color="var(--brand-2)" />
+                <span className="stat-label">邮箱</span>
+                <Mail size={20} color="var(--brand-2)" />
               </div>
-              <div className="stat-value">{(tenant?.used_namespaces || 0).toLocaleString()}</div>
-              {renderProgressBar(tenant?.used_namespaces, tenant?.max_namespaces, 'var(--brand-2)')}
+              <div className="stat-value">{user?.email || "-"}</div>
             </div>
           </div>
         </Panel>
@@ -81,7 +57,7 @@ export default function OverviewPage({ user, tenant, refreshAll, logout, busy })
       <section className="grid two">
         <Panel title="最近操作" subtitle="查看审计日志明细">
           <div className="audit-placeholder">
-            <Icons.History size={48} color="var(--line)" />
+            <History size={48} color="var(--line)" />
             <p className="muted">点击下方按钮查看完整的操作审计记录</p>
             <Link className="btn ghost" to="/app/audit">
               查看审计日志
@@ -94,11 +70,11 @@ export default function OverviewPage({ user, tenant, refreshAll, logout, busy })
             <div className="mini-row">
               <div className="identity-row">
                 <div className="identity-icon brand">
-                  <Icons.Users size={20} color="var(--brand)" />
+                  <Users size={20} color="var(--brand)" />
                 </div>
                 <div>
                   <strong>用户管理</strong>
-                  <small>添加或删除租户成员</small>
+                  <small>新增、编辑和禁用用户</small>
                 </div>
               </div>
               <Link className="btn small ghost" to="/app/iam-users">
@@ -108,7 +84,7 @@ export default function OverviewPage({ user, tenant, refreshAll, logout, busy })
             <div className="mini-row">
               <div className="identity-row">
                 <div className="identity-icon teal">
-                  <Icons.ShieldCheck size={20} color="var(--teal)" />
+                  <KeyRound size={20} color="var(--teal)" />
                 </div>
                 <div>
                   <strong>角色授权</strong>
@@ -125,4 +101,3 @@ export default function OverviewPage({ user, tenant, refreshAll, logout, busy })
     </div>
   );
 }
-

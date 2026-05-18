@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/share/app-shell";
-import { AuthCard } from "@/components/share/auth-card";
+import { AuthRedirect } from "@/components/share/auth-redirect";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type { CardAccessCodeConfig, CardDetailResponse, ExternalSessionUser } from "@/lib/shared";
 
@@ -255,11 +255,7 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
   }
 
   if (!currentUser) {
-    return (
-      <div className="min-h-screen bg-[var(--background)] px-4 py-10 sm:px-6">
-        <AuthCard afterSuccess={afterSuccessHref} />
-      </div>
-    );
+    return <AuthRedirect nextPath={afterSuccessHref} />;
   }
 
   return (

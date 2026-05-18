@@ -1,8 +1,7 @@
-﻿import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 export default function useAppWorkspaceController({
   token,
-  tenantID,
   uiSettings,
   act,
   setNotice,
@@ -12,7 +11,6 @@ export default function useAppWorkspaceController({
   iam,
   storage,
   audit,
-  loadTenant,
 }) {
   const refreshingRef = useRef(false);
 
@@ -22,7 +20,6 @@ export default function useAppWorkspaceController({
     try {
       await act(async () => {
         await Promise.all([
-          loadTenant(),
           iam.loadUsers(),
           iam.loadPermissions(),
           iam.loadRoles(),
@@ -41,7 +38,7 @@ export default function useAppWorkspaceController({
   useEffect(() => {
     if (!token) return;
     void refreshAll();
-  }, [token, tenantID]);
+  }, [token]);
 
   useEffect(() => {
     if (!storage.selectedNamespaceID && iam.namespaces.length > 0) {

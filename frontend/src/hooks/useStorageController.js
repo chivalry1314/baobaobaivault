@@ -3,12 +3,7 @@ import { api } from "../api";
 import { emptyObjectForm, emptyStorageForm } from "../constants/forms";
 import { parseJson } from "../utils/data";
 
-function buildTenantParams(isPlatformAdmin, tenantID) {
-  if (!isPlatformAdmin || !tenantID) return undefined;
-  return { tenant_id: tenantID };
-}
-
-export default function useStorageController({ token, tenantID, isPlatformAdmin, act, setNotice, loadTenant }) {
+export default function useStorageController({ token, act, setNotice, onStorageChanged }) {
   const [storageConfigs, setStorageConfigs] = useState([]);
   const [storageForm, setStorageForm] = useState(emptyStorageForm);
   const [objectForm, setObjectForm] = useState(emptyObjectForm);
@@ -30,10 +25,10 @@ export default function useStorageController({ token, tenantID, isPlatformAdmin,
     setUploadFile(null);
     setPresignUrl("");
     setPresignPutInfo(null);
-  }, [tenantID]);
+  }, [token]);
 
   async function loadStorageConfigs() {
-    const list = await api.listStorageConfigs(token, buildTenantParams(isPlatformAdmin, tenantID));
+    const list = await api.listStorageConfigs(token);
     setStorageConfigs(Array.isArray(list) ? list : []);
   }
 
@@ -61,23 +56,19 @@ export default function useStorageController({ token, tenantID, isPlatformAdmin,
     event.preventDefault();
     const ok = await act(
       () =>
-        api.createStorageConfig(
-          token,
-          {
-            name: storageForm.name,
-            provider: storageForm.provider,
-            endpoint: storageForm.endpoint,
-            region: storageForm.region,
-            bucket: storageForm.bucket,
-            access_key: storageForm.accessKey,
-            secret_key: storageForm.secretKey,
-            path_style: storageForm.pathStyle,
-            is_default: storageForm.isDefault,
-            extra_config: storageForm.extraConfig,
-          },
-          buildTenantParams(isPlatformAdmin, tenantID)
-        ),
-      "存储配置已创建"
+        api.createStorageConfig(token, {
+          name: storageForm.name,
+          provider: storageForm.provider,
+          endpoint: storageForm.endpoint,
+          region: storageForm.region,
+          bucket: storageForm.bucket,
+          access_key: storageForm.accessKey,
+          secret_key: storageForm.secretKey,
+          path_style: storageForm.pathStyle,
+          is_default: storageForm.isDefault,
+          extra_config: storageForm.extraConfig,
+        }),
+      "存储配置创建成功"
     );
     if (ok) {
       setStorageForm(emptyStorageForm);
@@ -86,8 +77,14 @@ export default function useStorageController({ token, tenantID, isPlatformAdmin,
   }
 
   async function onDeleteStorageConfig(id) {
-    const ok = await act(() => api.deleteStorageConfig(token, id, buildTenantParams(isPlatformAdmin, tenantID)), "存储配置已删除");
+    const ok = await act(() => api.deleteStorageConfig(token, id), "存储配置已删除");
     if (ok) await loadStorageConfigs();
+  }
+
+  async function notifyStorageChanged() {
+    if (typeof onStorageChanged === "function") {
+      await onStorageChanged();
+    }
   }
 
   async function onUploadObject(event) {
@@ -108,7 +105,7 @@ export default function useStorageController({ token, tenantID, isPlatformAdmin,
       setUploadFile(null);
       setPresignPutInfo(null);
       await loadObjects(selectedNamespaceID, objectPrefix);
-      await loadTenant();
+      await notifyStorageChanged();
     }
   }
 
@@ -120,7 +117,7 @@ export default function useStorageController({ token, tenantID, isPlatformAdmin,
         setObjectVersions([]);
       }
       await loadObjects(selectedNamespaceID, objectPrefix);
-      await loadTenant();
+      await notifyStorageChanged();
     }
   }
 
@@ -183,7 +180,7 @@ export default function useStorageController({ token, tenantID, isPlatformAdmin,
     if ((objectForm.metadata || "").trim()) {
       metadata = parseJson(objectForm.metadata, null);
       if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
-        return setNotice({ type: "error", text: "元数据必须是 JSON 对象" });
+        return setNotice({ type: "error", text: "metadata 必须是 JSON 对象" });
       }
     }
 
@@ -201,7 +198,7 @@ export default function useStorageController({ token, tenantID, isPlatformAdmin,
 
     if (ok) {
       await loadObjects(selectedNamespaceID, objectPrefix);
-      await loadTenant();
+      await notifyStorageChanged();
       if (selectedObjectKey === presignPutInfo.key) {
         await loadObjectVersions(selectedNamespaceID, selectedObjectKey);
       }

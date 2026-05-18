@@ -1,5 +1,5 @@
-﻿import { useState, useMemo } from "react";
-import * as Icons from "lucide-react";
+import { useMemo, useState } from "react";
+import { Filter, History, Search } from "lucide-react";
 import Panel from "../components/Panel";
 import Pagination, { PAGE_SIZE } from "../components/Pagination";
 
@@ -14,9 +14,6 @@ function buildAuditContextRows(log, detail) {
   }
   if (detail.auth_type) {
     rows.push({ label: "认证方式", value: String(detail.auth_type) });
-  }
-  if (log.tenant_id) {
-    rows.push({ label: "租户 ID", value: String(log.tenant_id) });
   }
   if (log.user_id) {
     rows.push({ label: "用户 ID", value: String(log.user_id) });
@@ -57,29 +54,37 @@ export default function AuditPage({
         <div className="section-header">
           <span />
           <button className="btn small ghost" type="button" onClick={() => setShowFilter((v) => !v)}>
-            <Icons.Filter size={16} />
+            <Filter size={16} />
             {showFilter ? "收起筛选" : "筛选条件"}
           </button>
         </div>
 
-        {showFilter && (
+        {showFilter ? (
           <form className="form-grid compact spaced-block" onSubmit={onApplyAuditFilter}>
             <div className="grid two mini-gap">
-              <input placeholder="动作 (GET/POST...)" value={auditFilter.action} onChange={(e) => setAuditFilter((v) => ({ ...v, action: e.target.value }))} />
-              <input placeholder="资源路径" value={auditFilter.resource} onChange={(e) => setAuditFilter((v) => ({ ...v, resource: e.target.value }))} />
+              <input placeholder="动作 (GET/POST...)" value={auditFilter.action} onChange={(event) => setAuditFilter((v) => ({ ...v, action: event.target.value }))} />
+              <input placeholder="资源路径" value={auditFilter.resource} onChange={(event) => setAuditFilter((v) => ({ ...v, resource: event.target.value }))} />
             </div>
             <div className="grid two mini-gap">
-              <input placeholder="状态 (success/failed)" value={auditFilter.status} onChange={(e) => setAuditFilter((v) => ({ ...v, status: e.target.value }))} />
-              <input placeholder="用户 ID" value={auditFilter.user_id} onChange={(e) => setAuditFilter((v) => ({ ...v, user_id: e.target.value }))} />
+              <input
+                placeholder="状态 (success/failed)"
+                value={auditFilter.status}
+                onChange={(event) => setAuditFilter((v) => ({ ...v, status: event.target.value }))}
+              />
+              <input placeholder="用户 ID" value={auditFilter.user_id} onChange={(event) => setAuditFilter((v) => ({ ...v, user_id: event.target.value }))} />
             </div>
-            <input placeholder="资源唯一标识 (Resource ID)" value={auditFilter.resource_id} onChange={(e) => setAuditFilter((v) => ({ ...v, resource_id: e.target.value }))} />
+            <input
+              placeholder="资源唯一标识 (Resource ID)"
+              value={auditFilter.resource_id}
+              onChange={(event) => setAuditFilter((v) => ({ ...v, resource_id: event.target.value }))}
+            />
             <div className="grid two mini-gap">
-              <input placeholder="开始时间 (YYYY-MM-DD)" value={auditFilter.from} onChange={(e) => setAuditFilter((v) => ({ ...v, from: e.target.value }))} />
-              <input placeholder="结束时间 (YYYY-MM-DD)" value={auditFilter.to} onChange={(e) => setAuditFilter((v) => ({ ...v, to: e.target.value }))} />
+              <input placeholder="开始时间 (YYYY-MM-DD)" value={auditFilter.from} onChange={(event) => setAuditFilter((v) => ({ ...v, from: event.target.value }))} />
+              <input placeholder="结束时间 (YYYY-MM-DD)" value={auditFilter.to} onChange={(event) => setAuditFilter((v) => ({ ...v, to: event.target.value }))} />
             </div>
             <div className="toolbar-actions">
               <button className="btn primary" type="submit" disabled={busy}>
-                <Icons.Search size={16} />
+                <Search size={16} />
                 <span>应用查询</span>
               </button>
               <button className="btn ghost" type="button" onClick={() => void onResetAuditFilter()} disabled={busy}>
@@ -87,7 +92,7 @@ export default function AuditPage({
               </button>
             </div>
           </form>
-        )}
+        ) : null}
 
         {pagedLogs.length > 0 ? (
           <>
@@ -102,9 +107,11 @@ export default function AuditPage({
                 return (
                   <div className="mini-row audit-row" key={x.id}>
                     <div>
-                      <strong>{x.action?.toUpperCase()} {x.resource}</strong>
+                      <strong>
+                        {x.action?.toUpperCase()} {x.resource}
+                      </strong>
                       <div className="badge-row">
-                        <span className={`badge ${x.status === 'success' ? 'success' : 'error'}`}>{x.status}</span>
+                        <span className={`badge ${x.status === "success" ? "success" : "error"}`}>{x.status}</span>
                         <small>{x.created_at}</small>
                       </div>
                       {detail.duration_ms !== undefined ? <small>耗时: {detail.duration_ms}ms</small> : null}
@@ -124,7 +131,9 @@ export default function AuditPage({
                           {changes.map((item, idx) => (
                             <div className="audit-change" key={`${x.id}-chg-${idx}`}>
                               <code>{item.field || `字段_${idx}`}</code>
-                              <span>{formatAuditValue(item.before)} {" -> "} {formatAuditValue(item.after)}</span>
+                              <span>
+                                {formatAuditValue(item.before)} {" -> "} {formatAuditValue(item.after)}
+                              </span>
                             </div>
                           ))}
                         </div>
@@ -159,7 +168,7 @@ export default function AuditPage({
           </>
         ) : (
           <div className="empty-state">
-            <Icons.History size={40} />
+            <History size={40} />
             <p>暂无审计日志</p>
           </div>
         )}

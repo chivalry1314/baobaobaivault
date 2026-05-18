@@ -12,7 +12,6 @@ import (
 // Claims carries authentication identity fields.
 type Claims struct {
 	UserID   string `json:"user_id"`
-	TenantID string `json:"tenant_id"`
 	Username string `json:"username"`
 	jwt.RegisteredClaims
 }
@@ -36,13 +35,12 @@ func NewJWTManager(cfg config.JWTConfig) *JWTManager {
 	}
 }
 
-func (m *JWTManager) GenerateToken(userID, tenantID, username string) (string, time.Time, error) {
+func (m *JWTManager) GenerateToken(userID, username string) (string, time.Time, error) {
 	now := time.Now()
 	expireAt := now.Add(m.ttl)
 
 	claims := &Claims{
 		UserID:   userID,
-		TenantID: tenantID,
 		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    m.issuer,

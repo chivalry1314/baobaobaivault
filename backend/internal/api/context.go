@@ -8,7 +8,6 @@ import (
 
 const (
 	ctxUserID      = "user_id"
-	ctxTenantID    = "tenant_id"
 	ctxUsername    = "username"
 	ctxAuthType    = "auth_type"
 	ctxAuditBefore = "audit_before"
@@ -43,12 +42,6 @@ func jsonError(c *gin.Context, status int, err error) {
 		err = http.ErrAbortHandler
 	}
 	c.JSON(status, apiError{Error: err.Error()})
-}
-
-func getTenantID(c *gin.Context) string {
-	v, _ := c.Get(ctxTenantID)
-	s, _ := v.(string)
-	return s
 }
 
 func getUserID(c *gin.Context) string {

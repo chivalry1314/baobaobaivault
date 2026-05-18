@@ -1,9 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  --font-be-vietnam-pro: var(--font-body), "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
-  --font-plus-jakarta-sans: var(--font-display), var(--font-body), "PingFang SC", "Microsoft YaHei", sans-serif;
-  --font-space-grotesk: var(--font-display), var(--font-body), "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-be-vietnam-pro: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC",
+    "WenQuanYi Micro Hei", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-plus-jakarta-sans: var(--font-be-vietnam-pro);
+  --font-space-grotesk: var(--font-be-vietnam-pro);
 
   /* Fresh translucent palette: blue/teal base with soft rose accents */
   --background: #f4fbff;

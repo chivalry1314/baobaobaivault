@@ -34,7 +34,6 @@ type Handler struct {
 	db               *gorm.DB
 	redis            *goredis.Client
 	logger           *zap.Logger
-	tenantService    *service.TenantService
 	userService      *service.UserService
 	roleService      *service.RoleService
 	namespaceService *service.NamespaceService
@@ -64,7 +63,6 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, logger *zap
 		db:               db,
 		redis:            rdb,
 		logger:           logger,
-		tenantService:    service.NewTenantService(db, logger),
 		userService:      service.NewUserService(db, logger, cfg.JWT.Secret),
 		roleService:      service.NewRoleService(db, logger),
 		namespaceService: service.NewNamespaceService(db, logger),
@@ -72,6 +70,13 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, logger *zap
 		baiduService:     service.NewBaiduConnectorService(db, logger, cfg.Baidu, cfg.JWT.Secret),
 		registry:         registry,
 		shareService:     service.NewShareService(db, logger, filepath.Join("storage", "share", "files")),
+	}
+
+	if _, err := h.roleService.EnsureDefaultAdminRole(context.Background()); err != nil {
+		logger.Warn("failed to ensure admin role", zap.Error(err))
+	}
+	if err := h.autoBootstrapAdmin(context.Background()); err != nil {
+		logger.Warn("failed to auto bootstrap admin user", zap.Error(err))
 	}
 
 	if cfg.WebPush.Enabled {
@@ -101,12 +106,6 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, logger *zap
 		}, h.webPushRepo, logger)
 	}
 
-	if _, err := h.tenantService.EnsurePlatformAdminRole(context.Background()); err != nil {
-		logger.Warn("failed to ensure platform admin role", zap.Error(err))
-	}
-	if err := h.autoBootstrapPlatformAdmin(context.Background()); err != nil {
-		logger.Warn("failed to auto bootstrap platform admin user", zap.Error(err))
-	}
 	authMiddleware := NewAuthMiddleware(db, h.userService)
 
 	r := gin.New()
@@ -131,15 +130,13 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, logger *zap
 		v1.POST("/auth/login", h.login)
 		v1.GET("/connectors/baidu/callback", h.baiduOAuthCallback)
 		if cfg.Server.AllowPublicBootstrap {
-			v1.POST("/bootstrap/tenant-admin", h.bootstrapTenantAdmin)
-			v1.POST("/bootstrap/platform-admin", h.bootstrapPlatformAdmin)
+			v1.POST("/bootstrap/admin", h.bootstrapAdmin)
 		} else {
-			v1.POST("/bootstrap/tenant-admin", h.bootstrapTenantAdminDisabled)
-			v1.POST("/bootstrap/platform-admin", h.bootstrapPlatformAdminDisabled)
+			v1.POST("/bootstrap/admin", h.bootstrapAdminDisabled)
 		}
 
 		authed := v1.Group("")
-		authed.Use(authMiddleware.RequireAuth(), h.auditLogMiddleware(), h.apiCallQuotaMiddleware())
+		authed.Use(authMiddleware.RequireAuth(), h.auditLogMiddleware())
 		{
 			authed.GET("/connectors/baidu/status", h.getBaiduConnectorStatus)
 			authed.GET("/connectors/baidu/auth-url", h.getBaiduConnectorAuthURL)
@@ -153,12 +150,6 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, logger *zap
 			authed.GET("/auth/aksk", h.listAKSK)
 			authed.DELETE("/auth/aksk/:id", h.revokeAKSK)
 			authed.PUT("/users/me/password", h.changePassword)
-
-			authed.GET("/tenants", authMiddleware.RequirePermission("tenant", "list"), h.listTenants)
-			authed.GET("/tenants/:id", authMiddleware.RequirePermission("tenant", "read"), h.getTenant)
-			authed.POST("/tenants", authMiddleware.RequirePermission("tenant", "create"), h.createTenant)
-			authed.PUT("/tenants/:id", authMiddleware.RequirePermission("tenant", "update"), h.updateTenant)
-			authed.DELETE("/tenants/:id", authMiddleware.RequirePermission("tenant", "delete"), h.deleteTenant)
 
 			authed.GET("/users", authMiddleware.RequirePermission("user", "list"), h.listUsers)
 			authed.GET("/users/:id", authMiddleware.RequirePermission("user", "read"), h.getUser)
@@ -192,7 +183,7 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, logger *zap
 			authed.POST("/storage/objects/presign-put/complete", authMiddleware.RequirePermission("object", "create"), h.completePresignPutObject)
 			authed.GET("/storage/objects/presign-get", authMiddleware.RequirePermission("object", "share"), h.presignGetObject)
 
-			authed.GET("/audit/logs", authMiddleware.RequirePermission("tenant", "read"), h.listAuditLogs)
+			authed.GET("/audit/logs", authMiddleware.RequirePermission("audit", "read"), h.listAuditLogs)
 		}
 	}
 
@@ -206,7 +197,7 @@ func (h *Handler) login(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.userService.LoginWithEmail(c.Request.Context(), req.TenantCode, req.Email, req.Password)
+	resp, err := h.userService.LoginWithEmail(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
 		jsonError(c, http.StatusUnauthorized, err)
 		return
@@ -214,17 +205,12 @@ func (h *Handler) login(c *gin.Context) {
 	jsonSuccess(c, resp)
 }
 
-func (h *Handler) bootstrapTenantAdminDisabled(c *gin.Context) {
-	jsonError(c, http.StatusForbidden, errors.New("public tenant bootstrap is disabled"))
+func (h *Handler) bootstrapAdminDisabled(c *gin.Context) {
+	jsonError(c, http.StatusForbidden, errors.New("public admin bootstrap is disabled"))
 }
 
-func (h *Handler) bootstrapPlatformAdminDisabled(c *gin.Context) {
-	jsonError(c, http.StatusForbidden, errors.New("public platform bootstrap is disabled"))
-}
-
-type bootstrapTenantAdminRequest struct {
-	Tenant service.CreateTenantRequest `json:"tenant" binding:"required"`
-	Admin  struct {
+type bootstrapAdminRequest struct {
+	Admin struct {
 		Username string `json:"username"`
 		Email    string `json:"email" binding:"required,email"`
 		Password string `json:"password" binding:"required,min=6"`
@@ -232,26 +218,34 @@ type bootstrapTenantAdminRequest struct {
 	} `json:"admin" binding:"required"`
 }
 
-func (h *Handler) bootstrapTenantAdmin(c *gin.Context) {
-	var req bootstrapTenantAdminRequest
+func (h *Handler) bootstrapAdmin(c *gin.Context) {
+	var req bootstrapAdminRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
 
-	tenant, err := h.tenantService.CreateTenant(c.Request.Context(), &req.Tenant)
-	if err != nil {
-		jsonError(c, http.StatusBadRequest, err)
+	var adminCount int64
+	if err := h.db.WithContext(c.Request.Context()).
+		Table("roles").
+		Joins("JOIN user_roles ur ON ur.role_id = roles.id").
+		Where("roles.code = ?", model.RoleCodeAdmin).
+		Count(&adminCount).Error; err != nil {
+		jsonError(c, http.StatusInternalServerError, err)
+		return
+	}
+	if adminCount > 0 {
+		jsonError(c, http.StatusForbidden, errors.New("admin already exists"))
 		return
 	}
 
-	var role model.Role
-	if err := h.db.WithContext(c.Request.Context()).First(&role, "tenant_id = ? AND code = ?", tenant.ID, model.RoleCodeTenantAdmin).Error; err != nil {
+	role, err := h.roleService.EnsureDefaultAdminRole(c.Request.Context())
+	if err != nil {
 		jsonError(c, http.StatusInternalServerError, err)
 		return
 	}
 
-	user, err := h.userService.CreateUser(c.Request.Context(), tenant.ID, &service.CreateUserRequest{
+	user, err := h.userService.CreateUser(c.Request.Context(), &service.CreateUserRequest{
 		Username: req.Admin.Username,
 		Email:    req.Admin.Email,
 		Password: req.Admin.Password,
@@ -263,141 +257,49 @@ func (h *Handler) bootstrapTenantAdmin(c *gin.Context) {
 		return
 	}
 
-	loginResp, err := h.userService.Login(c.Request.Context(), tenant.Code, req.Admin.Email, req.Admin.Password)
+	loginResp, err := h.userService.Login(c.Request.Context(), req.Admin.Email, req.Admin.Password)
 	if err != nil {
 		jsonError(c, http.StatusInternalServerError, err)
 		return
 	}
 
-	jsonCreated(c, gin.H{"tenant": tenant, "admin_user": user, "auth": loginResp})
+	jsonCreated(c, gin.H{"admin_user": user, "auth": loginResp})
 }
 
-type bootstrapPlatformAdminRequest struct {
-	TenantCode string `json:"tenant_code" binding:"required"`
-	Admin      struct {
-		Username string `json:"username"`
-		Email    string `json:"email" binding:"required,email"`
-		Password string `json:"password" binding:"required,min=6"`
-		Nickname string `json:"nickname"`
-	} `json:"admin" binding:"required"`
-}
-
-func (h *Handler) bootstrapPlatformAdmin(c *gin.Context) {
-	var req bootstrapPlatformAdminRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		jsonError(c, http.StatusBadRequest, err)
-		return
-	}
-
-	var platformAdminCount int64
-	if err := h.db.WithContext(c.Request.Context()).
-		Table("roles").
-		Joins("JOIN user_roles ur ON ur.role_id = roles.id").
-		Where("roles.code = ? AND roles.tenant_id IS NULL", model.RoleCodePlatformAdmin).
-		Count(&platformAdminCount).Error; err != nil {
-		jsonError(c, http.StatusInternalServerError, err)
-		return
-	}
-	if platformAdminCount > 0 {
-		jsonError(c, http.StatusForbidden, errors.New("platform admin already exists"))
-		return
-	}
-
-	tenant, err := h.tenantService.GetTenantByCode(c.Request.Context(), strings.TrimSpace(req.TenantCode))
-	if err != nil {
-		jsonError(c, http.StatusBadRequest, err)
-		return
-	}
-	if tenant.Status != model.TenantStatusActive {
-		jsonError(c, http.StatusBadRequest, errors.New("tenant is not active"))
-		return
-	}
-
-	platformRole, err := h.tenantService.EnsurePlatformAdminRole(c.Request.Context())
-	if err != nil {
-		jsonError(c, http.StatusInternalServerError, err)
-		return
-	}
-
-	user, err := h.userService.CreateUser(c.Request.Context(), tenant.ID, &service.CreateUserRequest{
-		Username: req.Admin.Username,
-		Email:    req.Admin.Email,
-		Password: req.Admin.Password,
-		Nickname: req.Admin.Nickname,
-		RoleIDs:  []string{platformRole.ID},
-	})
-	if err != nil {
-		jsonError(c, http.StatusBadRequest, err)
-		return
-	}
-
-	loginResp, err := h.userService.Login(c.Request.Context(), tenant.Code, req.Admin.Email, req.Admin.Password)
-	if err != nil {
-		jsonError(c, http.StatusInternalServerError, err)
-		return
-	}
-
-	jsonCreated(c, gin.H{"tenant": tenant, "admin_user": user, "auth": loginResp})
-}
-
-func (h *Handler) autoBootstrapPlatformAdmin(ctx context.Context) error {
-	if h.cfg == nil || !h.cfg.Server.AutoBootstrapPlatformAdmin {
+func (h *Handler) autoBootstrapAdmin(ctx context.Context) error {
+	if h.cfg == nil || !h.cfg.Server.AutoBootstrapAdmin {
 		return nil
 	}
 
-	tenantCode := strings.ToLower(strings.TrimSpace(h.cfg.Server.PlatformAdminTenantCode))
-	if tenantCode == "" {
-		tenantCode = "platform"
-	}
-	email := strings.ToLower(strings.TrimSpace(h.cfg.Server.PlatformAdminEmail))
-	password := strings.TrimSpace(h.cfg.Server.PlatformAdminPassword)
-	username := strings.TrimSpace(h.cfg.Server.PlatformAdminUsername)
-	nickname := strings.TrimSpace(h.cfg.Server.PlatformAdminNickname)
+	email := strings.ToLower(strings.TrimSpace(h.cfg.Server.AdminEmail))
+	password := strings.TrimSpace(h.cfg.Server.AdminPassword)
+	username := strings.TrimSpace(h.cfg.Server.AdminUsername)
+	nickname := strings.TrimSpace(h.cfg.Server.AdminNickname)
 
 	missing := make([]string, 0, 2)
 	if email == "" {
-		missing = append(missing, "server.platform_admin_email")
+		missing = append(missing, "server.admin_email")
 	}
 	if password == "" {
-		missing = append(missing, "server.platform_admin_password")
+		missing = append(missing, "server.admin_password")
 	}
 	if len(missing) > 0 {
-		return fmt.Errorf("auto bootstrap platform admin is enabled but missing config: %s", strings.Join(missing, ", "))
+		return fmt.Errorf("auto bootstrap admin is enabled but missing config: %s", strings.Join(missing, ", "))
 	}
 	if len(password) < 6 {
-		return errors.New("server.platform_admin_password must be at least 6 characters")
+		return errors.New("server.admin_password must be at least 6 characters")
 	}
 
-	tenant, err := h.ensurePlatformTenant(ctx, tenantCode)
-	if err != nil {
-		return err
-	}
-	if tenant.Status != model.TenantStatusActive {
-		if err := h.db.WithContext(ctx).
-			Model(&model.Tenant{}).
-			Where("id = ?", tenant.ID).
-			Update("status", model.TenantStatusActive).Error; err != nil {
-			return err
-		}
-		tenant.Status = model.TenantStatusActive
-		h.logger.Info("reactivated platform tenant for auto bootstrap",
-			zap.String("tenant_id", tenant.ID),
-			zap.String("tenant_code", tenant.Code),
-		)
-	}
-
-	role, err := h.tenantService.EnsurePlatformAdminRole(ctx)
+	role, err := h.roleService.EnsureDefaultAdminRole(ctx)
 	if err != nil {
 		return err
 	}
 
 	var user model.User
-	err = h.db.WithContext(ctx).
-		First(&user, "tenant_id = ? AND lower(email) = ?", tenant.ID, email).Error
+	err = h.db.WithContext(ctx).First(&user, "lower(email) = ?", email).Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err
 	}
-
 	if err == nil {
 		var roleBindingCount int64
 		if err := h.db.WithContext(ctx).
@@ -410,8 +312,7 @@ func (h *Handler) autoBootstrapPlatformAdmin(ctx context.Context) error {
 			if err := h.db.WithContext(ctx).Model(&user).Association("Roles").Append(role); err != nil {
 				return err
 			}
-			h.logger.Info("bound platform admin role to existing configured user",
-				zap.String("tenant_id", tenant.ID),
+			h.logger.Info("bound admin role to existing configured user",
 				zap.String("user_id", user.ID),
 				zap.String("email", email),
 			)
@@ -419,22 +320,20 @@ func (h *Handler) autoBootstrapPlatformAdmin(ctx context.Context) error {
 		return nil
 	}
 
-	var platformAdminCount int64
+	var adminCount int64
 	if err := h.db.WithContext(ctx).
 		Table("roles").
 		Joins("JOIN user_roles ur ON ur.role_id = roles.id").
-		Where("roles.code = ? AND roles.tenant_id IS NULL", model.RoleCodePlatformAdmin).
-		Count(&platformAdminCount).Error; err != nil {
+		Where("roles.code = ?", model.RoleCodeAdmin).
+		Count(&adminCount).Error; err != nil {
 		return err
 	}
-	if platformAdminCount > 0 {
-		h.logger.Info("platform admin already exists, skip auto bootstrap",
-			zap.Int64("existing_count", platformAdminCount),
-		)
+	if adminCount > 0 {
+		h.logger.Info("admin already exists, skip auto bootstrap", zap.Int64("existing_count", adminCount))
 		return nil
 	}
 
-	created, err := h.userService.CreateUser(ctx, tenant.ID, &service.CreateUserRequest{
+	created, err := h.userService.CreateUser(ctx, &service.CreateUserRequest{
 		Username: username,
 		Email:    email,
 		Password: password,
@@ -445,191 +344,41 @@ func (h *Handler) autoBootstrapPlatformAdmin(ctx context.Context) error {
 		return err
 	}
 
-	h.logger.Info("auto bootstrapped platform admin user",
-		zap.String("tenant_id", tenant.ID),
-		zap.String("tenant_code", tenant.Code),
+	h.logger.Info("auto bootstrapped admin user",
 		zap.String("user_id", created.ID),
 		zap.String("email", created.Email),
 	)
 	return nil
 }
 
-func (h *Handler) ensurePlatformTenant(ctx context.Context, tenantCode string) (*model.Tenant, error) {
-	if tenantCode == "" {
-		return nil, errors.New("platform tenant code is required")
-	}
-
-	var tenant model.Tenant
-	if err := h.db.WithContext(ctx).First(&tenant, "code = ?", tenantCode).Error; err == nil {
-		return &tenant, nil
-	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, err
-	}
-
-	req := &service.CreateTenantRequest{
-		Name:        fmt.Sprintf("platform-%s", tenantCode),
-		Code:        tenantCode,
-		Description: "Platform system tenant for global administrators",
-	}
-	created, err := h.tenantService.CreateTenant(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	h.logger.Info("auto created platform tenant",
-		zap.String("tenant_id", created.ID),
-		zap.String("tenant_code", created.Code),
-	)
-	return created, nil
-}
-
-func (h *Handler) createTenant(c *gin.Context) {
-	var req service.CreateTenantRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		jsonError(c, http.StatusBadRequest, err)
-		return
-	}
-	tenant, err := h.tenantService.CreateTenant(c.Request.Context(), &req)
-	if err != nil {
-		jsonError(c, http.StatusBadRequest, err)
-		return
-	}
-	jsonCreated(c, tenant)
-}
-
-func (h *Handler) getTenant(c *gin.Context) {
-	tenantID := c.Param("id")
-	if err := h.ensureTenantOwnership(c, tenantID); err != nil {
-		jsonError(c, http.StatusForbidden, err)
-		return
-	}
-	tenant, err := h.tenantService.GetTenant(c.Request.Context(), tenantID)
-	if err != nil {
-		jsonError(c, http.StatusNotFound, err)
-		return
-	}
-	jsonSuccess(c, tenant)
-}
-
-func (h *Handler) listTenants(c *gin.Context) {
-	isPlatformAdmin, err := h.isPlatformAdmin(c)
-	if err != nil {
-		jsonError(c, http.StatusInternalServerError, err)
-		return
-	}
-	if isPlatformAdmin {
-		page, pageSize := parsePage(c)
-		req := &service.ListTenantRequest{
-			Page:     page,
-			PageSize: pageSize,
-			Status:   strings.TrimSpace(c.Query("status")),
-			Keyword:  strings.TrimSpace(c.Query("keyword")),
-		}
-		items, total, err := h.tenantService.ListTenants(c.Request.Context(), req)
-		if err != nil {
-			jsonError(c, http.StatusInternalServerError, err)
-			return
-		}
-		jsonPage(c, total, page, pageSize, items)
-		return
-	}
-
-	currentTenantID := getTenantID(c)
-	tenant, err := h.tenantService.GetTenant(c.Request.Context(), currentTenantID)
-	if err != nil {
-		jsonError(c, http.StatusNotFound, err)
-		return
-	}
-	jsonPage(c, 1, 1, 1, []*model.Tenant{tenant})
-}
-
-func (h *Handler) updateTenant(c *gin.Context) {
-	tenantID := c.Param("id")
-	if err := h.ensureTenantOwnership(c, tenantID); err != nil {
-		jsonError(c, http.StatusForbidden, err)
-		return
-	}
-	before, err := h.tenantService.GetTenant(c.Request.Context(), tenantID)
-	if err != nil {
-		jsonError(c, http.StatusNotFound, err)
-		return
-	}
-
-	var req service.UpdateTenantRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		jsonError(c, http.StatusBadRequest, err)
-		return
-	}
-	tenant, err := h.tenantService.UpdateTenant(c.Request.Context(), tenantID, &req)
-	if err != nil {
-		jsonError(c, http.StatusBadRequest, err)
-		return
-	}
-	setAuditBeforeAfter(c, before, tenant)
-	jsonSuccess(c, tenant)
-}
-
-func (h *Handler) deleteTenant(c *gin.Context) {
-	tenantID := c.Param("id")
-	if err := h.ensureTenantOwnership(c, tenantID); err != nil {
-		jsonError(c, http.StatusForbidden, err)
-		return
-	}
-	if err := h.tenantService.DeleteTenant(c.Request.Context(), tenantID); err != nil {
-		jsonError(c, http.StatusBadRequest, err)
-		return
-	}
-	jsonSuccess(c, gin.H{"deleted": true})
-}
-
 func (h *Handler) createUser(c *gin.Context) {
-	tenantID, err := h.resolveTargetTenantID(c)
-	if err != nil {
-		jsonError(c, http.StatusBadRequest, err)
-		return
-	}
-	if err := h.tenantService.CheckQuota(c.Request.Context(), tenantID, service.QuotaTypeUser); err != nil {
-		jsonError(c, http.StatusBadRequest, err)
-		return
-	}
-
 	var req service.CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
-	if err := h.ensureAssignableRoles(c, tenantID, req.RoleIDs, string(model.ActionCreate)); err != nil {
+	if err := h.ensureAssignableRoles(c, req.RoleIDs, string(model.ActionCreate)); err != nil {
 		jsonError(c, http.StatusForbidden, err)
 		return
 	}
-	user, err := h.userService.CreateUser(c.Request.Context(), tenantID, &req)
+
+	user, err := h.userService.CreateUser(c.Request.Context(), &req)
 	if err != nil {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
-
-	_ = h.db.WithContext(c.Request.Context()).Model(&model.Tenant{}).
-		Where("id = ?", tenantID).
-		Update("used_users", gorm.Expr("used_users + ?", 1)).Error
-
 	jsonCreated(c, user)
 }
 
 func (h *Handler) getUser(c *gin.Context) {
 	user, err := h.userService.GetUser(c.Request.Context(), c.Param("id"))
 	if err != nil {
-		jsonError(c, http.StatusNotFound, err)
+		if errors.Is(err, gorm.ErrRecordNotFound) || strings.Contains(strings.ToLower(err.Error()), "not found") {
+			jsonError(c, http.StatusNotFound, err)
+			return
+		}
+		jsonError(c, http.StatusInternalServerError, err)
 		return
-	}
-	if user.TenantID != getTenantID(c) {
-		isPlatformAdmin, err := h.isPlatformAdmin(c)
-		if err != nil {
-			jsonError(c, http.StatusInternalServerError, err)
-			return
-		}
-		if !isPlatformAdmin {
-			jsonError(c, http.StatusForbidden, errors.New("cross-tenant access denied"))
-			return
-		}
 	}
 	if err := h.ensureUserActionAllowed(c, user.ID, string(model.ActionRead)); err != nil {
 		jsonError(c, http.StatusForbidden, err)
@@ -639,31 +388,26 @@ func (h *Handler) getUser(c *gin.Context) {
 }
 
 func (h *Handler) listUsers(c *gin.Context) {
-	tenantID, err := h.resolveTargetTenantID(c)
-	if err != nil {
-		jsonError(c, http.StatusBadRequest, err)
-		return
+	page, pageSize := parsePage(c)
+	req := &service.ListUserRequest{
+		Page:     page,
+		PageSize: pageSize,
+		Status:   strings.TrimSpace(c.Query("status")),
+		Keyword:  strings.TrimSpace(c.Query("keyword")),
 	}
 
-	page, pageSize := parsePage(c)
-	req := service.ListUserRequest{
-		Page:          page,
-		PageSize:      pageSize,
-		Status:        c.Query("status"),
-		Keyword:       c.Query("keyword"),
-		CurrentUserID: getUserID(c),
-	}
 	scope, unrestricted, err := h.namespaceScopeForAction(c, "user", string(model.ActionList))
 	if err != nil {
 		jsonError(c, http.StatusForbidden, err)
 		return
 	}
 	if !unrestricted {
-		req.ScopeFiltered = true
 		req.VisibleNamespaceIDs = namespaceIDSetToSlice(scope)
+		req.CurrentUserID = getUserID(c)
+		req.ScopeFiltered = true
 	}
 
-	items, total, err := h.userService.ListUsers(c.Request.Context(), tenantID, &req)
+	items, total, err := h.userService.ListUsers(c.Request.Context(), req)
 	if err != nil {
 		jsonError(c, http.StatusInternalServerError, err)
 		return
@@ -673,24 +417,18 @@ func (h *Handler) listUsers(c *gin.Context) {
 
 func (h *Handler) updateUser(c *gin.Context) {
 	userID := c.Param("id")
-	user, err := h.userService.GetUser(c.Request.Context(), userID)
-	if err != nil {
-		jsonError(c, http.StatusNotFound, err)
+	if userID == "" {
+		jsonError(c, http.StatusBadRequest, errors.New("user id is required"))
 		return
-	}
-	if user.TenantID != getTenantID(c) {
-		isPlatformAdmin, err := h.isPlatformAdmin(c)
-		if err != nil {
-			jsonError(c, http.StatusInternalServerError, err)
-			return
-		}
-		if !isPlatformAdmin {
-			jsonError(c, http.StatusForbidden, errors.New("cross-tenant access denied"))
-			return
-		}
 	}
 	if err := h.ensureUserActionAllowed(c, userID, string(model.ActionUpdate)); err != nil {
 		jsonError(c, http.StatusForbidden, err)
+		return
+	}
+
+	before, err := h.userService.GetUser(c.Request.Context(), userID)
+	if err != nil {
+		jsonError(c, http.StatusNotFound, err)
 		return
 	}
 
@@ -699,39 +437,27 @@ func (h *Handler) updateUser(c *gin.Context) {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
-	targetTenantID := user.TenantID
-	if len(req.RoleIDs) > 0 {
-		if err := h.ensureAssignableRoles(c, targetTenantID, req.RoleIDs, string(model.ActionUpdate)); err != nil {
+	if req.RoleIDs != nil {
+		if err := h.ensureAssignableRoles(c, req.RoleIDs, string(model.ActionUpdate)); err != nil {
 			jsonError(c, http.StatusForbidden, err)
 			return
 		}
 	}
-	updated, err := h.userService.UpdateUser(c.Request.Context(), userID, &req)
+
+	user, err := h.userService.UpdateUser(c.Request.Context(), userID, &req)
 	if err != nil {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
-	setAuditBeforeAfter(c, user, updated)
-	jsonSuccess(c, updated)
+	setAuditBeforeAfter(c, before, user)
+	jsonSuccess(c, user)
 }
 
 func (h *Handler) deleteUser(c *gin.Context) {
 	userID := c.Param("id")
-	user, err := h.userService.GetUser(c.Request.Context(), userID)
-	if err != nil {
-		jsonError(c, http.StatusNotFound, err)
+	if userID == "" {
+		jsonError(c, http.StatusBadRequest, errors.New("user id is required"))
 		return
-	}
-	if user.TenantID != getTenantID(c) {
-		isPlatformAdmin, err := h.isPlatformAdmin(c)
-		if err != nil {
-			jsonError(c, http.StatusInternalServerError, err)
-			return
-		}
-		if !isPlatformAdmin {
-			jsonError(c, http.StatusForbidden, errors.New("cross-tenant access denied"))
-			return
-		}
 	}
 	if err := h.ensureUserActionAllowed(c, userID, string(model.ActionDelete)); err != nil {
 		jsonError(c, http.StatusForbidden, err)
@@ -739,12 +465,13 @@ func (h *Handler) deleteUser(c *gin.Context) {
 	}
 
 	if err := h.userService.DeleteUser(c.Request.Context(), userID); err != nil {
-		jsonError(c, http.StatusBadRequest, err)
+		if strings.Contains(strings.ToLower(err.Error()), "not found") {
+			jsonError(c, http.StatusNotFound, err)
+			return
+		}
+		jsonError(c, http.StatusInternalServerError, err)
 		return
 	}
-	_ = h.db.WithContext(c.Request.Context()).Model(&model.Tenant{}).
-		Where("id = ?", user.TenantID).
-		Update("used_users", gorm.Expr("CASE WHEN used_users > 0 THEN used_users - 1 ELSE 0 END")).Error
 	jsonSuccess(c, gin.H{"deleted": true})
 }
 
@@ -758,12 +485,7 @@ func (h *Handler) listPermissions(c *gin.Context) {
 }
 
 func (h *Handler) listRoles(c *gin.Context) {
-	tenantID, err := h.resolveTargetTenantID(c)
-	if err != nil {
-		jsonError(c, http.StatusBadRequest, err)
-		return
-	}
-	items, err := h.roleService.ListRoles(c.Request.Context(), tenantID)
+	items, err := h.roleService.ListRoles(c.Request.Context())
 	if err != nil {
 		jsonError(c, http.StatusInternalServerError, err)
 		return
@@ -772,12 +494,6 @@ func (h *Handler) listRoles(c *gin.Context) {
 }
 
 func (h *Handler) createRole(c *gin.Context) {
-	tenantID, err := h.resolveTargetTenantID(c)
-	if err != nil {
-		jsonError(c, http.StatusBadRequest, err)
-		return
-	}
-
 	var req service.CreateRoleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		jsonError(c, http.StatusBadRequest, err)
@@ -785,7 +501,6 @@ func (h *Handler) createRole(c *gin.Context) {
 	}
 	if err := h.ensureRoleMutationAllowed(
 		c,
-		tenantID,
 		"",
 		string(model.ActionCreate),
 		req.Level,
@@ -795,19 +510,20 @@ func (h *Handler) createRole(c *gin.Context) {
 		jsonError(c, http.StatusForbidden, err)
 		return
 	}
-	role, err := h.roleService.CreateRole(c.Request.Context(), tenantID, &req)
+
+	role, err := h.roleService.CreateRole(c.Request.Context(), &req)
 	if err != nil {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
-	setAuditBeforeAfter(c, nil, role)
 	jsonCreated(c, role)
 }
 
 func (h *Handler) updateRole(c *gin.Context) {
-	tenantID, err := h.resolveTargetTenantID(c)
+	roleID := c.Param("id")
+	current, err := h.roleService.GetRole(c.Request.Context(), roleID)
 	if err != nil {
-		jsonError(c, http.StatusBadRequest, err)
+		jsonError(c, http.StatusNotFound, err)
 		return
 	}
 
@@ -816,45 +532,41 @@ func (h *Handler) updateRole(c *gin.Context) {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
-	current, err := h.roleService.GetRole(c.Request.Context(), tenantID, c.Param("id"))
-	if err != nil {
-		jsonError(c, http.StatusNotFound, err)
-		return
-	}
 
 	targetLevel := current.Level
 	if req.Level != nil {
 		targetLevel = *req.Level
 	}
-	targetPermissionIDs := make([]string, 0, len(current.Permissions))
-	for _, item := range current.Permissions {
-		targetPermissionIDs = append(targetPermissionIDs, item.ID)
-	}
+	permissionIDs := make([]string, 0, len(current.Permissions))
 	if req.PermissionIDs != nil {
-		targetPermissionIDs = append([]string{}, (*req.PermissionIDs)...)
+		permissionIDs = append(permissionIDs, *req.PermissionIDs...)
+	} else {
+		for _, item := range current.Permissions {
+			permissionIDs = append(permissionIDs, item.ID)
+		}
 	}
-	targetNamespaceIDs := make([]string, 0, len(current.Namespaces))
-	for _, item := range current.Namespaces {
-		targetNamespaceIDs = append(targetNamespaceIDs, item.ID)
-	}
+	namespaceIDs := make([]string, 0, len(current.Namespaces))
 	if req.NamespaceIDs != nil {
-		targetNamespaceIDs = append([]string{}, (*req.NamespaceIDs)...)
+		namespaceIDs = append(namespaceIDs, *req.NamespaceIDs...)
+	} else {
+		for _, item := range current.Namespaces {
+			namespaceIDs = append(namespaceIDs, item.ID)
+		}
 	}
 
 	if err := h.ensureRoleMutationAllowed(
 		c,
-		tenantID,
-		current.ID,
+		roleID,
 		string(model.ActionUpdate),
 		targetLevel,
-		targetPermissionIDs,
-		targetNamespaceIDs,
+		permissionIDs,
+		namespaceIDs,
 	); err != nil {
 		jsonError(c, http.StatusForbidden, err)
 		return
 	}
 
-	role, err := h.roleService.UpdateRole(c.Request.Context(), tenantID, c.Param("id"), &req)
+	role, err := h.roleService.UpdateRole(c.Request.Context(), roleID, &req)
 	if err != nil {
 		jsonError(c, http.StatusBadRequest, err)
 		return
@@ -864,42 +576,40 @@ func (h *Handler) updateRole(c *gin.Context) {
 }
 
 func (h *Handler) deleteRole(c *gin.Context) {
-	tenantID, err := h.resolveTargetTenantID(c)
-	if err != nil {
-		jsonError(c, http.StatusBadRequest, err)
-		return
-	}
-
-	current, err := h.roleService.GetRole(c.Request.Context(), tenantID, c.Param("id"))
+	roleID := c.Param("id")
+	current, err := h.roleService.GetRole(c.Request.Context(), roleID)
 	if err != nil {
 		jsonError(c, http.StatusNotFound, err)
 		return
 	}
-	targetPermissionIDs := make([]string, 0, len(current.Permissions))
+	permissionIDs := make([]string, 0, len(current.Permissions))
 	for _, item := range current.Permissions {
-		targetPermissionIDs = append(targetPermissionIDs, item.ID)
+		permissionIDs = append(permissionIDs, item.ID)
 	}
-	targetNamespaceIDs := make([]string, 0, len(current.Namespaces))
+	namespaceIDs := make([]string, 0, len(current.Namespaces))
 	for _, item := range current.Namespaces {
-		targetNamespaceIDs = append(targetNamespaceIDs, item.ID)
+		namespaceIDs = append(namespaceIDs, item.ID)
 	}
 	if err := h.ensureRoleMutationAllowed(
 		c,
-		tenantID,
-		current.ID,
+		roleID,
 		string(model.ActionDelete),
 		current.Level,
-		targetPermissionIDs,
-		targetNamespaceIDs,
+		permissionIDs,
+		namespaceIDs,
 	); err != nil {
 		jsonError(c, http.StatusForbidden, err)
 		return
 	}
-	if err := h.roleService.DeleteRole(c.Request.Context(), tenantID, c.Param("id")); err != nil {
+
+	if err := h.roleService.DeleteRole(c.Request.Context(), roleID); err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "not found") {
+			jsonError(c, http.StatusNotFound, err)
+			return
+		}
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
-	setAuditBeforeAfter(c, current, nil)
 	jsonSuccess(c, gin.H{"deleted": true})
 }
 
@@ -913,35 +623,25 @@ func (h *Handler) changePassword(c *gin.Context) {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
-	jsonSuccess(c, gin.H{"changed": true})
+	jsonSuccess(c, gin.H{"updated": true})
 }
 
 func (h *Handler) createNamespace(c *gin.Context) {
-	tenantID, err := h.resolveTargetTenantID(c)
-	if err != nil {
-		jsonError(c, http.StatusBadRequest, err)
-		return
-	}
-	if err := h.tenantService.CheckQuota(c.Request.Context(), tenantID, service.QuotaTypeNamespace); err != nil {
-		jsonError(c, http.StatusBadRequest, err)
-		return
-	}
-
 	var req service.CreateNamespaceRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
-	ns, err := h.namespaceService.CreateNamespace(c.Request.Context(), tenantID, &req)
-	if err != nil {
+	if err := h.ensureNamespaceOwnerExists(c.Request.Context(), req.OwnerUserID); err != nil {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
 
-	_ = h.db.WithContext(c.Request.Context()).Model(&model.Tenant{}).
-		Where("id = ?", tenantID).
-		Update("used_namespaces", gorm.Expr("used_namespaces + ?", 1)).Error
-
+	ns, err := h.namespaceService.CreateNamespace(c.Request.Context(), &req)
+	if err != nil {
+		jsonError(c, http.StatusBadRequest, err)
+		return
+	}
 	jsonCreated(c, ns)
 }
 
@@ -949,10 +649,6 @@ func (h *Handler) getNamespace(c *gin.Context) {
 	ns, err := h.namespaceService.GetNamespace(c.Request.Context(), c.Param("id"))
 	if err != nil {
 		jsonError(c, http.StatusNotFound, err)
-		return
-	}
-	if err := h.ensureTenantOwnership(c, ns.TenantID); err != nil {
-		jsonError(c, http.StatusForbidden, err)
 		return
 	}
 	if err := h.ensureNamespaceActionAllowed(c, ns.ID, "namespace", string(model.ActionRead)); err != nil {
@@ -963,14 +659,12 @@ func (h *Handler) getNamespace(c *gin.Context) {
 }
 
 func (h *Handler) listNamespaces(c *gin.Context) {
-	tenantID, err := h.resolveTargetTenantID(c)
-	if err != nil {
-		jsonError(c, http.StatusBadRequest, err)
-		return
-	}
-
 	page, pageSize := parsePage(c)
-	req := service.ListNamespaceRequest{Page: page, PageSize: pageSize, Status: c.Query("status")}
+	req := &service.ListNamespaceRequest{
+		Page:     page,
+		PageSize: pageSize,
+		Status:   strings.TrimSpace(c.Query("status")),
+	}
 
 	scope, unrestricted, err := h.namespaceScopeForAction(c, "namespace", string(model.ActionList))
 	if err != nil {
@@ -978,14 +672,10 @@ func (h *Handler) listNamespaces(c *gin.Context) {
 		return
 	}
 	if !unrestricted {
-		if len(scope) == 0 {
-			jsonPage(c, 0, page, pageSize, []*model.Namespace{})
-			return
-		}
 		req.NamespaceIDs = namespaceIDSetToSlice(scope)
 	}
 
-	items, total, err := h.namespaceService.ListNamespaces(c.Request.Context(), tenantID, &req)
+	items, total, err := h.namespaceService.ListNamespaces(c.Request.Context(), req)
 	if err != nil {
 		jsonError(c, http.StatusInternalServerError, err)
 		return
@@ -994,18 +684,19 @@ func (h *Handler) listNamespaces(c *gin.Context) {
 }
 
 func (h *Handler) updateNamespace(c *gin.Context) {
-	nsID := c.Param("id")
-	ns, err := h.namespaceService.GetNamespace(c.Request.Context(), nsID)
+	namespaceID := c.Param("id")
+	if namespaceID == "" {
+		jsonError(c, http.StatusBadRequest, errors.New("namespace id is required"))
+		return
+	}
+	if err := h.ensureNamespaceActionAllowed(c, namespaceID, "namespace", string(model.ActionUpdate)); err != nil {
+		jsonError(c, http.StatusForbidden, err)
+		return
+	}
+
+	before, err := h.namespaceService.GetNamespace(c.Request.Context(), namespaceID)
 	if err != nil {
 		jsonError(c, http.StatusNotFound, err)
-		return
-	}
-	if err := h.ensureTenantOwnership(c, ns.TenantID); err != nil {
-		jsonError(c, http.StatusForbidden, err)
-		return
-	}
-	if err := h.ensureNamespaceActionAllowed(c, ns.ID, "namespace", string(model.ActionUpdate)); err != nil {
-		jsonError(c, http.StatusForbidden, err)
 		return
 	}
 
@@ -1014,55 +705,52 @@ func (h *Handler) updateNamespace(c *gin.Context) {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
-	updated, err := h.namespaceService.UpdateNamespace(c.Request.Context(), nsID, &req)
+	if req.OwnerUserID != nil {
+		if err := h.ensureNamespaceOwnerExists(c.Request.Context(), *req.OwnerUserID); err != nil {
+			jsonError(c, http.StatusBadRequest, err)
+			return
+		}
+	}
+
+	ns, err := h.namespaceService.UpdateNamespace(c.Request.Context(), namespaceID, &req)
 	if err != nil {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
-	setAuditBeforeAfter(c, ns, updated)
-	jsonSuccess(c, updated)
+	setAuditBeforeAfter(c, before, ns)
+	jsonSuccess(c, ns)
 }
 
 func (h *Handler) deleteNamespace(c *gin.Context) {
-	nsID := c.Param("id")
-	ns, err := h.namespaceService.GetNamespace(c.Request.Context(), nsID)
-	if err != nil {
-		jsonError(c, http.StatusNotFound, err)
+	namespaceID := c.Param("id")
+	if namespaceID == "" {
+		jsonError(c, http.StatusBadRequest, errors.New("namespace id is required"))
 		return
 	}
-	if err := h.ensureTenantOwnership(c, ns.TenantID); err != nil {
+	if err := h.ensureNamespaceActionAllowed(c, namespaceID, "namespace", string(model.ActionDelete)); err != nil {
 		jsonError(c, http.StatusForbidden, err)
 		return
 	}
-	if err := h.ensureNamespaceActionAllowed(c, ns.ID, "namespace", string(model.ActionDelete)); err != nil {
-		jsonError(c, http.StatusForbidden, err)
-		return
-	}
-	if err := h.namespaceService.DeleteNamespace(c.Request.Context(), nsID); err != nil {
+
+	if err := h.namespaceService.DeleteNamespace(c.Request.Context(), namespaceID); err != nil {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
-
-	_ = h.db.WithContext(c.Request.Context()).Model(&model.Tenant{}).
-		Where("id = ?", ns.TenantID).
-		Update("used_namespaces", gorm.Expr("CASE WHEN used_namespaces > 0 THEN used_namespaces - 1 ELSE 0 END")).Error
-
 	jsonSuccess(c, gin.H{"deleted": true})
 }
 
 func (h *Handler) createStorageConfig(c *gin.Context) {
-	tenantID, err := h.resolveTargetTenantID(c)
-	if err != nil {
-		jsonError(c, http.StatusBadRequest, err)
-		return
-	}
-
 	var req service.CreateStorageConfigRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
-	cfg, err := h.storageService.CreateStorageConfig(c.Request.Context(), tenantID, &req)
+	if err := h.ensureNamespaceOwnerExists(c.Request.Context(), req.OwnerUserID); err != nil {
+		jsonError(c, http.StatusBadRequest, err)
+		return
+	}
+
+	cfg, err := h.storageService.CreateStorageConfig(c.Request.Context(), &req)
 	if err != nil {
 		jsonError(c, http.StatusBadRequest, err)
 		return
@@ -1071,12 +759,7 @@ func (h *Handler) createStorageConfig(c *gin.Context) {
 }
 
 func (h *Handler) listStorageConfigs(c *gin.Context) {
-	tenantID, err := h.resolveTargetTenantID(c)
-	if err != nil {
-		jsonError(c, http.StatusBadRequest, err)
-		return
-	}
-	items, err := h.storageService.ListStorageConfigs(c.Request.Context(), tenantID)
+	items, err := h.storageService.ListStorageConfigs(c.Request.Context())
 	if err != nil {
 		jsonError(c, http.StatusInternalServerError, err)
 		return
@@ -1085,17 +768,7 @@ func (h *Handler) listStorageConfigs(c *gin.Context) {
 }
 
 func (h *Handler) deleteStorageConfig(c *gin.Context) {
-	configID := c.Param("id")
-	cfg, err := h.storageService.GetStorageConfig(c.Request.Context(), configID)
-	if err != nil {
-		jsonError(c, http.StatusNotFound, err)
-		return
-	}
-	if err := h.ensureTenantOwnership(c, cfg.TenantID); err != nil {
-		jsonError(c, http.StatusForbidden, err)
-		return
-	}
-	if err := h.storageService.DeleteStorageConfig(c.Request.Context(), configID); err != nil {
+	if err := h.storageService.DeleteStorageConfig(c.Request.Context(), c.Param("id")); err != nil {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
@@ -1103,23 +776,13 @@ func (h *Handler) deleteStorageConfig(c *gin.Context) {
 }
 
 func (h *Handler) uploadObject(c *gin.Context) {
-	namespaceID := c.PostForm("namespace_id")
-	key := c.PostForm("key")
+	namespaceID := strings.TrimSpace(c.PostForm("namespace_id"))
+	key := strings.TrimSpace(c.PostForm("key"))
 	if namespaceID == "" || key == "" {
 		jsonError(c, http.StatusBadRequest, errors.New("namespace_id and key are required"))
 		return
 	}
-
-	ns, err := h.namespaceService.GetNamespace(c.Request.Context(), namespaceID)
-	if err != nil {
-		jsonError(c, http.StatusNotFound, err)
-		return
-	}
-	if err := h.ensureTenantOwnership(c, ns.TenantID); err != nil {
-		jsonError(c, http.StatusForbidden, err)
-		return
-	}
-	if err := h.ensureNamespaceActionAllowed(c, ns.ID, "object", string(model.ActionCreate)); err != nil {
+	if err := h.ensureNamespaceActionAllowed(c, namespaceID, "object", string(model.ActionCreate)); err != nil {
 		jsonError(c, http.StatusForbidden, err)
 		return
 	}
@@ -1131,196 +794,130 @@ func (h *Handler) uploadObject(c *gin.Context) {
 	}
 	defer file.Close()
 
-	if err := h.tenantService.CheckStorageGrowth(c.Request.Context(), ns.TenantID, header.Size); err != nil {
-		jsonError(c, http.StatusBadRequest, err)
-		return
-	}
-
-	if ns.MaxFileSize != nil && *ns.MaxFileSize > 0 && header.Size > *ns.MaxFileSize {
-		jsonError(c, http.StatusBadRequest, errors.New("namespace max file size exceeded"))
-		return
-	}
-	if ns.MaxStorage != nil && *ns.MaxStorage > 0 && ns.UsedStorage+header.Size > *ns.MaxStorage {
-		jsonError(c, http.StatusBadRequest, errors.New("namespace storage quota exceeded"))
-		return
-	}
-
-	var existingCount int64
-	if err := h.db.WithContext(c.Request.Context()).
-		Model(&model.Object{}).
-		Where("namespace_id = ? AND key = ? AND is_latest = ?", namespaceID, key, true).
-		Count(&existingCount).Error; err != nil {
-		jsonError(c, http.StatusInternalServerError, err)
-		return
-	}
-	if existingCount == 0 && ns.MaxFiles != nil && *ns.MaxFiles > 0 && ns.UsedFiles+1 > *ns.MaxFiles {
-		jsonError(c, http.StatusBadRequest, errors.New("namespace max files quota exceeded"))
-		return
-	}
-
-	contentType := c.PostForm("content_type")
+	contentType := strings.TrimSpace(c.PostForm("content_type"))
 	if contentType == "" {
-		contentType = header.Header.Get("Content-Type")
+		contentType = strings.TrimSpace(header.Header.Get("Content-Type"))
 	}
-	metadata := parseMetadata(c.PostForm("metadata"))
 
-	obj, err := h.storageService.PutObject(c.Request.Context(), namespaceID, key, file, header.Size, contentType, metadata)
+	metadata := parseMetadata(c.PostForm("metadata"))
+	object, err := h.storageService.PutObject(
+		c.Request.Context(),
+		namespaceID,
+		key,
+		file,
+		header.Size,
+		contentType,
+		metadata,
+	)
 	if err != nil {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
 
-	_ = h.db.WithContext(c.Request.Context()).Model(&model.Tenant{}).
-		Where("id = ?", ns.TenantID).
-		Update("used_storage", gorm.Expr("used_storage + ?", header.Size)).Error
-
-	jsonCreated(c, obj)
+	jsonCreated(c, object)
 }
 
 func (h *Handler) downloadObject(c *gin.Context) {
-	namespaceID := c.Query("namespace_id")
-	key := c.Query("key")
+	namespaceID := strings.TrimSpace(c.Query("namespace_id"))
+	key := strings.TrimSpace(c.Query("key"))
 	if namespaceID == "" || key == "" {
 		jsonError(c, http.StatusBadRequest, errors.New("namespace_id and key are required"))
 		return
 	}
-
-	ns, err := h.namespaceService.GetNamespace(c.Request.Context(), namespaceID)
-	if err != nil {
-		jsonError(c, http.StatusNotFound, err)
-		return
-	}
-	if err := h.ensureTenantOwnership(c, ns.TenantID); err != nil {
-		jsonError(c, http.StatusForbidden, err)
-		return
-	}
-	if err := h.ensureNamespaceActionAllowed(c, ns.ID, "object", string(model.ActionRead)); err != nil {
+	if err := h.ensureNamespaceActionAllowed(c, namespaceID, "object", string(model.ActionRead)); err != nil {
 		jsonError(c, http.StatusForbidden, err)
 		return
 	}
 
-	reader, obj, err := h.storageService.GetObject(c.Request.Context(), namespaceID, key)
+	reader, object, err := h.storageService.GetObject(c.Request.Context(), namespaceID, key)
 	if err != nil {
-		jsonError(c, http.StatusNotFound, err)
+		if strings.Contains(strings.ToLower(err.Error()), "not found") {
+			jsonError(c, http.StatusNotFound, err)
+			return
+		}
+		jsonError(c, http.StatusInternalServerError, err)
 		return
 	}
 	defer reader.Close()
 
-	if obj.ContentType != "" {
-		c.Header("Content-Type", obj.ContentType)
+	fileName := object.Name
+	if strings.TrimSpace(fileName) == "" {
+		fileName = filepath.Base(object.Key)
 	}
-	c.Header("Content-Disposition", "attachment; filename=\""+obj.Name+"\"")
-	if obj.ETag != "" {
-		c.Header("ETag", obj.ETag)
+	if strings.TrimSpace(fileName) == "" {
+		fileName = "download.bin"
 	}
-	c.Header("Content-Length", strconv.FormatInt(obj.Size, 10))
-	_, _ = io.Copy(c.Writer, reader)
+
+	contentType := object.ContentType
+	if strings.TrimSpace(contentType) == "" {
+		contentType = "application/octet-stream"
+	}
+
+	c.Header("Content-Type", contentType)
+	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, strings.ReplaceAll(fileName, `"`, "_")))
+	if object.Size > 0 {
+		c.Header("Content-Length", strconv.FormatInt(object.Size, 10))
+	}
+	c.Status(http.StatusOK)
+	if _, err := io.Copy(c.Writer, reader); err != nil {
+		c.Error(err)
+	}
 }
 
 func (h *Handler) deleteObject(c *gin.Context) {
-	namespaceID := c.Query("namespace_id")
-	key := c.Query("key")
+	namespaceID := strings.TrimSpace(c.Query("namespace_id"))
+	key := strings.TrimSpace(c.Query("key"))
 	if namespaceID == "" || key == "" {
 		jsonError(c, http.StatusBadRequest, errors.New("namespace_id and key are required"))
 		return
 	}
-
-	ns, err := h.namespaceService.GetNamespace(c.Request.Context(), namespaceID)
-	if err != nil {
-		jsonError(c, http.StatusNotFound, err)
-		return
-	}
-	if err := h.ensureTenantOwnership(c, ns.TenantID); err != nil {
+	if err := h.ensureNamespaceActionAllowed(c, namespaceID, "object", string(model.ActionDelete)); err != nil {
 		jsonError(c, http.StatusForbidden, err)
 		return
 	}
-	if err := h.ensureNamespaceActionAllowed(c, ns.ID, "object", string(model.ActionDelete)); err != nil {
-		jsonError(c, http.StatusForbidden, err)
-		return
-	}
-
-	_, obj, err := h.storageService.GetObject(c.Request.Context(), namespaceID, key)
-	if err != nil {
-		jsonError(c, http.StatusNotFound, err)
-		return
-	}
-
-	reclaimSize := obj.Size
-	versions, _, versionsErr := h.storageService.ListObjectVersions(c.Request.Context(), namespaceID, key, 1, 1000)
-	if versionsErr == nil && len(versions) > 0 {
-		var total int64
-		for _, item := range versions {
-			total += item.Size
-		}
-		if total > 0 {
-			reclaimSize = total
-		}
-	}
-
 	if err := h.storageService.DeleteObject(c.Request.Context(), namespaceID, key); err != nil {
-		jsonError(c, http.StatusBadRequest, err)
+		jsonError(c, http.StatusInternalServerError, err)
 		return
 	}
-
-	_ = h.db.WithContext(c.Request.Context()).Model(&model.Tenant{}).
-		Where("id = ?", ns.TenantID).
-		Update("used_storage", gorm.Expr("CASE WHEN used_storage >= ? THEN used_storage - ? ELSE 0 END", reclaimSize, reclaimSize)).Error
-
 	jsonSuccess(c, gin.H{"deleted": true})
 }
 
 func (h *Handler) listObjects(c *gin.Context) {
-	namespaceID := c.Query("namespace_id")
-	if namespaceID == "" {
-		jsonError(c, http.StatusBadRequest, errors.New("namespace_id is required"))
+	var req service.ListObjectRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
-
-	ns, err := h.namespaceService.GetNamespace(c.Request.Context(), namespaceID)
-	if err != nil {
-		jsonError(c, http.StatusNotFound, err)
-		return
+	if req.Page <= 0 {
+		req.Page = 1
 	}
-	if err := h.ensureTenantOwnership(c, ns.TenantID); err != nil {
-		jsonError(c, http.StatusForbidden, err)
-		return
+	if req.PageSize <= 0 {
+		req.PageSize = 20
 	}
-	if err := h.ensureNamespaceActionAllowed(c, ns.ID, "object", string(model.ActionList)); err != nil {
+	if err := h.ensureNamespaceActionAllowed(c, req.NamespaceID, "object", string(model.ActionList)); err != nil {
 		jsonError(c, http.StatusForbidden, err)
 		return
 	}
 
-	page, pageSize := parsePage(c)
-	items, total, err := h.storageService.ListObjects(c.Request.Context(), namespaceID, c.Query("prefix"), page, pageSize)
+	items, total, err := h.storageService.ListObjects(c.Request.Context(), req.NamespaceID, req.Prefix, req.Page, req.PageSize)
 	if err != nil {
 		jsonError(c, http.StatusInternalServerError, err)
 		return
 	}
-	jsonPage(c, total, page, pageSize, items)
+	jsonPage(c, total, req.Page, req.PageSize, items)
 }
 
 func (h *Handler) listObjectVersions(c *gin.Context) {
-	namespaceID := c.Query("namespace_id")
-	key := c.Query("key")
+	namespaceID := strings.TrimSpace(c.Query("namespace_id"))
+	key := strings.TrimSpace(c.Query("key"))
 	if namespaceID == "" || key == "" {
 		jsonError(c, http.StatusBadRequest, errors.New("namespace_id and key are required"))
 		return
 	}
-
-	ns, err := h.namespaceService.GetNamespace(c.Request.Context(), namespaceID)
-	if err != nil {
-		jsonError(c, http.StatusNotFound, err)
-		return
-	}
-	if err := h.ensureTenantOwnership(c, ns.TenantID); err != nil {
+	if err := h.ensureNamespaceActionAllowed(c, namespaceID, "object", string(model.ActionRead)); err != nil {
 		jsonError(c, http.StatusForbidden, err)
 		return
 	}
-	if err := h.ensureNamespaceActionAllowed(c, ns.ID, "object", string(model.ActionRead)); err != nil {
-		jsonError(c, http.StatusForbidden, err)
-		return
-	}
-
 	page, pageSize := parsePage(c)
 	items, total, err := h.storageService.ListObjectVersions(c.Request.Context(), namespaceID, key, page, pageSize)
 	if err != nil {
@@ -1330,113 +927,74 @@ func (h *Handler) listObjectVersions(c *gin.Context) {
 	jsonPage(c, total, page, pageSize, items)
 }
 
-type rollbackObjectVersionRequest struct {
-	NamespaceID string `json:"namespace_id" binding:"required"`
-	Key         string `json:"key" binding:"required"`
-	VersionID   string `json:"version_id" binding:"required"`
-}
-
 func (h *Handler) rollbackObjectVersion(c *gin.Context) {
-	var req rollbackObjectVersionRequest
+	var req struct {
+		NamespaceID string `json:"namespace_id" binding:"required"`
+		Key         string `json:"key" binding:"required"`
+		VersionID   string `json:"version_id" binding:"required"`
+	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
-
-	ns, err := h.namespaceService.GetNamespace(c.Request.Context(), req.NamespaceID)
-	if err != nil {
-		jsonError(c, http.StatusNotFound, err)
-		return
-	}
-	if err := h.ensureTenantOwnership(c, ns.TenantID); err != nil {
-		jsonError(c, http.StatusForbidden, err)
-		return
-	}
-	if err := h.ensureNamespaceActionAllowed(c, ns.ID, "object", string(model.ActionCreate)); err != nil {
+	if err := h.ensureNamespaceActionAllowed(c, req.NamespaceID, "object", string(model.ActionCreate)); err != nil {
 		jsonError(c, http.StatusForbidden, err)
 		return
 	}
 
-	obj, err := h.storageService.RollbackObjectVersion(c.Request.Context(), req.NamespaceID, req.Key, req.VersionID)
+	object, err := h.storageService.RollbackObjectVersion(c.Request.Context(), req.NamespaceID, req.Key, req.VersionID)
 	if err != nil {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
-	jsonSuccess(c, obj)
+	jsonSuccess(c, object)
 }
 
 func (h *Handler) presignPutObject(c *gin.Context) {
-	namespaceID := c.Query("namespace_id")
-	key := c.Query("key")
+	namespaceID := strings.TrimSpace(c.Query("namespace_id"))
+	key := strings.TrimSpace(c.Query("key"))
 	if namespaceID == "" || key == "" {
 		jsonError(c, http.StatusBadRequest, errors.New("namespace_id and key are required"))
 		return
 	}
-
-	ns, err := h.namespaceService.GetNamespace(c.Request.Context(), namespaceID)
-	if err != nil {
-		jsonError(c, http.StatusNotFound, err)
-		return
-	}
-	if err := h.ensureTenantOwnership(c, ns.TenantID); err != nil {
-		jsonError(c, http.StatusForbidden, err)
-		return
-	}
-	if err := h.ensureNamespaceActionAllowed(c, ns.ID, "object", string(model.ActionCreate)); err != nil {
+	if err := h.ensureNamespaceActionAllowed(c, namespaceID, "object", string(model.ActionCreate)); err != nil {
 		jsonError(c, http.StatusForbidden, err)
 		return
 	}
 
-	ttlSeconds := int64(300)
+	ttlSeconds := 300
 	if raw := strings.TrimSpace(c.Query("ttl_seconds")); raw != "" {
-		if value, err := strconv.ParseInt(raw, 10, 64); err == nil && value > 0 && value <= 3600 {
-			ttlSeconds = value
+		if v, err := strconv.Atoi(raw); err == nil && v > 0 && v <= 3600 {
+			ttlSeconds = v
 		}
 	}
 
-	prepared, err := h.storageService.PreparePresignPutObject(c.Request.Context(), namespaceID, key, time.Duration(ttlSeconds)*time.Second)
+	result, err := h.storageService.PreparePresignPutObject(c.Request.Context(), namespaceID, key, time.Duration(ttlSeconds)*time.Second)
 	if err != nil {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
-	jsonSuccess(c, gin.H{
-		"url":         prepared.URL,
-		"ttl_seconds": ttlSeconds,
-		"key":         prepared.Key,
-		"version_id":  prepared.VersionID,
-	})
-}
-
-type completePresignPutRequest struct {
-	NamespaceID string            `json:"namespace_id" binding:"required"`
-	Key         string            `json:"key" binding:"required"`
-	VersionID   string            `json:"version_id" binding:"required"`
-	ContentType string            `json:"content_type"`
-	Metadata    map[string]string `json:"metadata"`
+	jsonSuccess(c, result)
 }
 
 func (h *Handler) completePresignPutObject(c *gin.Context) {
-	var req completePresignPutRequest
+	var req struct {
+		NamespaceID string            `json:"namespace_id" binding:"required"`
+		Key         string            `json:"key" binding:"required"`
+		VersionID   string            `json:"version_id" binding:"required"`
+		ContentType string            `json:"content_type"`
+		Metadata    map[string]string `json:"metadata"`
+	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
-
-	ns, err := h.namespaceService.GetNamespace(c.Request.Context(), req.NamespaceID)
-	if err != nil {
-		jsonError(c, http.StatusNotFound, err)
-		return
-	}
-	if err := h.ensureTenantOwnership(c, ns.TenantID); err != nil {
-		jsonError(c, http.StatusForbidden, err)
-		return
-	}
-	if err := h.ensureNamespaceActionAllowed(c, ns.ID, "object", string(model.ActionCreate)); err != nil {
+	if err := h.ensureNamespaceActionAllowed(c, req.NamespaceID, "object", string(model.ActionCreate)); err != nil {
 		jsonError(c, http.StatusForbidden, err)
 		return
 	}
 
-	obj, err := h.storageService.FinalizePresignedPut(
+	object, err := h.storageService.FinalizePresignedPut(
 		c.Request.Context(),
 		req.NamespaceID,
 		req.Key,
@@ -1448,36 +1006,25 @@ func (h *Handler) completePresignPutObject(c *gin.Context) {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
-
-	jsonSuccess(c, obj)
+	jsonSuccess(c, object)
 }
 
 func (h *Handler) presignGetObject(c *gin.Context) {
-	namespaceID := c.Query("namespace_id")
-	key := c.Query("key")
+	namespaceID := strings.TrimSpace(c.Query("namespace_id"))
+	key := strings.TrimSpace(c.Query("key"))
 	if namespaceID == "" || key == "" {
 		jsonError(c, http.StatusBadRequest, errors.New("namespace_id and key are required"))
 		return
 	}
-
-	ns, err := h.namespaceService.GetNamespace(c.Request.Context(), namespaceID)
-	if err != nil {
-		jsonError(c, http.StatusNotFound, err)
-		return
-	}
-	if err := h.ensureTenantOwnership(c, ns.TenantID); err != nil {
-		jsonError(c, http.StatusForbidden, err)
-		return
-	}
-	if err := h.ensureNamespaceActionAllowed(c, ns.ID, "object", string(model.ActionShare)); err != nil {
+	if err := h.ensureNamespaceActionAllowed(c, namespaceID, "object", string(model.ActionShare)); err != nil {
 		jsonError(c, http.StatusForbidden, err)
 		return
 	}
 
-	ttlSeconds := int64(300)
+	ttlSeconds := 300
 	if raw := strings.TrimSpace(c.Query("ttl_seconds")); raw != "" {
-		if value, err := strconv.ParseInt(raw, 10, 64); err == nil && value > 0 && value <= 3600 {
-			ttlSeconds = value
+		if v, err := strconv.Atoi(raw); err == nil && v > 0 && v <= 3600 {
+			ttlSeconds = v
 		}
 	}
 
@@ -1486,18 +1033,21 @@ func (h *Handler) presignGetObject(c *gin.Context) {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
-	jsonSuccess(c, gin.H{"url": url, "ttl_seconds": ttlSeconds})
-}
-
-type createAKSKRequest struct {
-	Description   string `json:"description"`
-	ExpiresInDays int    `json:"expires_in_days"`
+	jsonSuccess(c, gin.H{"url": url})
 }
 
 func (h *Handler) createAKSK(c *gin.Context) {
-	var req createAKSKRequest
+	var req struct {
+		Description  string `json:"description"`
+		ExpiresInDays int   `json:"expires_in_days"`
+	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		jsonError(c, http.StatusBadRequest, err)
+		return
+	}
+	userID := getUserID(c)
+	if userID == "" {
+		jsonError(c, http.StatusUnauthorized, errors.New("invalid auth context"))
 		return
 	}
 
@@ -1514,11 +1064,10 @@ func (h *Handler) createAKSK(c *gin.Context) {
 	}
 
 	record := &model.AKSK{
-		TenantID:    getTenantID(c),
-		UserID:      getUserID(c),
+		UserID:      userID,
 		AccessKey:   accessKey,
 		SecretKey:   secretKey,
-		Description: req.Description,
+		Description: strings.TrimSpace(req.Description),
 		Status:      model.AKSKStatusActive,
 		ExpiresAt:   expiresAt,
 	}
@@ -1529,42 +1078,47 @@ func (h *Handler) createAKSK(c *gin.Context) {
 
 	jsonCreated(c, gin.H{
 		"id":          record.ID,
-		"access_key":  accessKey,
-		"secret_key":  secretKey,
-		"expires_at":  expiresAt,
+		"access_key":  record.AccessKey,
+		"secret_key":  record.SecretKey,
 		"description": record.Description,
+		"status":      record.Status,
+		"expires_at":  record.ExpiresAt,
+		"created_at":  record.CreatedAt,
 	})
 }
 
 func (h *Handler) listAKSK(c *gin.Context) {
-	var records []model.AKSK
-	err := h.db.WithContext(c.Request.Context()).
-		Where("tenant_id = ? AND user_id = ?", getTenantID(c), getUserID(c)).
-		Order("created_at DESC").
-		Find(&records).Error
-	if err != nil {
-		jsonError(c, http.StatusInternalServerError, err)
+	userID := getUserID(c)
+	if userID == "" {
+		jsonError(c, http.StatusUnauthorized, errors.New("invalid auth context"))
 		return
 	}
-
-	items := make([]gin.H, 0, len(records))
-	for _, item := range records {
-		items = append(items, gin.H{
-			"id":          item.ID,
-			"access_key":  item.AccessKey,
-			"description": item.Description,
-			"status":      item.Status,
-			"expires_at":  item.ExpiresAt,
-			"created_at":  item.CreatedAt,
-		})
+	items := make([]*model.AKSK, 0, 16)
+	if err := h.db.WithContext(c.Request.Context()).
+		Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Find(&items).Error; err != nil {
+		jsonError(c, http.StatusInternalServerError, err)
+		return
 	}
 	jsonSuccess(c, items)
 }
 
 func (h *Handler) revokeAKSK(c *gin.Context) {
-	id := c.Param("id")
-	result := h.db.WithContext(c.Request.Context()).Model(&model.AKSK{}).
-		Where("id = ? AND tenant_id = ? AND user_id = ?", id, getTenantID(c), getUserID(c)).
+	userID := getUserID(c)
+	if userID == "" {
+		jsonError(c, http.StatusUnauthorized, errors.New("invalid auth context"))
+		return
+	}
+	id := strings.TrimSpace(c.Param("id"))
+	if id == "" {
+		jsonError(c, http.StatusBadRequest, errors.New("id is required"))
+		return
+	}
+
+	result := h.db.WithContext(c.Request.Context()).
+		Model(&model.AKSK{}).
+		Where("id = ? AND user_id = ?", id, userID).
 		Update("status", model.AKSKStatusRevoked)
 	if result.Error != nil {
 		jsonError(c, http.StatusInternalServerError, result.Error)
@@ -1580,33 +1134,9 @@ func (h *Handler) revokeAKSK(c *gin.Context) {
 func (h *Handler) listAuditLogs(c *gin.Context) {
 	page, pageSize := parsePage(c)
 
-	isPlatformAdmin, err := h.isPlatformAdmin(c)
-	if err != nil {
-		jsonError(c, http.StatusInternalServerError, err)
-		return
-	}
-
 	query := h.db.WithContext(c.Request.Context()).Model(&model.AuditLog{})
-	requestedTenantID := strings.TrimSpace(c.Query("tenant_id"))
-	if isPlatformAdmin {
-		if requestedTenantID != "" {
-			if _, err := h.tenantService.GetTenant(c.Request.Context(), requestedTenantID); err != nil {
-				jsonError(c, http.StatusBadRequest, err)
-				return
-			}
-			query = query.Where("tenant_id = ?", requestedTenantID)
-		}
-	} else {
-		currentTenantID := getTenantID(c)
-		if requestedTenantID != "" && requestedTenantID != currentTenantID {
-			jsonError(c, http.StatusForbidden, errors.New("cross-tenant access denied"))
-			return
-		}
-		query = query.Where("tenant_id = ?", currentTenantID)
-	}
-
 	if action := strings.TrimSpace(c.Query("action")); action != "" {
-		query = query.Where("action = ?", action)
+		query = query.Where("action = ?", strings.ToLower(action))
 	}
 	if resource := strings.TrimSpace(c.Query("resource")); resource != "" {
 		query = query.Where("resource = ?", resource)
@@ -1620,22 +1150,42 @@ func (h *Handler) listAuditLogs(c *gin.Context) {
 	if resourceID := strings.TrimSpace(c.Query("resource_id")); resourceID != "" {
 		query = query.Where("resource_id = ?", resourceID)
 	}
-
-	if raw := strings.TrimSpace(c.Query("from")); raw != "" {
-		from, err := parseAuditTime(raw, false)
+	if rawFrom := strings.TrimSpace(c.Query("from")); rawFrom != "" {
+		from, err := parseAuditTime(rawFrom, false)
 		if err != nil {
-			jsonError(c, http.StatusBadRequest, fmt.Errorf("invalid from time: %w", err))
+			jsonError(c, http.StatusBadRequest, fmt.Errorf("invalid from: %w", err))
 			return
 		}
 		query = query.Where("created_at >= ?", from)
 	}
-	if raw := strings.TrimSpace(c.Query("to")); raw != "" {
-		to, err := parseAuditTime(raw, true)
+	if rawTo := strings.TrimSpace(c.Query("to")); rawTo != "" {
+		to, err := parseAuditTime(rawTo, true)
 		if err != nil {
-			jsonError(c, http.StatusBadRequest, fmt.Errorf("invalid to time: %w", err))
+			jsonError(c, http.StatusBadRequest, fmt.Errorf("invalid to: %w", err))
 			return
 		}
 		query = query.Where("created_at < ?", to)
+	}
+
+	scope, unrestricted, err := h.namespaceScopeForAction(c, "audit", string(model.ActionRead))
+	if err != nil {
+		jsonError(c, http.StatusForbidden, err)
+		return
+	}
+	if !unrestricted {
+		nsIDs := namespaceIDSetToSlice(scope)
+		if len(nsIDs) == 0 {
+			jsonPage(c, 0, page, pageSize, []*model.AuditLog{})
+			return
+		}
+		conditions := make([]string, 0, len(nsIDs))
+		args := make([]any, 0, len(nsIDs))
+		for _, nsID := range nsIDs {
+			prefix := fmt.Sprintf("%%\"namespace_id\":\"%s\"%%", nsID)
+			conditions = append(conditions, "detail LIKE ?")
+			args = append(args, prefix)
+		}
+		query = query.Where("("+strings.Join(conditions, " OR ")+")", args...)
 	}
 
 	var total int64
@@ -1650,119 +1200,39 @@ func (h *Handler) listAuditLogs(c *gin.Context) {
 		jsonError(c, http.StatusInternalServerError, err)
 		return
 	}
-
 	jsonPage(c, total, page, pageSize, items)
 }
 
-func (h *Handler) apiCallQuotaMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		tenantID := getTenantID(c)
-		if tenantID == "" {
-			jsonError(c, http.StatusUnauthorized, errors.New("invalid auth context"))
-			c.Abort()
-			return
-		}
-
-		ctx := c.Request.Context()
-		today := time.Now().UTC().Format("2006-01-02")
-		if err := h.resetDailyAPICallCounter(ctx, tenantID, today); err != nil {
-			jsonError(c, http.StatusInternalServerError, err)
-			c.Abort()
-			return
-		}
-
-		tenant, err := h.tenantService.GetTenant(ctx, tenantID)
-		if err != nil {
-			jsonError(c, http.StatusNotFound, err)
-			c.Abort()
-			return
-		}
-
-		if tenant.MaxAPICalls > 0 && h.redis != nil {
-			dayKey := strings.ReplaceAll(today, "-", "")
-			redisKey := fmt.Sprintf("tenant:%s:api_calls:%s", tenantID, dayKey)
-
-			count, err := h.redis.Incr(ctx, redisKey).Result()
-			if err == nil {
-				if count == 1 {
-					_ = h.redis.Expire(ctx, redisKey, ttlUntilNextUTCDay()).Err()
-				}
-				if count > tenant.MaxAPICalls {
-					_ = h.redis.Decr(ctx, redisKey).Err()
-					jsonError(c, http.StatusTooManyRequests, errors.New("api calls quota exceeded"))
-					c.Abort()
-					return
-				}
-
-				_ = h.db.WithContext(ctx).Model(&model.Tenant{}).
-					Where("id = ?", tenantID).
-					Updates(map[string]any{
-						"used_api_calls": count,
-						"api_calls_date": today,
-					}).Error
-
-				c.Next()
-				return
-			}
-
-			h.logger.Warn("redis api call quota fallback to db", zap.Error(err), zap.String("tenant_id", tenantID))
-		}
-
-		update := h.db.WithContext(ctx).
-			Model(&model.Tenant{}).
-			Where("id = ?", tenantID)
-		if tenant.MaxAPICalls > 0 {
-			update = update.Where("used_api_calls < ?", tenant.MaxAPICalls)
-		}
-		update = update.Updates(map[string]any{
-			"used_api_calls": gorm.Expr("used_api_calls + 1"),
-			"api_calls_date": today,
-		})
-		if update.Error != nil {
-			jsonError(c, http.StatusInternalServerError, update.Error)
-			c.Abort()
-			return
-		}
-		if tenant.MaxAPICalls > 0 && update.RowsAffected == 0 {
-			jsonError(c, http.StatusTooManyRequests, errors.New("api calls quota exceeded"))
-			c.Abort()
-			return
-		}
-
-		c.Next()
+func (h *Handler) ensureNamespaceOwnerExists(ctx context.Context, ownerUserID string) error {
+	ownerUserID = strings.TrimSpace(ownerUserID)
+	if ownerUserID == "" {
+		return nil
 	}
-}
-
-func (h *Handler) resetDailyAPICallCounter(ctx context.Context, tenantID, today string) error {
-	return h.db.WithContext(ctx).Model(&model.Tenant{}).
-		Where("id = ?", tenantID).
-		Where("api_calls_date IS NULL OR api_calls_date::date <> ?::date", today).
-		Updates(map[string]any{
-			"used_api_calls": 0,
-			"api_calls_date": today,
-		}).Error
-}
-
-func ttlUntilNextUTCDay() time.Duration {
-	now := time.Now().UTC()
-	next := now.Truncate(24 * time.Hour).Add(24 * time.Hour)
-	ttl := time.Until(next) + time.Hour
-	if ttl <= 0 {
-		return 25 * time.Hour
+	var count int64
+	if err := h.db.WithContext(ctx).Model(&model.User{}).Where("id = ?", ownerUserID).Count(&count).Error; err != nil {
+		return err
 	}
-	return ttl
+	if count == 0 {
+		return errors.New("owner user not found")
+	}
+	return nil
 }
 
 func (h *Handler) auditLogMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		path := c.FullPath()
+		if !strings.HasPrefix(path, "/api/v1/") {
+			c.Next()
+			return
+		}
+		if strings.HasPrefix(path, "/api/v1/auth/login") {
+			c.Next()
+			return
+		}
+
 		start := time.Now()
 		requestBodyHash := hashJSONRequestBody(c.Request)
 		c.Next()
-
-		tenantID := getTenantID(c)
-		if tenantID == "" {
-			return
-		}
 
 		var userIDPtr *string
 		if userID := getUserID(c); userID != "" {
@@ -1773,7 +1243,6 @@ func (h *Handler) auditLogMiddleware() gin.HandlerFunc {
 		if fullPath == "" {
 			fullPath = c.Request.URL.Path
 		}
-
 		resource := strings.Trim(strings.TrimPrefix(fullPath, "/api/v1/"), "/")
 		if resource == "" {
 			resource = "unknown"
@@ -1827,7 +1296,6 @@ func (h *Handler) auditLogMiddleware() gin.HandlerFunc {
 		detailJSON, _ := json.Marshal(detail)
 
 		entry := &model.AuditLog{
-			TenantID:   tenantID,
 			UserID:     userIDPtr,
 			Action:     strings.ToLower(c.Request.Method),
 			Resource:   resource,
@@ -1978,65 +1446,6 @@ func buildAuditChanges(before, after map[string]any) []map[string]any {
 	return changes
 }
 
-func (h *Handler) isPlatformAdmin(c *gin.Context) (bool, error) {
-	userID := getUserID(c)
-	if strings.TrimSpace(userID) == "" {
-		return false, nil
-	}
-
-	var count int64
-	if err := h.db.WithContext(c.Request.Context()).
-		Table("roles").
-		Joins("JOIN user_roles ur ON ur.role_id = roles.id").
-		Where("ur.user_id = ? AND roles.code = ? AND roles.tenant_id IS NULL", userID, model.RoleCodePlatformAdmin).
-		Count(&count).Error; err != nil {
-		return false, err
-	}
-	return count > 0, nil
-}
-
-func (h *Handler) resolveTargetTenantID(c *gin.Context) (string, error) {
-	currentTenantID := strings.TrimSpace(getTenantID(c))
-	if currentTenantID == "" {
-		return "", errors.New("invalid auth context")
-	}
-
-	requestedTenantID := strings.TrimSpace(c.Query("tenant_id"))
-	if requestedTenantID == "" || requestedTenantID == currentTenantID {
-		return currentTenantID, nil
-	}
-
-	isPlatformAdmin, err := h.isPlatformAdmin(c)
-	if err != nil {
-		return "", err
-	}
-	if !isPlatformAdmin {
-		return "", errors.New("cross-tenant access denied")
-	}
-
-	if _, err := h.tenantService.GetTenant(c.Request.Context(), requestedTenantID); err != nil {
-		return "", err
-	}
-	return requestedTenantID, nil
-}
-
-func (h *Handler) ensureTenantOwnership(c *gin.Context, tenantID string) error {
-	if tenantID == "" {
-		return errors.New("tenant id is required")
-	}
-	isPlatformAdmin, err := h.isPlatformAdmin(c)
-	if err != nil {
-		return err
-	}
-	if isPlatformAdmin {
-		return nil
-	}
-	if tenantID != getTenantID(c) {
-		return errors.New("cross-tenant access denied")
-	}
-	return nil
-}
-
 func (h *Handler) ensureNamespaceActionAllowed(c *gin.Context, namespaceID, resource, action string) error {
 	scope, unrestricted, err := h.namespaceScopeForAction(c, resource, action)
 	if err != nil {
@@ -2054,17 +1463,9 @@ func (h *Handler) ensureNamespaceActionAllowed(c *gin.Context, namespaceID, reso
 	return nil
 }
 
-func (h *Handler) ensureAssignableRoles(c *gin.Context, tenantID string, roleIDs []string, action string) error {
+func (h *Handler) ensureAssignableRoles(c *gin.Context, roleIDs []string, action string) error {
 	roleIDs = normalizeIDList(roleIDs)
 	if len(roleIDs) == 0 {
-		return nil
-	}
-
-	isPlatformAdmin, err := h.isPlatformAdmin(c)
-	if err != nil {
-		return err
-	}
-	if isPlatformAdmin {
 		return nil
 	}
 
@@ -2073,15 +1474,13 @@ func (h *Handler) ensureAssignableRoles(c *gin.Context, tenantID string, roleIDs
 		return errors.New("invalid auth context")
 	}
 
-	var actorAdminCount int64
-	if err := h.db.WithContext(c.Request.Context()).
-		Table("roles").
-		Joins("JOIN user_roles ur ON ur.role_id = roles.id").
-		Where("ur.user_id = ? AND roles.code = ? AND (roles.tenant_id = ? OR roles.tenant_id IS NULL)", actorUserID, model.RoleCodeTenantAdmin, tenantID).
-		Count(&actorAdminCount).Error; err != nil {
+	isAdmin, err := h.isAdmin(c)
+	if err != nil {
 		return err
 	}
-	isTenantAdmin := actorAdminCount > 0
+	if isAdmin {
+		return nil
+	}
 
 	var actorMaxLevel int
 	if err := h.db.WithContext(c.Request.Context()).
@@ -2089,14 +1488,12 @@ func (h *Handler) ensureAssignableRoles(c *gin.Context, tenantID string, roleIDs
 		Select("COALESCE(MAX(roles.level), 0)").
 		Joins("JOIN user_roles ur ON ur.role_id = roles.id").
 		Where("ur.user_id = ?", actorUserID).
-		Where("roles.tenant_id = ? OR roles.tenant_id IS NULL", tenantID).
 		Scan(&actorMaxLevel).Error; err != nil {
 		return err
 	}
 
 	type roleMeta struct {
 		ID       string
-		TenantID *string
 		Code     string
 		IsSystem bool
 		Level    int
@@ -2104,7 +1501,7 @@ func (h *Handler) ensureAssignableRoles(c *gin.Context, tenantID string, roleIDs
 	roles := make([]roleMeta, 0, len(roleIDs))
 	if err := h.db.WithContext(c.Request.Context()).
 		Table("roles").
-		Select("id, tenant_id, code, is_system, level").
+		Select("id, code, is_system, level").
 		Where("id IN ?", roleIDs).
 		Find(&roles).Error; err != nil {
 		return err
@@ -2136,13 +1533,10 @@ func (h *Handler) ensureAssignableRoles(c *gin.Context, tenantID string, roleIDs
 	}
 
 	for _, role := range roles {
-		if role.TenantID != nil && *role.TenantID != tenantID {
-			return errors.New("contains cross-tenant roles")
+		if role.Code == model.RoleCodeAdmin && !isAdmin {
+			return errors.New("permission denied: can not assign admin role")
 		}
-		if role.Code == model.RoleCodeTenantAdmin && !isTenantAdmin {
-			return errors.New("permission denied: can not assign tenant_admin role")
-		}
-		if role.IsSystem && !isTenantAdmin {
+		if role.IsSystem && !isAdmin {
 			return errors.New("permission denied: can not assign system role")
 		}
 		if role.Level > actorMaxLevel {
@@ -2168,7 +1562,6 @@ func (h *Handler) ensureAssignableRoles(c *gin.Context, tenantID string, roleIDs
 
 func (h *Handler) ensureRoleMutationAllowed(
 	c *gin.Context,
-	tenantID string,
 	targetRoleID string,
 	action string,
 	targetLevel int,
@@ -2176,30 +1569,20 @@ func (h *Handler) ensureRoleMutationAllowed(
 	namespaceIDs []string,
 ) error {
 	actorUserID := getUserID(c)
-	if actorUserID == "" || tenantID == "" {
+	if actorUserID == "" {
 		return errors.New("invalid auth context")
 	}
 
-	isPlatformAdmin, err := h.isPlatformAdmin(c)
+	isAdmin, err := h.isAdmin(c)
 	if err != nil {
 		return err
 	}
-	if isPlatformAdmin {
+	if isAdmin {
 		return nil
 	}
 
 	permissionIDs = normalizeIDList(permissionIDs)
 	namespaceIDs = normalizeIDList(namespaceIDs)
-
-	var actorAdminCount int64
-	if err := h.db.WithContext(c.Request.Context()).
-		Table("roles").
-		Joins("JOIN user_roles ur ON ur.role_id = roles.id").
-		Where("ur.user_id = ? AND roles.code = ? AND (roles.tenant_id = ? OR roles.tenant_id IS NULL)", actorUserID, model.RoleCodeTenantAdmin, tenantID).
-		Count(&actorAdminCount).Error; err != nil {
-		return err
-	}
-	isTenantAdmin := actorAdminCount > 0
 
 	var actorMaxLevel int
 	if err := h.db.WithContext(c.Request.Context()).
@@ -2207,7 +1590,6 @@ func (h *Handler) ensureRoleMutationAllowed(
 		Select("COALESCE(MAX(roles.level), 0)").
 		Joins("JOIN user_roles ur ON ur.role_id = roles.id").
 		Where("ur.user_id = ?", actorUserID).
-		Where("roles.tenant_id = ? OR roles.tenant_id IS NULL", tenantID).
 		Scan(&actorMaxLevel).Error; err != nil {
 		return err
 	}
@@ -2219,7 +1601,6 @@ func (h *Handler) ensureRoleMutationAllowed(
 	if targetRoleID != "" {
 		type targetRoleMeta struct {
 			ID       string
-			TenantID *string
 			Code     string
 			IsSystem bool
 			Level    int
@@ -2227,14 +1608,11 @@ func (h *Handler) ensureRoleMutationAllowed(
 		var meta targetRoleMeta
 		if err := h.db.WithContext(c.Request.Context()).
 			Table("roles").
-			Select("id, tenant_id, code, is_system, level").
+			Select("id, code, is_system, level").
 			First(&meta, "id = ?", targetRoleID).Error; err != nil {
 			return err
 		}
-		if meta.TenantID != nil && *meta.TenantID != tenantID {
-			return errors.New("cross-tenant role mutation denied")
-		}
-		if !isTenantAdmin && (meta.IsSystem || strings.EqualFold(meta.Code, model.RoleCodeTenantAdmin)) {
+		if !isAdmin && (meta.IsSystem || strings.EqualFold(meta.Code, model.RoleCodeAdmin)) {
 			return errors.New("permission denied: can not manage protected role")
 		}
 		if meta.Level > actorMaxLevel {
@@ -2242,7 +1620,7 @@ func (h *Handler) ensureRoleMutationAllowed(
 		}
 	}
 
-	if !isTenantAdmin && len(permissionIDs) > 0 {
+	if len(permissionIDs) > 0 {
 		actorPermissionIDs := make([]string, 0, 32)
 		if err := h.db.WithContext(c.Request.Context()).
 			Table("permissions").
@@ -2251,7 +1629,6 @@ func (h *Handler) ensureRoleMutationAllowed(
 			Joins("JOIN roles r ON r.id = rp.role_id").
 			Joins("JOIN user_roles ur ON ur.role_id = r.id").
 			Where("ur.user_id = ?", actorUserID).
-			Where("r.tenant_id = ? OR r.tenant_id IS NULL", tenantID).
 			Pluck("permissions.id", &actorPermissionIDs).Error; err != nil {
 			return err
 		}
@@ -2326,30 +1703,34 @@ func (h *Handler) ensureUserActionAllowed(c *gin.Context, targetUserID, action s
 	return nil
 }
 
-func (h *Handler) namespaceScopeForAction(c *gin.Context, resource, action string) (map[string]struct{}, bool, error) {
+func (h *Handler) isAdmin(c *gin.Context) (bool, error) {
 	userID := getUserID(c)
-	tenantID := getTenantID(c)
-	if userID == "" || tenantID == "" {
-		return nil, false, errors.New("invalid auth context")
+	if strings.TrimSpace(userID) == "" {
+		return false, nil
 	}
 
-	isPlatformAdmin, err := h.isPlatformAdmin(c)
-	if err != nil {
-		return nil, false, err
-	}
-	if isPlatformAdmin {
-		return nil, true, nil
-	}
-
-	var adminCount int64
+	var count int64
 	if err := h.db.WithContext(c.Request.Context()).
 		Table("roles").
 		Joins("JOIN user_roles ur ON ur.role_id = roles.id").
-		Where("ur.user_id = ? AND roles.code = ? AND (roles.tenant_id = ? OR roles.tenant_id IS NULL)", userID, model.RoleCodeTenantAdmin, tenantID).
-		Count(&adminCount).Error; err != nil {
+		Where("ur.user_id = ? AND roles.code = ?", userID, model.RoleCodeAdmin).
+		Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (h *Handler) namespaceScopeForAction(c *gin.Context, resource, action string) (map[string]struct{}, bool, error) {
+	userID := getUserID(c)
+	if userID == "" {
+		return nil, false, errors.New("invalid auth context")
+	}
+
+	isAdmin, err := h.isAdmin(c)
+	if err != nil {
 		return nil, false, err
 	}
-	if adminCount > 0 {
+	if isAdmin {
 		return nil, true, nil
 	}
 
@@ -2361,7 +1742,6 @@ func (h *Handler) namespaceScopeForAction(c *gin.Context, resource, action strin
 		Joins("JOIN role_permissions rp ON rp.role_id = roles.id").
 		Joins("JOIN permissions p ON p.id = rp.permission_id").
 		Where("ur.user_id = ?", userID).
-		Where("roles.tenant_id = ? OR roles.tenant_id IS NULL", tenantID).
 		Where("p.resource = ?", resource).
 		Where("p.action = ? OR p.action = ?", action, string(model.ActionAdmin)).
 		Pluck("roles.id", &roleIDs).Error; err != nil {

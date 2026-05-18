@@ -1,4 +1,4 @@
-import * as Icons from "lucide-react";
+import { X } from "lucide-react";
 
 export default function Modal({ open, title, subtitle, onClose, children, width = 560 }) {
   if (!open) return null;
@@ -12,7 +12,7 @@ export default function Modal({ open, title, subtitle, onClose, children, width 
             {subtitle ? <p>{subtitle}</p> : null}
           </div>
           <button className="modal-close" type="button" onClick={onClose}>
-            <Icons.X size={18} />
+            <X size={18} />
           </button>
         </div>
         <div className="modal-body">

@@ -6,32 +6,29 @@ import (
 	"gorm.io/gorm"
 )
 
-// StorageConfig 存储配置表（每个租户可配置多个存储后端）
+// StorageConfig describes one storage backend configuration.
 type StorageConfig struct {
 	ID          string              `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	TenantID    string              `gorm:"type:uuid;not null;index" json:"tenant_id"`
+	OwnerUserID *string             `gorm:"type:uuid;index" json:"owner_user_id,omitempty"`
 	Name        string              `gorm:"type:varchar(100);not null" json:"name"`
 	Provider    StorageProvider     `gorm:"type:varchar(50);not null" json:"provider"`
 	Endpoint    string              `gorm:"type:varchar(255)" json:"endpoint"`
 	Region      string              `gorm:"type:varchar(50)" json:"region"`
 	Bucket      string              `gorm:"type:varchar(100)" json:"bucket"`
-	AccessKey   string              `gorm:"type:varchar(100)" json:"-"`      // 加密存储
-	SecretKey   string              `gorm:"type:varchar(255)" json:"-"`      // 加密存储
-	PathStyle   bool                `gorm:"default:false" json:"path_style"` // 是否使用 path-style URL
+	AccessKey   string              `gorm:"type:varchar(100)" json:"-"`
+	SecretKey   string              `gorm:"type:varchar(255)" json:"-"`
+	PathStyle   bool                `gorm:"default:false" json:"path_style"`
 	IsDefault   bool                `gorm:"default:false" json:"is_default"`
 	Status      StorageConfigStatus `gorm:"type:varchar(20);default:'active'" json:"status"`
-	ExtraConfig string              `gorm:"type:text" json:"extra_config"` // JSON 格式的额外配置
-
-	// 统计信息
-	UsedStorage int64 `gorm:"default:0" json:"used_storage"`
-	ObjectCount int64 `gorm:"default:0" json:"object_count"`
+	ExtraConfig string              `gorm:"type:text" json:"extra_config"`
+	UsedStorage int64               `gorm:"default:0" json:"used_storage"`
+	ObjectCount int64               `gorm:"default:0" json:"object_count"`
 
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
-	// 关联
-	Tenant     *Tenant     `gorm:"foreignKey:TenantID" json:"tenant,omitempty"`
+	Owner      *User       `gorm:"foreignKey:OwnerUserID" json:"owner,omitempty"`
 	Namespaces []Namespace `gorm:"foreignKey:StorageConfigID" json:"namespaces,omitempty"`
 }
 
@@ -60,36 +57,30 @@ func (StorageConfig) TableName() string {
 	return "storage_configs"
 }
 
-// Object 对象表（文件元数据）
+// Object stores metadata for the latest live version of one object key.
 type Object struct {
 	ID          string `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
 	NamespaceID string `gorm:"type:uuid;not null;index" json:"namespace_id"`
-	Key         string `gorm:"type:varchar(1024);not null;index:idx_object_key,namespace_id" json:"key"` // 对象路径
-	Name        string `gorm:"type:varchar(255)" json:"name"`                                            // 文件名
+	Key         string `gorm:"type:varchar(1024);not null;index:idx_object_key,namespace_id" json:"key"`
+	Name        string `gorm:"type:varchar(255)" json:"name"`
 	Size        int64  `gorm:"not null" json:"size"`
 	ContentType string `gorm:"type:varchar(100)" json:"content_type"`
-	ETag        string `gorm:"type:varchar(64)" json:"etag"` // MD5
+	ETag        string `gorm:"type:varchar(64)" json:"etag"`
 	VersionID   string `gorm:"type:varchar(64)" json:"version_id"`
 
-	// 存储信息
-	StorageKey   string `gorm:"type:varchar(1024)" json:"storage_key"` // 实际存储路径
+	StorageKey   string `gorm:"type:varchar(1024)" json:"storage_key"`
 	StorageClass string `gorm:"type:varchar(20)" json:"storage_class"`
+	Metadata     string `gorm:"type:text" json:"metadata"`
+	UserMetadata string `gorm:"type:text" json:"user_metadata"`
 
-	// 元数据
-	Metadata     string `gorm:"type:text" json:"metadata"`      // JSON 格式
-	UserMetadata string `gorm:"type:text" json:"user_metadata"` // 用户自定义元数据
-
-	// 版本控制
 	IsLatest  bool `gorm:"default:true" json:"is_latest"`
-	IsDeleted bool `gorm:"default:false" json:"is_deleted"` // 软删除标记
+	IsDeleted bool `gorm:"default:false" json:"is_deleted"`
 
-	// 时间戳
 	LastModified time.Time      `json:"last_modified"`
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 
-	// 关联
 	Namespace *Namespace      `gorm:"foreignKey:NamespaceID" json:"namespace,omitempty"`
 	Versions  []ObjectVersion `gorm:"foreignKey:ObjectID" json:"versions,omitempty"`
 }
@@ -98,7 +89,7 @@ func (Object) TableName() string {
 	return "objects"
 }
 
-// ObjectVersion 对象版本表
+// ObjectVersion stores historical immutable object versions.
 type ObjectVersion struct {
 	ID         string `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
 	ObjectID   string `gorm:"type:uuid;not null;index" json:"object_id"`
@@ -111,7 +102,6 @@ type ObjectVersion struct {
 	CreatedAt time.Time      `json:"created_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
-	// 关联
 	Object *Object `gorm:"foreignKey:ObjectID" json:"object,omitempty"`
 }
 
@@ -119,24 +109,21 @@ func (ObjectVersion) TableName() string {
 	return "object_versions"
 }
 
-// AuditLog 审计日志表
+// AuditLog records management operation traces.
 type AuditLog struct {
 	ID         string  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	TenantID   string  `gorm:"type:uuid;not null;index" json:"tenant_id"`
 	UserID     *string `gorm:"type:uuid;index" json:"user_id"`
 	Action     string  `gorm:"type:varchar(50);not null;index" json:"action"`
 	Resource   string  `gorm:"type:varchar(100);not null" json:"resource"`
 	ResourceID string  `gorm:"type:varchar(100);index" json:"resource_id"`
-	Detail     string  `gorm:"type:text" json:"detail"` // JSON 格式的详细信息
+	Detail     string  `gorm:"type:text" json:"detail"`
 	IPAddress  string  `gorm:"type:varchar(50)" json:"ip_address"`
 	UserAgent  string  `gorm:"type:varchar(500)" json:"user_agent"`
-	Status     string  `gorm:"type:varchar(20)" json:"status"` // success, failed
+	Status     string  `gorm:"type:varchar(20)" json:"status"`
 
 	CreatedAt time.Time `gorm:"index" json:"created_at"`
 
-	// 关联
-	Tenant *Tenant `gorm:"foreignKey:TenantID" json:"tenant,omitempty"`
-	User   *User   `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	User *User `gorm:"foreignKey:UserID" json:"user,omitempty"`
 }
 
 func (AuditLog) TableName() string {

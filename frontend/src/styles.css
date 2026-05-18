@@ -757,84 +757,6 @@ input:focus, select:focus, textarea:focus {
   text-decoration: none;
 }
 
-.tenant-card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.tenant-card {
-  padding: 16px;
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.5);
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  text-align: left;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  position: relative;
-  overflow: hidden;
-}
-
-.tenant-card:hover {
-  border-color: var(--brand-2);
-  background: #ffffff;
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-.tenant-card.active {
-  border-color: var(--brand-2);
-  background: #ffffff;
-  box-shadow: var(--shadow-glow);
-}
-
-.tenant-card.active::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 32px;
-  height: 32px;
-  background: var(--brand-2);
-  clip-path: polygon(100% 0, 0 0, 100% 100%);
-  opacity: 1;
-}
-
-.tenant-card-check {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  color: white;
-  z-index: 1;
-}
-
-.tenant-card strong {
-  font-size: 0.95rem;
-  color: var(--text);
-  font-weight: 700;
-}
-
-.tenant-card small {
-  font-size: 0.75rem;
-  color: var(--muted);
-  font-family: "JetBrains Mono", monospace;
-}
-
-.tenant-badge {
-  font-size: 0.65rem;
-  background: linear-gradient(135deg, var(--brand), var(--brand-2));
-  color: white;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
 .auth-help-links {
   display: flex;
   flex-wrap: wrap;
@@ -897,6 +819,12 @@ input:focus, select:focus, textarea:focus {
 .btn.small {
   padding: 6px 12px;
   font-size: 0.8rem;
+}
+
+.btn.tiny {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  min-height: auto;
 }
 
 .btn.secondary {
@@ -1027,6 +955,49 @@ input:focus, select:focus, textarea:focus {
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 8px;
   margin-top: 8px;
+}
+
+.permission-groups {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.permission-group-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  padding: 10px 12px;
+}
+
+.permission-group-head {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.permission-group-head strong {
+  font-size: 0.85rem;
+}
+
+.permission-group-head small {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.permission-group-actions {
+  justify-self: end;
+  display: flex;
+  gap: 6px;
+}
+
+.role-modal-form .section-label {
+  display: none;
+}
+
+.role-modal-form .field-hint[style*="display: none"] {
+  display: none !important;
 }
 
 /* ---- KV list ---- */

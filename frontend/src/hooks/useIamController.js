@@ -3,12 +3,7 @@ import { api } from "../api";
 import { emptyNamespaceForm, emptyRoleForm, emptyUserForm } from "../constants/forms";
 import { parseOptionalPositiveInt } from "../utils/data";
 
-function buildTenantParams(isPlatformAdmin, tenantID) {
-  if (!isPlatformAdmin || !tenantID) return undefined;
-  return { tenant_id: tenantID };
-}
-
-export default function useIamController({ token, tenantID, isPlatformAdmin, act, storageConfigs, loadObjects }) {
+export default function useIamController({ token, act, storageConfigs, loadObjects }) {
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [permissions, setPermissions] = useState([]);
@@ -30,10 +25,10 @@ export default function useIamController({ token, tenantID, isPlatformAdmin, act
     setEditingRoleID("");
     setNamespaceForm(emptyNamespaceForm);
     setEditingNamespaceID("");
-  }, [tenantID]);
+  }, [token]);
 
   async function loadUsers() {
-    const page = await api.listUsers(token, { page: 1, page_size: 100, ...buildTenantParams(isPlatformAdmin, tenantID) });
+    const page = await api.listUsers(token, { page: 1, page_size: 100 });
     setUsers(page?.items || []);
   }
 
@@ -43,12 +38,12 @@ export default function useIamController({ token, tenantID, isPlatformAdmin, act
   }
 
   async function loadRoles() {
-    const list = await api.listRoles(token, buildTenantParams(isPlatformAdmin, tenantID));
+    const list = await api.listRoles(token);
     setRoles(Array.isArray(list) ? list : []);
   }
 
   async function loadNamespaces() {
-    const page = await api.listNamespaces(token, { page: 1, page_size: 100, ...buildTenantParams(isPlatformAdmin, tenantID) });
+    const page = await api.listNamespaces(token, { page: 1, page_size: 100 });
     setNamespaces(page?.items || []);
   }
 
@@ -63,18 +58,14 @@ export default function useIamController({ token, tenantID, isPlatformAdmin, act
     const roleIDs = Array.isArray(userForm.roleIDs) ? userForm.roleIDs : [];
     const ok = await act(
       () =>
-        api.createUser(
-          token,
-          {
-            username: userForm.username,
-            email: userForm.email,
-            password: userForm.password,
-            nickname: userForm.nickname,
-            role_ids: roleIDs,
-          },
-          buildTenantParams(isPlatformAdmin, tenantID)
-        ),
-      "用户已创建"
+        api.createUser(token, {
+          username: userForm.username,
+          email: userForm.email,
+          password: userForm.password,
+          nickname: userForm.nickname,
+          role_ids: roleIDs,
+        }),
+      "用户创建成功"
     );
     if (ok) {
       setUserForm(emptyUserForm);
@@ -104,10 +95,7 @@ export default function useIamController({ token, tenantID, isPlatformAdmin, act
     if (userForm.password) {
       payload.password = userForm.password;
     }
-    const ok = await act(
-      () => api.updateUser(token, editingUserID, payload),
-      "用户已更新"
-    );
+    const ok = await act(() => api.updateUser(token, editingUserID, payload), "用户更新成功");
     if (ok) {
       setUserForm(emptyUserForm);
       setEditingUserID("");
@@ -131,23 +119,21 @@ export default function useIamController({ token, tenantID, isPlatformAdmin, act
       namespace_ids: roleForm.namespaceIDs,
     };
 
-    const ok = await act(() => {
-      if (editingRoleID) {
-        return api.updateRole(
-          token,
-          editingRoleID,
-          {
+    const ok = await act(
+      () => {
+        if (editingRoleID) {
+          return api.updateRole(token, editingRoleID, {
             name: payload.name,
             description: payload.description,
             level: payload.level,
             permission_ids: payload.permission_ids,
             namespace_ids: payload.namespace_ids,
-          },
-          buildTenantParams(isPlatformAdmin, tenantID)
-        );
-      }
-      return api.createRole(token, payload, buildTenantParams(isPlatformAdmin, tenantID));
-    }, editingRoleID ? "角色已更新" : "角色已创建");
+          });
+        }
+        return api.createRole(token, payload);
+      },
+      editingRoleID ? "角色更新成功" : "角色创建成功"
+    );
 
     if (ok) {
       setRoleForm(emptyRoleForm);
@@ -158,7 +144,7 @@ export default function useIamController({ token, tenantID, isPlatformAdmin, act
   }
 
   async function onDeleteRole(id) {
-    const ok = await act(() => api.deleteRole(token, id, buildTenantParams(isPlatformAdmin, tenantID)), "角色已删除");
+    const ok = await act(() => api.deleteRole(token, id), "角色已删除");
     if (ok) {
       await loadRoles();
       await loadUsers();
@@ -194,20 +180,16 @@ export default function useIamController({ token, tenantID, isPlatformAdmin, act
     const maxFileSize = parseOptionalPositiveInt(namespaceForm.maxFileSize);
     const ok = await act(
       () =>
-        api.createNamespace(
-          token,
-          {
-            name: namespaceForm.name,
-            description: namespaceForm.description,
-            storage_config_id: namespaceForm.storageConfigID || undefined,
-            path_prefix: namespaceForm.pathPrefix,
-            max_storage: maxStorage,
-            max_files: maxFiles,
-            max_file_size: maxFileSize,
-          },
-          buildTenantParams(isPlatformAdmin, tenantID)
-        ),
-      "命名空间已创建"
+        api.createNamespace(token, {
+          name: namespaceForm.name,
+          description: namespaceForm.description,
+          storage_config_id: namespaceForm.storageConfigID || undefined,
+          path_prefix: namespaceForm.pathPrefix,
+          max_storage: maxStorage,
+          max_files: maxFiles,
+          max_file_size: maxFileSize,
+        }),
+      "命名空间创建成功"
     );
     if (ok) {
       setNamespaceForm(emptyNamespaceForm);
@@ -244,7 +226,7 @@ export default function useIamController({ token, tenantID, isPlatformAdmin, act
           max_files: maxFiles,
           max_file_size: maxFileSize,
         }),
-      "命名空间已更新"
+      "命名空间更新成功"
     );
     if (ok) {
       setNamespaceForm(emptyNamespaceForm);

@@ -56,14 +56,13 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 func (m *AuthMiddleware) RequirePermission(resource, action string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID := getUserID(c)
-		tenantID := getTenantID(c)
-		if userID == "" || tenantID == "" {
+		if userID == "" {
 			jsonError(c, http.StatusUnauthorized, errors.New("invalid auth context"))
 			c.Abort()
 			return
 		}
 
-		allowed, err := m.hasPermission(c, userID, tenantID, resource, action)
+		allowed, err := m.hasPermission(c, userID, resource, action)
 		if err != nil {
 			jsonError(c, http.StatusInternalServerError, err)
 			c.Abort()
@@ -90,14 +89,12 @@ func (m *AuthMiddleware) authenticateJWT(c *gin.Context, authorization string) e
 	}
 
 	userID := claimToString(*claims, "user_id")
-	tenantID := claimToString(*claims, "tenant_id")
 	username := claimToString(*claims, "username")
-	if userID == "" || tenantID == "" {
+	if userID == "" {
 		return errors.New("token missing required claims")
 	}
 
 	c.Set(ctxUserID, userID)
-	c.Set(ctxTenantID, tenantID)
 	c.Set(ctxUsername, username)
 	c.Set(ctxAuthType, "jwt")
 	return nil
@@ -149,7 +146,6 @@ func (m *AuthMiddleware) authenticateAKSK(c *gin.Context, authorization string) 
 	}
 
 	c.Set(ctxUserID, credential.UserID)
-	c.Set(ctxTenantID, credential.TenantID)
 	if credential.User != nil {
 		c.Set(ctxUsername, credential.User.Username)
 	}
@@ -157,24 +153,13 @@ func (m *AuthMiddleware) authenticateAKSK(c *gin.Context, authorization string) 
 	return nil
 }
 
-func (m *AuthMiddleware) hasPermission(c *gin.Context, userID, tenantID, resource, action string) (bool, error) {
+func (m *AuthMiddleware) hasPermission(c *gin.Context, userID, resource, action string) (bool, error) {
 	var count int64
 
 	if err := m.db.WithContext(c.Request.Context()).
 		Table("roles").
 		Joins("JOIN user_roles ur ON ur.role_id = roles.id").
-		Where("ur.user_id = ? AND roles.code = ? AND roles.tenant_id IS NULL", userID, model.RoleCodePlatformAdmin).
-		Count(&count).Error; err != nil {
-		return false, err
-	}
-	if count > 0 {
-		return true, nil
-	}
-
-	if err := m.db.WithContext(c.Request.Context()).
-		Table("roles").
-		Joins("JOIN user_roles ur ON ur.role_id = roles.id").
-		Where("ur.user_id = ? AND roles.code = ? AND (roles.tenant_id = ? OR roles.tenant_id IS NULL)", userID, model.RoleCodeTenantAdmin, tenantID).
+		Where("ur.user_id = ? AND roles.code = ?", userID, model.RoleCodeAdmin).
 		Count(&count).Error; err != nil {
 		return false, err
 	}
@@ -189,7 +174,6 @@ func (m *AuthMiddleware) hasPermission(c *gin.Context, userID, tenantID, resourc
 		Joins("JOIN roles r ON r.id = rp.role_id").
 		Joins("JOIN user_roles ur ON ur.role_id = r.id").
 		Where("ur.user_id = ?", userID).
-		Where("r.tenant_id = ? OR r.tenant_id IS NULL", tenantID).
 		Where("permissions.resource = ?", resource).
 		Where("permissions.action = ? OR permissions.action = ?", action, string(model.ActionAdmin)).
 		Count(&count).Error

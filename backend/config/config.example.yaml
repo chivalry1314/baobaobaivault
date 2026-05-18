@@ -15,12 +15,11 @@ server:
   write_timeout: 30
   mode: debug # debug, release, test
   allow_public_bootstrap: false
-  auto_bootstrap_platform_admin: false
-  platform_admin_tenant_code: "platform"
-  platform_admin_email: ""
-  platform_admin_password: ""
-  platform_admin_username: "platform_admin"
-  platform_admin_nickname: "platform admin"
+  auto_bootstrap_admin: false
+  admin_email: ""
+  admin_password: ""
+  admin_username: "admin"
+  admin_nickname: "Administrator"
 
 cors:
   enabled: true

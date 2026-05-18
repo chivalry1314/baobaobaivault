@@ -50,7 +50,6 @@ func NewPostgresDB(cfg config.DatabaseConfig, log *zap.Logger) (*gorm.DB, error)
 // AutoMigrate runs all schema migrations.
 func AutoMigrate(db *gorm.DB) error {
 	return db.AutoMigrate(
-		&model.Tenant{},
 		&model.Namespace{},
 		&model.User{},
 		&model.Role{},

@@ -1,4 +1,4 @@
-import * as Icons from "lucide-react";
+import { AlertTriangle, Info, ShieldAlert } from "lucide-react";
 import Modal from "./Modal";
 
 export default function ConfirmDialog({
@@ -6,7 +6,7 @@ export default function ConfirmDialog({
   title,
   subtitle,
   changes,
-  confirmText = "确认提交",
+  confirmText = "确认操作",
   cancelText = "取消",
   busy,
   onCancel,
@@ -16,18 +16,14 @@ export default function ConfirmDialog({
   note = "",
 }) {
   const visualKind = danger ? "danger" : kind;
-  const introIcon = danger
-    ? <Icons.AlertTriangle size={18} />
-    : visualKind === "warning"
-      ? <Icons.ShieldAlert size={18} />
-      : <Icons.Info size={18} />;
+  const introIcon = danger ? <AlertTriangle size={18} /> : visualKind === "warning" ? <ShieldAlert size={18} /> : <Info size={18} />;
 
   return (
-    <Modal open={open} title={title || "请确认操作"} subtitle={subtitle} onClose={onCancel} width={480}>
+    <Modal open={open} title={title || "确认操作"} subtitle={subtitle} onClose={onCancel} width={480}>
       <div className={`confirm-dialog-intro ${visualKind}`}>
         <span className="confirm-dialog-icon">{introIcon}</span>
         <div className="confirm-dialog-copy">
-          <strong>{danger ? "此操作具有风险，请确认后继续。" : "请确认本次操作内容。"}</strong>
+          <strong>{danger ? "此操作不可撤销，请谨慎确认。" : "请确认是否继续执行该操作。"}</strong>
           {note ? <p>{note}</p> : null}
         </div>
       </div>
@@ -38,7 +34,7 @@ export default function ConfirmDialog({
             <div className="confirm-change" key={item.label}>
               <code>{item.label}</code>
               <span>
-                {item.beforeText} → {item.afterText}
+                {item.beforeText} {" -> "} {item.afterText}
               </span>
             </div>
           ))}

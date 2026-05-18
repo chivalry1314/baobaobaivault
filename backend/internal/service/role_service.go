@@ -11,7 +11,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// RoleService manages tenant roles and permission bindings.
+// RoleService manages roles and permission bindings.
 type RoleService struct {
 	db     *gorm.DB
 	logger *zap.Logger
@@ -21,12 +21,75 @@ func NewRoleService(db *gorm.DB, logger *zap.Logger) *RoleService {
 	return &RoleService{db: db, logger: logger}
 }
 
-func (s *RoleService) ListRoles(ctx context.Context, tenantID string) ([]*model.Role, error) {
+func (s *RoleService) EnsureDefaultAdminRole(ctx context.Context) (*model.Role, error) {
+	var role model.Role
+	err := s.db.WithContext(ctx).
+		Preload("Permissions").
+		First(&role, "code = ?", model.RoleCodeAdmin).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		role = model.Role{
+			Code:        model.RoleCodeAdmin,
+			Name:        "Administrator",
+			Description: "Full control over platform resources",
+			IsSystem:    true,
+			Level:       100,
+		}
+		if err := s.db.WithContext(ctx).Create(&role).Error; err != nil {
+			return nil, err
+		}
+	}
+
+	resourceActions := map[string][]model.PermissionAction{
+		"user":      {model.ActionCreate, model.ActionRead, model.ActionUpdate, model.ActionDelete, model.ActionList, model.ActionAdmin},
+		"namespace": {model.ActionCreate, model.ActionRead, model.ActionUpdate, model.ActionDelete, model.ActionList, model.ActionAdmin},
+		"storage":   {model.ActionCreate, model.ActionRead, model.ActionUpdate, model.ActionDelete, model.ActionList, model.ActionAdmin},
+		"object":    {model.ActionCreate, model.ActionRead, model.ActionUpdate, model.ActionDelete, model.ActionList, model.ActionShare, model.ActionAdmin},
+		"audit":     {model.ActionRead, model.ActionList, model.ActionAdmin},
+	}
+	permissionIDs := make([]string, 0, 64)
+	for resource, actions := range resourceActions {
+		for _, action := range actions {
+			code := fmt.Sprintf("%s:%s", resource, string(action))
+			var permission model.Permission
+			err := s.db.WithContext(ctx).First(&permission, "code = ?", code).Error
+			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, err
+			}
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				permission = model.Permission{
+					Code:        code,
+					Name:        code,
+					Description: fmt.Sprintf("%s %s permission", resource, action),
+					Resource:    resource,
+					Action:      action,
+				}
+				if err := s.db.WithContext(ctx).Create(&permission).Error; err != nil {
+					return nil, err
+				}
+			}
+			permissionIDs = append(permissionIDs, permission.ID)
+		}
+	}
+
+	permissions := make([]model.Permission, 0, len(permissionIDs))
+	if err := s.db.WithContext(ctx).Find(&permissions, "id IN ?", permissionIDs).Error; err != nil {
+		return nil, err
+	}
+	if err := s.db.WithContext(ctx).Model(&role).Association("Permissions").Replace(permissions); err != nil {
+		return nil, err
+	}
+
+	return s.GetRole(ctx, role.ID)
+}
+
+func (s *RoleService) ListRoles(ctx context.Context) ([]*model.Role, error) {
 	items := make([]*model.Role, 0, 16)
 	err := s.db.WithContext(ctx).
 		Preload("Permissions").
 		Preload("Namespaces").
-		Where("tenant_id = ? OR tenant_id IS NULL", tenantID).
 		Order("is_system DESC, level DESC, created_at ASC").
 		Find(&items).Error
 	if err != nil {
@@ -43,7 +106,7 @@ func (s *RoleService) ListPermissions(ctx context.Context) ([]*model.Permission,
 	return items, nil
 }
 
-func (s *RoleService) CreateRole(ctx context.Context, tenantID string, req *CreateRoleRequest) (*model.Role, error) {
+func (s *RoleService) CreateRole(ctx context.Context, req *CreateRoleRequest) (*model.Role, error) {
 	if req == nil {
 		return nil, errors.New("invalid request")
 	}
@@ -52,10 +115,13 @@ func (s *RoleService) CreateRole(ctx context.Context, tenantID string, req *Crea
 	if code == "" || name == "" {
 		return nil, errors.New("code and name are required")
 	}
+	if strings.EqualFold(code, model.RoleCodeAdmin) {
+		return nil, errors.New("admin role can not be created manually")
+	}
 
 	var existing int64
 	if err := s.db.WithContext(ctx).Model(&model.Role{}).
-		Where("tenant_id = ? AND code = ?", tenantID, code).
+		Where("code = ?", code).
 		Count(&existing).Error; err != nil {
 		return nil, fmt.Errorf("failed to check role code: %w", err)
 	}
@@ -64,7 +130,6 @@ func (s *RoleService) CreateRole(ctx context.Context, tenantID string, req *Crea
 	}
 
 	role := &model.Role{
-		TenantID:    &tenantID,
 		Code:        code,
 		Name:        name,
 		Description: strings.TrimSpace(req.Description),
@@ -76,7 +141,7 @@ func (s *RoleService) CreateRole(ctx context.Context, tenantID string, req *Crea
 	if err != nil {
 		return nil, err
 	}
-	namespaces, err := s.findNamespacesByIDs(ctx, tenantID, req.NamespaceIDs)
+	namespaces, err := s.findNamespacesByIDs(ctx, req.NamespaceIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -98,17 +163,16 @@ func (s *RoleService) CreateRole(ctx context.Context, tenantID string, req *Crea
 		return nil, fmt.Errorf("failed to commit create role transaction: %w", err)
 	}
 
-	s.logger.Info("Role created", zap.String("tenant_id", tenantID), zap.String("role_id", role.ID), zap.String("code", role.Code))
-	return s.GetRole(ctx, tenantID, role.ID)
+	s.logger.Info("Role created", zap.String("role_id", role.ID), zap.String("code", role.Code))
+	return s.GetRole(ctx, role.ID)
 }
 
-func (s *RoleService) GetRole(ctx context.Context, tenantID, roleID string) (*model.Role, error) {
+func (s *RoleService) GetRole(ctx context.Context, roleID string) (*model.Role, error) {
 	var role model.Role
 	err := s.db.WithContext(ctx).
 		Preload("Permissions").
 		Preload("Namespaces").
 		Where("id = ?", roleID).
-		Where("tenant_id = ? OR tenant_id IS NULL", tenantID).
 		First(&role).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -119,22 +183,19 @@ func (s *RoleService) GetRole(ctx context.Context, tenantID, roleID string) (*mo
 	return &role, nil
 }
 
-func (s *RoleService) UpdateRole(ctx context.Context, tenantID, roleID string, req *UpdateRoleRequest) (*model.Role, error) {
+func (s *RoleService) UpdateRole(ctx context.Context, roleID string, req *UpdateRoleRequest) (*model.Role, error) {
 	if req == nil {
 		return nil, errors.New("invalid request")
 	}
-	role, err := s.GetRole(ctx, tenantID, roleID)
+	role, err := s.GetRole(ctx, roleID)
 	if err != nil {
 		return nil, err
 	}
-	if role.IsSystem || role.TenantID == nil {
+	if role.IsSystem {
 		return nil, errors.New("system role can not be modified")
 	}
-	if *role.TenantID != tenantID {
-		return nil, errors.New("cross-tenant access denied")
-	}
-	if strings.EqualFold(role.Code, "tenant_admin") {
-		return nil, errors.New("tenant_admin role can not be modified")
+	if strings.EqualFold(role.Code, model.RoleCodeAdmin) {
+		return nil, errors.New("admin role can not be modified")
 	}
 
 	updates := map[string]any{}
@@ -173,7 +234,7 @@ func (s *RoleService) UpdateRole(ctx context.Context, tenantID, roleID string, r
 		}
 	}
 	if req.NamespaceIDs != nil {
-		namespaces, err := s.findNamespacesByIDs(ctx, tenantID, *req.NamespaceIDs)
+		namespaces, err := s.findNamespacesByIDs(ctx, *req.NamespaceIDs)
 		if err != nil {
 			tx.Rollback()
 			return nil, err
@@ -188,22 +249,19 @@ func (s *RoleService) UpdateRole(ctx context.Context, tenantID, roleID string, r
 	if err := tx.Commit().Error; err != nil {
 		return nil, fmt.Errorf("failed to commit update role transaction: %w", err)
 	}
-	return s.GetRole(ctx, tenantID, roleID)
+	return s.GetRole(ctx, roleID)
 }
 
-func (s *RoleService) DeleteRole(ctx context.Context, tenantID, roleID string) error {
-	role, err := s.GetRole(ctx, tenantID, roleID)
+func (s *RoleService) DeleteRole(ctx context.Context, roleID string) error {
+	role, err := s.GetRole(ctx, roleID)
 	if err != nil {
 		return err
 	}
-	if role.IsSystem || role.TenantID == nil {
+	if role.IsSystem {
 		return errors.New("system role can not be deleted")
 	}
-	if *role.TenantID != tenantID {
-		return errors.New("cross-tenant access denied")
-	}
-	if strings.EqualFold(role.Code, "tenant_admin") {
-		return errors.New("tenant_admin role can not be deleted")
+	if strings.EqualFold(role.Code, model.RoleCodeAdmin) {
+		return errors.New("admin role can not be deleted")
 	}
 
 	var assigned int64
@@ -224,7 +282,7 @@ func (s *RoleService) DeleteRole(ctx context.Context, tenantID, roleID string) e
 		tx.Rollback()
 		return fmt.Errorf("failed to clear role namespaces: %w", err)
 	}
-	if err := tx.Delete(&model.Role{}, "id = ? AND tenant_id = ?", roleID, tenantID).Error; err != nil {
+	if err := tx.Delete(&model.Role{}, "id = ?", roleID).Error; err != nil {
 		tx.Rollback()
 		return fmt.Errorf("failed to delete role: %w", err)
 	}
@@ -232,7 +290,7 @@ func (s *RoleService) DeleteRole(ctx context.Context, tenantID, roleID string) e
 		return fmt.Errorf("failed to commit delete role transaction: %w", err)
 	}
 
-	s.logger.Info("Role deleted", zap.String("tenant_id", tenantID), zap.String("role_id", roleID))
+	s.logger.Info("Role deleted", zap.String("role_id", roleID))
 	return nil
 }
 
@@ -268,7 +326,7 @@ func (s *RoleService) findPermissionsByIDs(ctx context.Context, ids []string) ([
 	return items, nil
 }
 
-func (s *RoleService) findNamespacesByIDs(ctx context.Context, tenantID string, ids []string) ([]model.Namespace, error) {
+func (s *RoleService) findNamespacesByIDs(ctx context.Context, ids []string) ([]model.Namespace, error) {
 	if len(ids) == 0 {
 		return []model.Namespace{}, nil
 	}
@@ -292,7 +350,6 @@ func (s *RoleService) findNamespacesByIDs(ctx context.Context, tenantID string, 
 
 	items := make([]model.Namespace, 0, len(cleaned))
 	if err := s.db.WithContext(ctx).
-		Where("tenant_id = ?", tenantID).
 		Find(&items, "id IN ?", cleaned).Error; err != nil {
 		return nil, fmt.Errorf("failed to query namespaces: %w", err)
 	}

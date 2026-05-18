@@ -13,7 +13,7 @@ import {
 } from "react";
 
 import { AppShell } from "@/components/share/app-shell";
-import { AuthCard } from "@/components/share/auth-card";
+import { AuthRedirect } from "@/components/share/auth-redirect";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type { CardDetailResponse, ExternalSessionUser } from "@/lib/shared";
 
@@ -391,11 +391,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
   }
 
   if (!currentUser) {
-    return (
-      <div className="min-h-screen bg-[var(--background)] px-4 py-10 sm:px-6">
-        <AuthCard afterSuccess={afterSuccessPath} />
-      </div>
-    );
+    return <AuthRedirect nextPath={afterSuccessPath} />;
   }
 
   if (mode === "edit" && loadError) {

@@ -2,12 +2,7 @@ import { useState } from "react";
 import { api } from "../api";
 import { emptyAuditFilter } from "../constants/forms";
 
-function buildTenantParams(isPlatformAdmin, tenantID) {
-  if (!isPlatformAdmin || !tenantID) return undefined;
-  return { tenant_id: tenantID };
-}
-
-export default function useAuditController({ token, tenantID, isPlatformAdmin, act }) {
+export default function useAuditController({ token, act }) {
   const [auditFilter, setAuditFilter] = useState(emptyAuditFilter);
   const [auditLogs, setAuditLogs] = useState([]);
 
@@ -15,7 +10,6 @@ export default function useAuditController({ token, tenantID, isPlatformAdmin, a
     const page = await api.listAuditLogs(token, {
       page: 1,
       page_size: 50,
-      ...buildTenantParams(isPlatformAdmin, tenantID),
       ...filters,
     });
     setAuditLogs(page?.items || []);

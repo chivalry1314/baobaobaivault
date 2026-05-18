@@ -34,25 +34,25 @@ func (h *Handler) baiduOAuthCallback(c *gin.Context) {
 		return
 	}
 
-	tenantID, userID, returnTo, err := h.baiduService.HandleOAuthCallback(c.Request.Context(), code, state)
+	userID, returnTo, err := h.baiduService.HandleOAuthCallback(c.Request.Context(), code, state)
 	if err != nil {
 		h.logger.Warn("baidu oauth callback failed", zap.Error(err))
 		renderBaiduOAuthResult(c, http.StatusBadRequest, false, "百度授权失败："+err.Error(), "")
 		return
 	}
 
-	h.logger.Info("baidu account linked", zap.String("tenant_id", tenantID), zap.String("user_id", userID))
+	h.logger.Info("baidu account linked", zap.String("user_id", userID))
 	renderBaiduOAuthResult(c, http.StatusOK, true, "百度网盘授权成功，正在返回应用。", returnTo)
 }
 
 func (h *Handler) getBaiduConnectorStatus(c *gin.Context) {
-	tenantID, userID, err := authSubjectFromContext(c)
+	userID, err := authSubjectFromContext(c)
 	if err != nil {
 		jsonError(c, http.StatusUnauthorized, err)
 		return
 	}
 
-	status, err := h.baiduService.GetAccountStatus(c.Request.Context(), tenantID, userID)
+	status, err := h.baiduService.GetAccountStatus(c.Request.Context(), userID)
 	if err != nil {
 		jsonError(c, http.StatusInternalServerError, err)
 		return
@@ -61,14 +61,14 @@ func (h *Handler) getBaiduConnectorStatus(c *gin.Context) {
 }
 
 func (h *Handler) getBaiduConnectorAuthURL(c *gin.Context) {
-	tenantID, userID, err := authSubjectFromContext(c)
+	userID, err := authSubjectFromContext(c)
 	if err != nil {
 		jsonError(c, http.StatusUnauthorized, err)
 		return
 	}
 
 	returnTo := strings.TrimSpace(c.Query("return_to"))
-	authURL, err := h.baiduService.BuildAuthURL(tenantID, userID, returnTo)
+	authURL, err := h.baiduService.BuildAuthURL(userID, returnTo)
 	if err != nil {
 		jsonError(c, http.StatusBadRequest, err)
 		return
@@ -77,14 +77,14 @@ func (h *Handler) getBaiduConnectorAuthURL(c *gin.Context) {
 }
 
 func (h *Handler) listBaiduBackups(c *gin.Context) {
-	tenantID, userID, err := authSubjectFromContext(c)
+	userID, err := authSubjectFromContext(c)
 	if err != nil {
 		jsonError(c, http.StatusUnauthorized, err)
 		return
 	}
 
 	pathPrefix := strings.TrimSpace(c.Query("path_prefix"))
-	items, err := h.baiduService.ListBackups(c.Request.Context(), tenantID, userID, pathPrefix)
+	items, err := h.baiduService.ListBackups(c.Request.Context(), userID, pathPrefix)
 	if err != nil {
 		status := http.StatusBadRequest
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -97,7 +97,7 @@ func (h *Handler) listBaiduBackups(c *gin.Context) {
 }
 
 func (h *Handler) uploadBaiduBackup(c *gin.Context) {
-	tenantID, userID, err := authSubjectFromContext(c)
+	userID, err := authSubjectFromContext(c)
 	if err != nil {
 		jsonError(c, http.StatusUnauthorized, err)
 		return
@@ -122,7 +122,7 @@ func (h *Handler) uploadBaiduBackup(c *gin.Context) {
 	}
 	pathPrefix := strings.TrimSpace(c.PostForm("path_prefix"))
 
-	item, err := h.baiduService.UploadBackup(c.Request.Context(), tenantID, userID, fileName, content, pathPrefix)
+	item, err := h.baiduService.UploadBackup(c.Request.Context(), userID, fileName, content, pathPrefix)
 	if err != nil {
 		status := http.StatusBadRequest
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -136,7 +136,7 @@ func (h *Handler) uploadBaiduBackup(c *gin.Context) {
 }
 
 func (h *Handler) downloadBaiduBackup(c *gin.Context) {
-	tenantID, userID, err := authSubjectFromContext(c)
+	userID, err := authSubjectFromContext(c)
 	if err != nil {
 		jsonError(c, http.StatusUnauthorized, err)
 		return
@@ -148,7 +148,7 @@ func (h *Handler) downloadBaiduBackup(c *gin.Context) {
 		return
 	}
 
-	content, fileName, err := h.baiduService.DownloadBackup(c.Request.Context(), tenantID, userID, filePath)
+	content, fileName, err := h.baiduService.DownloadBackup(c.Request.Context(), userID, filePath)
 	if err != nil {
 		status := http.StatusBadRequest
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -170,7 +170,7 @@ func (h *Handler) downloadBaiduBackup(c *gin.Context) {
 }
 
 func (h *Handler) deleteBaiduBackup(c *gin.Context) {
-	tenantID, userID, err := authSubjectFromContext(c)
+	userID, err := authSubjectFromContext(c)
 	if err != nil {
 		jsonError(c, http.StatusUnauthorized, err)
 		return
@@ -182,7 +182,7 @@ func (h *Handler) deleteBaiduBackup(c *gin.Context) {
 		return
 	}
 
-	if err := h.baiduService.DeleteBackup(c.Request.Context(), tenantID, userID, filePath); err != nil {
+	if err := h.baiduService.DeleteBackup(c.Request.Context(), userID, filePath); err != nil {
 		status := http.StatusBadRequest
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			status = http.StatusNotFound
@@ -195,13 +195,13 @@ func (h *Handler) deleteBaiduBackup(c *gin.Context) {
 }
 
 func (h *Handler) disconnectBaiduConnector(c *gin.Context) {
-	tenantID, userID, err := authSubjectFromContext(c)
+	userID, err := authSubjectFromContext(c)
 	if err != nil {
 		jsonError(c, http.StatusUnauthorized, err)
 		return
 	}
 
-	if err := h.baiduService.Disconnect(c.Request.Context(), tenantID, userID); err != nil {
+	if err := h.baiduService.Disconnect(c.Request.Context(), userID); err != nil {
 		jsonError(c, http.StatusInternalServerError, err)
 		return
 	}
@@ -211,13 +211,12 @@ func (h *Handler) disconnectBaiduConnector(c *gin.Context) {
 	})
 }
 
-func authSubjectFromContext(c *gin.Context) (string, string, error) {
-	tenantID := strings.TrimSpace(getTenantID(c))
+func authSubjectFromContext(c *gin.Context) (string, error) {
 	userID := strings.TrimSpace(getUserID(c))
-	if tenantID == "" || userID == "" {
-		return "", "", errors.New("无效的登录上下文")
+	if userID == "" {
+		return "", errors.New("无效的登录上下文")
 	}
-	return tenantID, userID, nil
+	return userID, nil
 }
 
 func renderBaiduOAuthResult(c *gin.Context, status int, success bool, message, returnTo string) {

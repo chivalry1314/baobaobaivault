@@ -1,4 +1,4 @@
-﻿export function parseJson(value, fallback = null) {
+export function parseJson(value, fallback = null) {
   try {
     return JSON.parse(value);
   } catch {

@@ -5,12 +5,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
-import type { ExternalSessionUser } from "@/lib/shared";
-
-type AuthPageProps = {
-  afterSuccess?: string;
-  onSuccess?: (user: ExternalSessionUser) => void;
-};
 
 type FieldProps = {
   label: string;
@@ -53,7 +47,20 @@ function Field({
   );
 }
 
-export function AuthPage({ afterSuccess = "/creator", onSuccess }: AuthPageProps) {
+function getSafeRedirectPath(value: string | null, fallback: string) {
+  const nextPath = (value ?? "").trim();
+  if (!nextPath) {
+    return fallback;
+  }
+
+  if (!nextPath.startsWith("/") || nextPath.startsWith("//")) {
+    return fallback;
+  }
+
+  return nextPath;
+}
+
+export function AuthPage() {
   const router = useRouter();
   const [sessionChecking, setSessionChecking] = useState(true);
   const [email, setEmail] = useState("");
@@ -61,6 +68,12 @@ export function AuthPage({ afterSuccess = "/creator", onSuccess }: AuthPageProps
   const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [redirectPath, setRedirectPath] = useState("/creator");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setRedirectPath(getSafeRedirectPath(params.get("next"), "/creator"));
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -73,8 +86,7 @@ export function AuthPage({ afterSuccess = "/creator", onSuccess }: AuthPageProps
         }
 
         if (session.authenticated && session.user) {
-          onSuccess?.(session.user);
-          router.replace(afterSuccess);
+          router.replace(redirectPath);
           router.refresh();
           return;
         }
@@ -92,7 +104,7 @@ export function AuthPage({ afterSuccess = "/creator", onSuccess }: AuthPageProps
     return () => {
       active = false;
     };
-  }, [afterSuccess, onSuccess, router]);
+  }, [redirectPath, router]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -116,8 +128,7 @@ export function AuthPage({ afterSuccess = "/creator", onSuccess }: AuthPageProps
         password,
       });
 
-      onSuccess?.(payload.user);
-      router.push(afterSuccess);
+      router.push(redirectPath);
       router.refresh();
     } catch (submitError) {
       setError(getShareErrorMessage(submitError, "暂时无法继续，请稍后重试"));

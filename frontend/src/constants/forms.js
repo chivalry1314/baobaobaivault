@@ -1,18 +1,14 @@
 export const TOKEN_KEY = "bv_token";
 export const USER_KEY = "bv_user";
-export const TENANT_KEY = "bv_tenant";
 
 export const emptyBootstrap = {
-  tenantName: "",
-  tenantCode: "",
-  tenantDescription: "",
   adminUsername: "",
   adminEmail: "",
   adminPassword: "",
   adminNickname: "",
 };
 
-export const emptyLogin = { tenantCode: "", email: "", password: "" };
+export const emptyLogin = { email: "", password: "" };
 export const emptyUserForm = { username: "", email: "", password: "", nickname: "", roleIDs: [] };
 export const emptyRoleForm = { code: "", name: "", description: "", level: 10, permissionIDs: [], namespaceIDs: [] };
 export const emptyNamespaceForm = { name: "", description: "", storageConfigID: "", pathPrefix: "", maxStorage: "", maxFiles: "", maxFileSize: "" };

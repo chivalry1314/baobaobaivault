@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/share/app-shell";
-import { AuthCard } from "@/components/share/auth-card";
+import { AuthRedirect } from "@/components/share/auth-redirect";
 import { ShareApiError, getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type { AccessCodeDashboardItem, DashboardCard, PlatformCard } from "@/lib/shared";
 
@@ -249,11 +249,7 @@ export function ShareAccessCodeCardPicker() {
   }
 
   if (!authenticated) {
-    return (
-      <div className="min-h-screen bg-[var(--background)] px-4 py-10 sm:px-6">
-        <AuthCard afterSuccess="/creator/access-codes/new" />
-      </div>
-    );
+    return <AuthRedirect nextPath="/creator/access-codes/new" />;
   }
 
   return (

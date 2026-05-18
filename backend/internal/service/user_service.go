@@ -26,29 +26,28 @@ func NewUserService(db *gorm.DB, logger *zap.Logger, jwtSecret string) *UserServ
 	return &UserService{db: db, logger: logger, jwtSecret: jwtSecret}
 }
 
-func (s *UserService) CreateUser(ctx context.Context, tenantID string, req *CreateUserRequest) (*model.User, error) {
+func (s *UserService) CreateUser(ctx context.Context, req *CreateUserRequest) (*model.User, error) {
 	email := normalizeEmail(req.Email)
 	if email == "" {
 		return nil, errors.New("email is required")
 	}
 
-	username, err := s.resolveUsername(ctx, tenantID, req.Username, email)
+	username, err := s.resolveUsername(ctx, req.Username, email)
 	if err != nil {
 		return nil, err
 	}
 
-	var count int64
+	var emailCount int64
 	if err := s.db.WithContext(ctx).Model(&model.User{}).
-		Where("tenant_id = ? AND lower(email) = ?", tenantID, email).
-		Count(&count).Error; err != nil {
+		Where("lower(email) = ?", email).
+		Count(&emailCount).Error; err != nil {
 		return nil, fmt.Errorf("failed to check email: %w", err)
 	}
-	if count > 0 {
+	if emailCount > 0 {
 		return nil, errors.New("email already exists")
 	}
 
 	user := &model.User{
-		TenantID: tenantID,
 		Username: username,
 		Email:    email,
 		Nickname: req.Nickname,
@@ -71,7 +70,6 @@ func (s *UserService) CreateUser(ctx context.Context, tenantID string, req *Crea
 
 	s.logger.Info("User created",
 		zap.String("user_id", user.ID),
-		zap.String("tenant_id", tenantID),
 		zap.String("username", user.Username),
 		zap.String("email", user.Email),
 	)
@@ -89,10 +87,10 @@ func (s *UserService) GetUser(ctx context.Context, userID string) (*model.User, 
 	return &user, nil
 }
 
-func (s *UserService) GetUserByUsername(ctx context.Context, tenantID, username string) (*model.User, error) {
+func (s *UserService) GetUserByUsername(ctx context.Context, username string) (*model.User, error) {
 	var user model.User
 	if err := s.db.WithContext(ctx).Preload("Roles.Permissions").
-		First(&user, "tenant_id = ? AND username = ?", tenantID, username).Error; err != nil {
+		First(&user, "username = ?", strings.TrimSpace(username)).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errUserNotFound
 		}
@@ -101,11 +99,11 @@ func (s *UserService) GetUserByUsername(ctx context.Context, tenantID, username 
 	return &user, nil
 }
 
-func (s *UserService) GetUserByEmail(ctx context.Context, tenantID, email string) (*model.User, error) {
+func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
 	email = normalizeEmail(email)
 	var user model.User
 	if err := s.db.WithContext(ctx).Preload("Roles.Permissions").
-		First(&user, "tenant_id = ? AND lower(email) = ?", tenantID, email).Error; err != nil {
+		First(&user, "lower(email) = ?", email).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errUserNotFound
 		}
@@ -114,7 +112,7 @@ func (s *UserService) GetUserByEmail(ctx context.Context, tenantID, email string
 	return &user, nil
 }
 
-func (s *UserService) ListUsers(ctx context.Context, tenantID string, req *ListUserRequest) ([]*model.User, int64, error) {
+func (s *UserService) ListUsers(ctx context.Context, req *ListUserRequest) ([]*model.User, int64, error) {
 	if req == nil {
 		req = &ListUserRequest{}
 	}
@@ -128,7 +126,7 @@ func (s *UserService) ListUsers(ctx context.Context, tenantID string, req *ListU
 	var users []*model.User
 	var total int64
 
-	query := s.db.WithContext(ctx).Model(&model.User{}).Where("tenant_id = ?", tenantID)
+	query := s.db.WithContext(ctx).Model(&model.User{})
 	if req.Status != "" {
 		query = query.Where("status = ?", req.Status)
 	}
@@ -181,6 +179,12 @@ func (s *UserService) UpdateUser(ctx context.Context, userID string, req *Update
 	if req.Status != "" {
 		updates["status"] = req.Status
 	}
+	if req.Password != "" {
+		if err := user.SetPassword(req.Password); err != nil {
+			return nil, fmt.Errorf("failed to hash password: %w", err)
+		}
+		updates["password"] = user.Password
+	}
 
 	if len(updates) > 0 {
 		if err := s.db.WithContext(ctx).Model(user).Updates(updates).Error; err != nil {
@@ -188,7 +192,7 @@ func (s *UserService) UpdateUser(ctx context.Context, userID string, req *Update
 		}
 	}
 
-	if len(req.RoleIDs) > 0 {
+	if req.RoleIDs != nil {
 		if err := s.assignRoles(ctx, user, req.RoleIDs); err != nil {
 			return nil, err
 		}
@@ -229,25 +233,13 @@ func (s *UserService) ChangePassword(ctx context.Context, userID, oldPassword, n
 	return nil
 }
 
-func (s *UserService) Login(ctx context.Context, tenantCode, email, password string) (*LoginResponse, error) {
-	tenantCode = strings.TrimSpace(tenantCode)
+func (s *UserService) Login(ctx context.Context, email, password string) (*LoginResponse, error) {
 	email = normalizeEmail(email)
 	if email == "" {
 		return nil, errors.New("email is required")
 	}
 
-	var tenant model.Tenant
-	if err := s.db.WithContext(ctx).First(&tenant, "code = ?", tenantCode).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("tenant not found")
-		}
-		return nil, fmt.Errorf("failed to get tenant: %w", err)
-	}
-	if tenant.Status != model.TenantStatusActive {
-		return nil, errors.New("tenant is not active")
-	}
-
-	user, err := s.GetUserByEmail(ctx, tenant.ID, email)
+	user, err := s.GetUserByEmail(ctx, email)
 	if err != nil || !user.CheckPassword(password) {
 		return nil, errors.New("invalid email or password")
 	}
@@ -265,7 +257,6 @@ func (s *UserService) Login(ctx context.Context, tenantCode, email, password str
 
 	s.logger.Info("User logged in",
 		zap.String("user_id", user.ID),
-		zap.String("tenant_id", user.TenantID),
 		zap.String("username", user.Username),
 		zap.String("email", user.Email),
 	)
@@ -274,12 +265,10 @@ func (s *UserService) Login(ctx context.Context, tenantCode, email, password str
 		Token:     token,
 		ExpiresAt: now.Add(24 * time.Hour),
 		User:      user,
-		Tenant:    &tenant,
 	}, nil
 }
 
-func (s *UserService) LoginWithEmail(ctx context.Context, tenantCode, email, password string) (*LoginFlowResponse, error) {
-	tenantCode = strings.TrimSpace(tenantCode)
+func (s *UserService) LoginWithEmail(ctx context.Context, email, password string) (*LoginResponse, error) {
 	email = normalizeEmail(email)
 	if email == "" {
 		return nil, errors.New("email is required")
@@ -287,103 +276,17 @@ func (s *UserService) LoginWithEmail(ctx context.Context, tenantCode, email, pas
 	if strings.TrimSpace(password) == "" {
 		return nil, errors.New("password is required")
 	}
-
-	if tenantCode != "" {
-		auth, err := s.Login(ctx, tenantCode, email, password)
-		if err != nil {
-			return nil, err
-		}
-		return &LoginFlowResponse{Auth: auth}, nil
-	}
-
-	options, err := s.findTenantLoginOptions(ctx, email, password)
-	if err != nil {
-		return nil, err
-	}
-	if len(options) == 0 {
-		return nil, errors.New("invalid email or password")
-	}
-	if len(options) == 1 {
-		auth, err := s.Login(ctx, options[0].TenantCode, email, password)
-		if err != nil {
-			return nil, err
-		}
-		return &LoginFlowResponse{Auth: auth}, nil
-	}
-
-	return &LoginFlowResponse{
-		RequiresTenantSelection: true,
-		TenantOptions:           options,
-	}, nil
-}
-
-func (s *UserService) findTenantLoginOptions(ctx context.Context, email, password string) ([]TenantLoginOption, error) {
-	type loginCandidate struct {
-		UserID       string
-		Username     string
-		UserStatus   model.UserStatus
-		PasswordHash string
-		TenantID     string
-		TenantCode   string
-		TenantName   string
-		TenantStatus model.TenantStatus
-	}
-
-	candidates := make([]loginCandidate, 0, 8)
-	err := s.db.WithContext(ctx).
-		Table("users").
-		Select(
-			"users.id AS user_id, users.username, users.status AS user_status, users.password AS password_hash, "+
-				"tenants.id AS tenant_id, tenants.code AS tenant_code, tenants.name AS tenant_name, tenants.status AS tenant_status",
-		).
-		Joins("JOIN tenants ON tenants.id = users.tenant_id").
-		Where("lower(users.email) = ?", email).
-		Where("users.deleted_at IS NULL").
-		Where("tenants.deleted_at IS NULL").
-		Order("tenants.code ASC").
-		Scan(&candidates).Error
-	if err != nil {
-		return nil, fmt.Errorf("failed to find tenant candidates: %w", err)
-	}
-
-	options := make([]TenantLoginOption, 0, len(candidates))
-	seenTenant := make(map[string]struct{}, len(candidates))
-	for _, candidate := range candidates {
-		if candidate.UserStatus != model.UserStatusActive || candidate.TenantStatus != model.TenantStatusActive {
-			continue
-		}
-
-		user := &model.User{Password: candidate.PasswordHash}
-		if !user.CheckPassword(password) {
-			continue
-		}
-
-		if _, exists := seenTenant[candidate.TenantCode]; exists {
-			continue
-		}
-		seenTenant[candidate.TenantCode] = struct{}{}
-
-		options = append(options, TenantLoginOption{
-			TenantID:   candidate.TenantID,
-			TenantCode: candidate.TenantCode,
-			TenantName: candidate.TenantName,
-			UserID:     candidate.UserID,
-			Username:   candidate.Username,
-		})
-	}
-
-	return options, nil
+	return s.Login(ctx, email, password)
 }
 
 func (s *UserService) generateToken(user *model.User) (string, error) {
 	now := time.Now()
 	claims := jwt.MapClaims{
-		"user_id":   user.ID,
-		"tenant_id": user.TenantID,
-		"username":  user.Username,
-		"email":     user.Email,
-		"exp":       now.Add(24 * time.Hour).Unix(),
-		"iat":       now.Unix(),
+		"user_id":  user.ID,
+		"username": user.Username,
+		"email":    user.Email,
+		"exp":      now.Add(24 * time.Hour).Unix(),
+		"iat":      now.Unix(),
 	}
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(s.jwtSecret))
 }
@@ -435,20 +338,20 @@ func usernameBaseFromEmail(email string) string {
 	return email[:idx]
 }
 
-func (s *UserService) usernameExists(ctx context.Context, tenantID, username string) (bool, error) {
+func (s *UserService) usernameExists(ctx context.Context, username string) (bool, error) {
 	var count int64
 	if err := s.db.WithContext(ctx).Model(&model.User{}).
-		Where("tenant_id = ? AND username = ?", tenantID, username).
+		Where("username = ?", strings.TrimSpace(username)).
 		Count(&count).Error; err != nil {
 		return false, err
 	}
 	return count > 0, nil
 }
 
-func (s *UserService) resolveUsername(ctx context.Context, tenantID, requested, email string) (string, error) {
+func (s *UserService) resolveUsername(ctx context.Context, requested, email string) (string, error) {
 	requested = strings.TrimSpace(requested)
 	if requested != "" {
-		exists, err := s.usernameExists(ctx, tenantID, requested)
+		exists, err := s.usernameExists(ctx, requested)
 		if err != nil {
 			return "", fmt.Errorf("failed to check username: %w", err)
 		}
@@ -484,7 +387,7 @@ func (s *UserService) resolveUsername(ctx context.Context, tenantID, requested, 
 			candidate = candidateBase + suffix
 		}
 
-		exists, err := s.usernameExists(ctx, tenantID, candidate)
+		exists, err := s.usernameExists(ctx, candidate)
 		if err != nil {
 			return "", fmt.Errorf("failed to check username: %w", err)
 		}
@@ -535,7 +438,6 @@ func (s *UserService) assignRoles(ctx context.Context, user *model.User, roleIDs
 	var roles []model.Role
 	if err := s.db.WithContext(ctx).
 		Where("id IN ?", cleaned).
-		Where("tenant_id = ? OR tenant_id IS NULL", user.TenantID).
 		Find(&roles).Error; err != nil {
 		return fmt.Errorf("failed to find roles: %w", err)
 	}
@@ -557,6 +459,7 @@ type CreateUserRequest struct {
 }
 
 type UpdateUserRequest struct {
+	Password string   `json:"password"`
 	Nickname string   `json:"nickname"`
 	Avatar   string   `json:"avatar"`
 	Status   string   `json:"status"`
@@ -574,30 +477,14 @@ type ListUserRequest struct {
 }
 
 type LoginRequest struct {
-	TenantCode string `json:"tenant_code"`
-	Email      string `json:"email" binding:"required,email"`
-	Password   string `json:"password" binding:"required"`
-}
-
-type TenantLoginOption struct {
-	TenantID   string `json:"tenant_id"`
-	TenantCode string `json:"tenant_code"`
-	TenantName string `json:"tenant_name"`
-	UserID     string `json:"user_id"`
-	Username   string `json:"username"`
-}
-
-type LoginFlowResponse struct {
-	RequiresTenantSelection bool                `json:"requires_tenant_selection"`
-	TenantOptions           []TenantLoginOption `json:"tenant_options,omitempty"`
-	Auth                    *LoginResponse      `json:"auth,omitempty"`
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required"`
 }
 
 type LoginResponse struct {
-	Token     string        `json:"token"`
-	ExpiresAt time.Time     `json:"expires_at"`
-	User      *model.User   `json:"user"`
-	Tenant    *model.Tenant `json:"tenant"`
+	Token     string      `json:"token"`
+	ExpiresAt time.Time   `json:"expires_at"`
+	User      *model.User `json:"user"`
 }
 
 type ChangePasswordRequest struct {

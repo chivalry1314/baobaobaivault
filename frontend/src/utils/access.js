@@ -26,17 +26,13 @@ export function collectPermissionCodes(user) {
 }
 
 export function isPlatformAdmin(user) {
-  return collectRoleCodes(user).has("platform_admin");
-}
-
-export function isTenantAdmin(user) {
-  return collectRoleCodes(user).has("tenant_admin");
+  return collectRoleCodes(user).has("admin");
 }
 
 function hasAnyPermission(user, permissionCodes) {
   const targetCodes = Array.isArray(permissionCodes) ? permissionCodes : [];
   if (targetCodes.length === 0) return true;
-  if (isPlatformAdmin(user) || isTenantAdmin(user)) return true;
+  if (isPlatformAdmin(user)) return true;
 
   const permissionSet = collectPermissionCodes(user);
   return targetCodes.some((code) => permissionSet.has(code));
@@ -51,8 +47,7 @@ const pagePermissionMap = {
   "iam-namespaces": ["namespace:list", "namespace:admin", "user:admin"],
   "storage-config": ["storage:list", "storage:admin"],
   "storage-objects": ["object:list", "object:admin", "namespace:list"],
-  audit: ["tenant:read", "tenant:admin"],
-  tenant: ["tenant:read", "tenant:update", "tenant:admin"],
+  audit: ["audit:read", "audit:list", "audit:admin"],
   settings: [],
 };
 

@@ -1,6 +1,6 @@
-﻿import Panel from "../components/Panel";
+import Panel from "../components/Panel";
 
-export default function ProfilePage({ user, tenant }) {
+export default function ProfilePage({ user }) {
   return (
     <section className="grid two">
       <Panel title="个人资料" subtitle="当前登录用户信息">
@@ -24,28 +24,18 @@ export default function ProfilePage({ user, tenant }) {
         </ul>
       </Panel>
 
-      <Panel title="租户归属" subtitle="当前会话绑定租户" delay={120}>
-        {tenant ? (
+      <Panel title="角色信息" subtitle="当前账号权限摘要" delay={120}>
+        {Array.isArray(user?.roles) && user.roles.length > 0 ? (
           <ul className="kv-list">
-            <li>
-              <span>租户名称</span>
-              <strong>{tenant.name || "-"}</strong>
-            </li>
-            <li>
-              <span>租户编码</span>
-              <strong>{tenant.code || "-"}</strong>
-            </li>
-            <li>
-              <span>租户 ID</span>
-              <code>{tenant.id || "-"}</code>
-            </li>
-            <li>
-              <span>默认存储配置</span>
-              <strong>{tenant.default_storage_config_id || "未配置"}</strong>
-            </li>
+            {user.roles.map((role) => (
+              <li key={role.id || role.code}>
+                <span>{role.name || role.code || "未命名角色"}</span>
+                <strong>{role.code || "-"}</strong>
+              </li>
+            ))}
           </ul>
         ) : (
-          <p className="muted">暂无租户信息。</p>
+          <p className="muted">当前账号尚未绑定角色。</p>
         )}
       </Panel>
     </section>

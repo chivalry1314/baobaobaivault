@@ -70,7 +70,6 @@ type BaiduBackupObject struct {
 }
 
 type baiduOAuthState struct {
-	TenantID string `json:"tenant_id"`
 	UserID   string `json:"user_id"`
 	ReturnTo string `json:"return_to,omitempty"`
 	Exp      int64  `json:"exp"`
@@ -173,7 +172,7 @@ func NewBaiduConnectorService(
 	}
 }
 
-func (s *BaiduConnectorService) BuildAuthURL(tenantID, userID, returnTo string) (string, error) {
+func (s *BaiduConnectorService) BuildAuthURL(userID, returnTo string) (string, error) {
 	if !s.cfg.Enabled {
 		return "", errors.New("baidu connector is disabled")
 	}
@@ -184,7 +183,7 @@ func (s *BaiduConnectorService) BuildAuthURL(tenantID, userID, returnTo string) 
 		return "", errors.New("baidu redirect_uri is not configured")
 	}
 
-	state, err := s.createSignedState(tenantID, userID, returnTo, baiduStateTTL)
+	state, err := s.createSignedState(userID, returnTo, baiduStateTTL)
 	if err != nil {
 		return "", err
 	}
@@ -220,29 +219,29 @@ func (s *BaiduConnectorService) BuildAuthURL(tenantID, userID, returnTo string) 
 	return authURL + "?" + values.Encode(), nil
 }
 
-func (s *BaiduConnectorService) HandleOAuthCallback(ctx context.Context, code, state string) (string, string, string, error) {
+func (s *BaiduConnectorService) HandleOAuthCallback(ctx context.Context, code, state string) (string, string, error) {
 	if strings.TrimSpace(code) == "" {
-		return "", "", "", errors.New("missing oauth code")
+		return "", "", errors.New("missing oauth code")
 	}
 
 	statePayload, err := s.parseSignedState(state)
 	if err != nil {
-		return "", "", "", err
+		return "", "", err
 	}
 
 	token, err := s.exchangeAuthorizationCode(ctx, code)
 	if err != nil {
-		return "", "", "", err
+		return "", "", err
 	}
 
-	if err := s.upsertAccountToken(ctx, statePayload.TenantID, statePayload.UserID, token); err != nil {
-		return "", "", "", err
+	if err := s.upsertAccountToken(ctx, statePayload.UserID, token); err != nil {
+		return "", "", err
 	}
-	return statePayload.TenantID, statePayload.UserID, statePayload.ReturnTo, nil
+	return statePayload.UserID, statePayload.ReturnTo, nil
 }
 
-func (s *BaiduConnectorService) GetAccountStatus(ctx context.Context, tenantID, userID string) (*BaiduAccountStatus, error) {
-	account, err := s.getAccount(ctx, tenantID, userID)
+func (s *BaiduConnectorService) GetAccountStatus(ctx context.Context, userID string) (*BaiduAccountStatus, error) {
+	account, err := s.getAccount(ctx, userID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &BaiduAccountStatus{
@@ -270,7 +269,7 @@ func (s *BaiduConnectorService) GetAccountStatus(ctx context.Context, tenantID, 
 	}, nil
 }
 
-func (s *BaiduConnectorService) Disconnect(ctx context.Context, tenantID, userID string) error {
+func (s *BaiduConnectorService) Disconnect(ctx context.Context, userID string) error {
 	updates := map[string]any{
 		"status":            model.CloudAccountStatusInactive,
 		"access_token_enc":  "",
@@ -279,13 +278,12 @@ func (s *BaiduConnectorService) Disconnect(ctx context.Context, tenantID, userID
 	}
 	return s.db.WithContext(ctx).
 		Model(&model.CloudAccount{}).
-		Where("tenant_id = ? AND user_id = ? AND provider = ?", tenantID, userID, baiduProviderID).
+		Where("user_id = ? AND provider = ?", userID, baiduProviderID).
 		Updates(updates).Error
 }
 
 func (s *BaiduConnectorService) UploadBackup(
 	ctx context.Context,
-	tenantID string,
 	userID string,
 	fileName string,
 	content []byte,
@@ -299,7 +297,7 @@ func (s *BaiduConnectorService) UploadBackup(
 		fileName = fmt.Sprintf("baobaobaiphone-backup-%d.json", time.Now().Unix())
 	}
 
-	accessToken, _, err := s.ensureValidAccessToken(ctx, tenantID, userID)
+	accessToken, _, err := s.ensureValidAccessToken(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -398,11 +396,10 @@ func (s *BaiduConnectorService) UploadBackup(
 
 func (s *BaiduConnectorService) ListBackups(
 	ctx context.Context,
-	tenantID string,
 	userID string,
 	pathPrefix string,
 ) ([]BaiduBackupObject, error) {
-	accessToken, _, err := s.ensureValidAccessToken(ctx, tenantID, userID)
+	accessToken, _, err := s.ensureValidAccessToken(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -444,7 +441,6 @@ func (s *BaiduConnectorService) ListBackups(
 
 func (s *BaiduConnectorService) DownloadBackup(
 	ctx context.Context,
-	tenantID string,
 	userID string,
 	filePath string,
 ) ([]byte, string, error) {
@@ -453,7 +449,7 @@ func (s *BaiduConnectorService) DownloadBackup(
 		return nil, "", errors.New("backup path is required")
 	}
 
-	accessToken, _, err := s.ensureValidAccessToken(ctx, tenantID, userID)
+	accessToken, _, err := s.ensureValidAccessToken(ctx, userID)
 	if err != nil {
 		return nil, "", err
 	}
@@ -488,7 +484,6 @@ func (s *BaiduConnectorService) DownloadBackup(
 
 func (s *BaiduConnectorService) DeleteBackup(
 	ctx context.Context,
-	tenantID string,
 	userID string,
 	filePath string,
 ) error {
@@ -501,7 +496,7 @@ func (s *BaiduConnectorService) DeleteBackup(
 		return errors.New("backup path is invalid")
 	}
 
-	accessToken, _, err := s.ensureValidAccessToken(ctx, tenantID, userID)
+	accessToken, _, err := s.ensureValidAccessToken(ctx, userID)
 	if err != nil {
 		return err
 	}
@@ -600,7 +595,6 @@ func (s *BaiduConnectorService) requestToken(ctx context.Context, values url.Val
 
 func (s *BaiduConnectorService) upsertAccountToken(
 	ctx context.Context,
-	tenantID string,
 	userID string,
 	token *baiduTokenResponse,
 ) error {
@@ -627,11 +621,10 @@ func (s *BaiduConnectorService) upsertAccountToken(
 
 	var account model.CloudAccount
 	tx := s.db.WithContext(ctx)
-	err = tx.Where("tenant_id = ? AND user_id = ? AND provider = ?", tenantID, userID, baiduProviderID).
+	err = tx.Where("user_id = ? AND provider = ?", userID, baiduProviderID).
 		First(&account).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		account = model.CloudAccount{
-			TenantID:        tenantID,
 			UserID:          userID,
 			Provider:        baiduProviderID,
 			ExternalUserID:  strings.TrimSpace(token.OpenID),
@@ -661,10 +654,10 @@ func (s *BaiduConnectorService) upsertAccountToken(
 	return tx.Model(&account).Updates(updates).Error
 }
 
-func (s *BaiduConnectorService) getAccount(ctx context.Context, tenantID, userID string) (*model.CloudAccount, error) {
+func (s *BaiduConnectorService) getAccount(ctx context.Context, userID string) (*model.CloudAccount, error) {
 	var account model.CloudAccount
 	if err := s.db.WithContext(ctx).
-		Where("tenant_id = ? AND user_id = ? AND provider = ?", tenantID, userID, baiduProviderID).
+		Where("user_id = ? AND provider = ?", userID, baiduProviderID).
 		First(&account).Error; err != nil {
 		return nil, err
 	}
@@ -673,10 +666,9 @@ func (s *BaiduConnectorService) getAccount(ctx context.Context, tenantID, userID
 
 func (s *BaiduConnectorService) ensureValidAccessToken(
 	ctx context.Context,
-	tenantID string,
 	userID string,
 ) (string, *model.CloudAccount, error) {
-	account, err := s.getAccount(ctx, tenantID, userID)
+	account, err := s.getAccount(ctx, userID)
 	if err != nil {
 		return "", nil, err
 	}
@@ -716,11 +708,11 @@ func (s *BaiduConnectorService) ensureValidAccessToken(
 	if strings.TrimSpace(refreshed.RefreshToken) == "" {
 		refreshed.RefreshToken = refreshToken
 	}
-	if err := s.upsertAccountToken(ctx, tenantID, userID, refreshed); err != nil {
+	if err := s.upsertAccountToken(ctx, userID, refreshed); err != nil {
 		return "", nil, err
 	}
 
-	account, err = s.getAccount(ctx, tenantID, userID)
+	account, err = s.getAccount(ctx, userID)
 	if err != nil {
 		return "", nil, err
 	}
@@ -734,15 +726,14 @@ func (s *BaiduConnectorService) ensureValidAccessToken(
 	return accessToken, account, nil
 }
 
-func (s *BaiduConnectorService) createSignedState(tenantID, userID, returnTo string, ttl time.Duration) (string, error) {
-	if strings.TrimSpace(tenantID) == "" || strings.TrimSpace(userID) == "" {
+func (s *BaiduConnectorService) createSignedState(userID, returnTo string, ttl time.Duration) (string, error) {
+	if strings.TrimSpace(userID) == "" {
 		return "", errors.New("invalid auth context for baidu state")
 	}
 	if ttl <= 0 {
 		ttl = baiduStateTTL
 	}
 	state := baiduOAuthState{
-		TenantID: tenantID,
 		UserID:   userID,
 		ReturnTo: sanitizeReturnTo(returnTo),
 		Exp:      time.Now().UTC().Add(ttl).Unix(),
@@ -785,7 +776,7 @@ func (s *BaiduConnectorService) parseSignedState(encoded string) (*baiduOAuthSta
 	if state.Exp <= time.Now().UTC().Unix() {
 		return nil, errors.New("oauth state expired")
 	}
-	if strings.TrimSpace(state.TenantID) == "" || strings.TrimSpace(state.UserID) == "" {
+	if strings.TrimSpace(state.UserID) == "" {
 		return nil, errors.New("oauth state missing subject")
 	}
 	state.ReturnTo = sanitizeReturnTo(state.ReturnTo)

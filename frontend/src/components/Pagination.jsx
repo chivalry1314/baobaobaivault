@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import * as Icons from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const PAGE_SIZE = 10;
 
@@ -39,11 +39,13 @@ export default function Pagination({ total, page, pageSize = PAGE_SIZE, onChange
   return (
     <div className="pagination">
       <button type="button" disabled={safePage <= 1} onClick={() => onChange(safePage - 1)}>
-        <Icons.ChevronLeft size={16} />
+        <ChevronLeft size={16} />
       </button>
       {pages.map((p, idx) =>
         p === "..." ? (
-          <span key={`ellipsis-${idx}`} className="pagination-info">...</span>
+          <span key={`ellipsis-${idx}`} className="pagination-info">
+            ...
+          </span>
         ) : (
           <button key={p} type="button" className={p === safePage ? "active" : ""} onClick={() => onChange(p)}>
             {p}
@@ -51,11 +53,9 @@ export default function Pagination({ total, page, pageSize = PAGE_SIZE, onChange
         )
       )}
       <button type="button" disabled={safePage >= totalPages} onClick={() => onChange(safePage + 1)}>
-        <Icons.ChevronRight size={16} />
+        <ChevronRight size={16} />
       </button>
-      <span className="pagination-info">
-        共 {total} 条
-      </span>
+      <span className="pagination-info">共 {total} 条</span>
     </div>
   );
 }

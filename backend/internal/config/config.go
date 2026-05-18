@@ -20,17 +20,16 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port                       string `mapstructure:"port"`
-	ReadTimeout                int    `mapstructure:"read_timeout"`
-	WriteTimeout               int    `mapstructure:"write_timeout"`
-	Mode                       string `mapstructure:"mode"` // debug, release, test
-	AllowPublicBootstrap       bool   `mapstructure:"allow_public_bootstrap"`
-	AutoBootstrapPlatformAdmin bool   `mapstructure:"auto_bootstrap_platform_admin"`
-	PlatformAdminTenantCode    string `mapstructure:"platform_admin_tenant_code"`
-	PlatformAdminEmail         string `mapstructure:"platform_admin_email"`
-	PlatformAdminPassword      string `mapstructure:"platform_admin_password"`
-	PlatformAdminUsername      string `mapstructure:"platform_admin_username"`
-	PlatformAdminNickname      string `mapstructure:"platform_admin_nickname"`
+	Port               string `mapstructure:"port"`
+	ReadTimeout        int    `mapstructure:"read_timeout"`
+	WriteTimeout       int    `mapstructure:"write_timeout"`
+	Mode               string `mapstructure:"mode"` // debug, release, test
+	AllowPublicBootstrap bool `mapstructure:"allow_public_bootstrap"`
+	AutoBootstrapAdmin bool   `mapstructure:"auto_bootstrap_admin"`
+	AdminEmail         string `mapstructure:"admin_email"`
+	AdminPassword      string `mapstructure:"admin_password"`
+	AdminUsername      string `mapstructure:"admin_username"`
+	AdminNickname      string `mapstructure:"admin_nickname"`
 }
 
 type CorsConfig struct {
@@ -161,12 +160,11 @@ func setDefaults() {
 	viper.SetDefault("server.write_timeout", 30)
 	viper.SetDefault("server.mode", "debug")
 	viper.SetDefault("server.allow_public_bootstrap", false)
-	viper.SetDefault("server.auto_bootstrap_platform_admin", false)
-	viper.SetDefault("server.platform_admin_tenant_code", "platform")
-	viper.SetDefault("server.platform_admin_email", "")
-	viper.SetDefault("server.platform_admin_password", "")
-	viper.SetDefault("server.platform_admin_username", "platform_admin")
-	viper.SetDefault("server.platform_admin_nickname", "platform admin")
+	viper.SetDefault("server.auto_bootstrap_admin", false)
+	viper.SetDefault("server.admin_email", "")
+	viper.SetDefault("server.admin_password", "")
+	viper.SetDefault("server.admin_username", "admin")
+	viper.SetDefault("server.admin_nickname", "Administrator")
 
 	// CORS
 	viper.SetDefault("cors.enabled", true)

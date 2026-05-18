@@ -12,8 +12,8 @@ import {
   type ReactNode,
 } from "react";
 
-import { AuthCard } from "@/components/share/auth-card";
 import { ShareProfileSettings } from "@/components/share/share-profile-settings";
+import { AuthRedirect } from "@/components/share/auth-redirect";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type { DashboardCard, DashboardResponse, ExternalSessionUser, PlatformCard } from "@/lib/shared";
 
@@ -735,11 +735,7 @@ export function CreatorStudio() {
   }
 
   if (!currentUser) {
-    return (
-      <div className="min-h-screen bg-[var(--background)] px-4 py-10 sm:px-6">
-        <AuthCard afterSuccess="/creator" />
-      </div>
-    );
+    return <AuthRedirect nextPath="/creator" />;
   }
 
   return (

@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import * as Icons from "lucide-react";
+import { useMemo, useState } from "react";
+import { FileSearch, HardDrive, Plus, Search, Upload } from "lucide-react";
 import Panel from "../components/Panel";
 import Modal from "../components/Modal";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -55,9 +55,7 @@ export default function StoragePage({
   const filteredConfigs = useMemo(() => {
     const q = configSearch.toLowerCase().trim();
     if (!q) return storageConfigs;
-    return storageConfigs.filter((c) =>
-      [c.name, c.provider, c.bucket, c.endpoint, c.region].some((s) => String(s || "").toLowerCase().includes(q))
-    );
+    return storageConfigs.filter((c) => [c.name, c.provider, c.bucket, c.endpoint, c.region].some((s) => String(s || "").toLowerCase().includes(q)));
   }, [storageConfigs, configSearch]);
 
   const filteredObjects = useMemo(() => {
@@ -89,15 +87,15 @@ export default function StoragePage({
 
   return (
     <section id="section-storage" className="grid one">
-      {showConfig && (
-        <Panel title="存储配置" subtitle={`${storageConfigs.length} 条`}>
+      {showConfig ? (
+        <Panel title="存储配置" subtitle={`${storageConfigs.length} 条配置`}>
           <div className="section-header">
             <div className="search-bar">
-              <Icons.Search size={16} />
-              <input placeholder="搜索名称、Provider、Bucket..." value={configSearch} onChange={(e) => { setConfigSearch(e.target.value); setConfigPage(1); }} />
+              <Search size={16} />
+              <input placeholder="搜索名称、Provider、Bucket..." value={configSearch} onChange={(event) => { setConfigSearch(event.target.value); setConfigPage(1); }} />
             </div>
             <button className="btn small primary" type="button" onClick={() => setShowConfigModal(true)}>
-              <Icons.Plus size={16} />
+              <Plus size={16} />
               新增配置
             </button>
           </div>
@@ -108,7 +106,9 @@ export default function StoragePage({
                 {pagedConfigs.map((x) => (
                   <div className="mini-row" key={x.id}>
                     <div>
-                      <strong>{x.name} ({x.provider})</strong>
+                      <strong>
+                        {x.name} ({x.provider})
+                      </strong>
                       <small>{x.bucket}</small>
                     </div>
                     <button className="btn small danger" type="button" onClick={() => confirmDelete("config", x.id, `${x.name} (${x.provider})`)}>
@@ -121,22 +121,22 @@ export default function StoragePage({
             </>
           ) : (
             <div className="empty-state">
-              <Icons.HardDrive size={40} />
-              <p>{configSearch ? "没有匹配的配置" : "暂无存储配置，点击新增"}</p>
+              <HardDrive size={40} />
+              <p>{configSearch ? "未找到匹配配置" : "暂无存储配置"}</p>
             </div>
           )}
         </Panel>
-      )}
+      ) : null}
 
-      {showObjects && (
+      {showObjects ? (
         <Panel title="对象管理" subtitle={selectedNamespace ? `命名空间：${selectedNamespace.name}` : "请先选择命名空间"} delay={120}>
           <div className="section-header">
             <div className="search-bar">
-              <Icons.Search size={16} />
-              <input placeholder="搜索对象键..." value={objectSearch} onChange={(e) => { setObjectSearch(e.target.value); setObjectPage(1); }} />
+              <Search size={16} />
+              <input placeholder="搜索对象键..." value={objectSearch} onChange={(event) => { setObjectSearch(event.target.value); setObjectPage(1); }} />
             </div>
             <button className="btn small primary" type="button" onClick={() => setShowUploadModal(true)} disabled={!selectedNamespaceID}>
-              <Icons.Upload size={16} />
+              <Upload size={16} />
               上传对象
             </button>
           </div>
@@ -144,8 +144,8 @@ export default function StoragePage({
           <div className="form-grid compact spaced-block">
             <select
               value={selectedNamespaceID}
-              onChange={(e) => {
-                setSelectedNamespaceID(e.target.value);
+              onChange={(event) => {
+                setSelectedNamespaceID(event.target.value);
                 setSelectedObjectKey("");
                 setObjectVersions([]);
                 setPresignPutInfo(null);
@@ -153,32 +153,44 @@ export default function StoragePage({
             >
               <option value="">选择命名空间</option>
               {namespaces.map((x) => (
-                <option key={x.id} value={x.id}>{x.name}</option>
+                <option key={x.id} value={x.id}>
+                  {x.name}
+                </option>
               ))}
             </select>
             <div className="inline">
-              <input placeholder="前缀" value={objectPrefix} onChange={(e) => setObjectPrefix(e.target.value)} />
-              <button className="btn ghost" type="button" onClick={() => void loadObjects(selectedNamespaceID, objectPrefix)} disabled={busy}>查询</button>
+              <input placeholder="前缀" value={objectPrefix} onChange={(event) => setObjectPrefix(event.target.value)} />
+              <button className="btn ghost" type="button" onClick={() => void loadObjects(selectedNamespaceID, objectPrefix)} disabled={busy}>
+                查询
+              </button>
             </div>
           </div>
 
           <div className="toolbar-actions spaced-block">
-            <button className="btn small ghost" type="button" onClick={() => void onPresignPut()} disabled={busy || !selectedNamespaceID}>预签名上传</button>
-            <button className="btn small ghost" type="button" onClick={() => void onCompletePresignPut()} disabled={busy || !selectedNamespaceID || !presignPutInfo}>回写预签名</button>
+            <button className="btn small ghost" type="button" onClick={() => void onPresignPut()} disabled={busy || !selectedNamespaceID}>
+              生成预签名 PUT
+            </button>
+            <button className="btn small ghost" type="button" onClick={() => void onCompletePresignPut()} disabled={busy || !selectedNamespaceID || !presignPutInfo}>
+              回写预签名 PUT
+            </button>
           </div>
 
           {presignUrl ? (
             <div className="secret-box">
-              <p>预签名下载地址（5 分钟）</p>
-              <a href={presignUrl} target="_blank" rel="noreferrer">{presignUrl}</a>
+              <p>预签名 GET 地址（可复制）</p>
+              <a href={presignUrl} target="_blank" rel="noreferrer">
+                {presignUrl}
+              </a>
             </div>
           ) : null}
 
           {presignPutInfo ? (
             <div className="secret-box">
-              <p>预签名上传地址（5 分钟）</p>
-              <a href={presignPutInfo.url} target="_blank" rel="noreferrer">{presignPutInfo.url}</a>
-              <code>键：{presignPutInfo.key}</code>
+              <p>预签名 PUT 地址（可复制）</p>
+              <a href={presignPutInfo.url} target="_blank" rel="noreferrer">
+                {presignPutInfo.url}
+              </a>
+              <code>对象键：{presignPutInfo.key}</code>
               <code>版本：{presignPutInfo.version_id}</code>
             </div>
           ) : null}
@@ -193,10 +205,18 @@ export default function StoragePage({
                       <small>{x.size?.toLocaleString()} 字节</small>
                     </div>
                     <div className="actions-inline">
-                      <button className="btn small ghost" type="button" onClick={() => void onDownloadObject(x)}>下载</button>
-                      <button className="btn small ghost" type="button" onClick={() => void onViewVersions(x)}>版本</button>
-                      <button className="btn small ghost" type="button" onClick={() => void onPresign(x)}>预签名</button>
-                      <button className="btn small danger" type="button" onClick={() => confirmDelete("object", x.id, x.key)}>删除</button>
+                      <button className="btn small ghost" type="button" onClick={() => void onDownloadObject(x)}>
+                        下载
+                      </button>
+                      <button className="btn small ghost" type="button" onClick={() => void onViewVersions(x)}>
+                        版本
+                      </button>
+                      <button className="btn small ghost" type="button" onClick={() => void onPresign(x)}>
+                        预签名 GET
+                      </button>
+                      <button className="btn small danger" type="button" onClick={() => confirmDelete("object", x.id, x.key)}>
+                        删除
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -205,8 +225,8 @@ export default function StoragePage({
             </>
           ) : (
             <div className="empty-state">
-              <Icons.FileSearch size={40} />
-              <p>{objectSearch ? "没有匹配的对象" : selectedNamespaceID ? "该命名空间下暂无对象" : "请先选择命名空间"}</p>
+              <FileSearch size={40} />
+              <p>{objectSearch ? "未找到匹配对象" : selectedNamespaceID ? "当前命名空间暂无对象" : "请先选择命名空间"}</p>
             </div>
           )}
 
@@ -227,7 +247,9 @@ export default function StoragePage({
                   <div className="actions-inline">
                     <code>{x.is_latest ? "最新" : "历史"}</code>
                     {!x.is_latest ? (
-                      <button className="btn small ghost" type="button" onClick={() => setRollbackTarget(x.version_id)}>恢复备份</button>
+                      <button className="btn small ghost" type="button" onClick={() => setRollbackTarget(x.version_id)}>
+                        回滚
+                      </button>
                     ) : null}
                   </div>
                 </div>
@@ -235,14 +257,13 @@ export default function StoragePage({
             </div>
           ) : null}
         </Panel>
-      )}
+      ) : null}
 
-      {/* ── 存储配置创建弹窗 ── */}
-      <Modal open={showConfigModal} title="新增存储配置" subtitle="添加一个新的存储后端" onClose={() => setShowConfigModal(false)}>
-        <form className="form-grid compact" onSubmit={(e) => { onCreateStorageConfig(e); setShowConfigModal(false); }}>
+      <Modal open={showConfigModal} title="新增存储配置" subtitle="创建一个新的存储配置" onClose={() => setShowConfigModal(false)}>
+        <form className="form-grid compact" onSubmit={(event) => { onCreateStorageConfig(event); setShowConfigModal(false); }}>
           <div className="grid two mini-gap">
-            <input placeholder="显示名称" value={storageForm.name} onChange={(e) => setStorageForm((v) => ({ ...v, name: e.target.value }))} required />
-            <select value={storageForm.provider} onChange={(e) => setStorageForm((v) => ({ ...v, provider: e.target.value }))}>
+            <input placeholder="配置名称" value={storageForm.name} onChange={(event) => setStorageForm((v) => ({ ...v, name: event.target.value }))} required />
+            <select value={storageForm.provider} onChange={(event) => setStorageForm((v) => ({ ...v, provider: event.target.value }))}>
               <option value="local">本地存储 (Local)</option>
               <option value="s3">Amazon S3</option>
               <option value="minio">MinIO</option>
@@ -251,45 +272,59 @@ export default function StoragePage({
             </select>
           </div>
           <div className="grid two mini-gap">
-            <input placeholder="访问端点 (Endpoint)" value={storageForm.endpoint} onChange={(e) => setStorageForm((v) => ({ ...v, endpoint: e.target.value }))} />
-            <input placeholder="区域 (Region)" value={storageForm.region} onChange={(e) => setStorageForm((v) => ({ ...v, region: e.target.value }))} />
+            <input placeholder="Endpoint" value={storageForm.endpoint} onChange={(event) => setStorageForm((v) => ({ ...v, endpoint: event.target.value }))} />
+            <input placeholder="Region" value={storageForm.region} onChange={(event) => setStorageForm((v) => ({ ...v, region: event.target.value }))} />
           </div>
-          <input placeholder="存储桶名称 / 基础路径 (Bucket)" value={storageForm.bucket} onChange={(e) => setStorageForm((v) => ({ ...v, bucket: e.target.value }))} required />
+          <input placeholder="Bucket / 本地目录前缀" value={storageForm.bucket} onChange={(event) => setStorageForm((v) => ({ ...v, bucket: event.target.value }))} required />
           <div className="grid two mini-gap">
-            <input placeholder="访问密钥 (Access Key)" value={storageForm.accessKey} onChange={(e) => setStorageForm((v) => ({ ...v, accessKey: e.target.value }))} />
-            <input type="password" placeholder="安全密钥 (Secret Key)" value={storageForm.secretKey} onChange={(e) => setStorageForm((v) => ({ ...v, secretKey: e.target.value }))} />
+            <input placeholder="Access Key" value={storageForm.accessKey} onChange={(event) => setStorageForm((v) => ({ ...v, accessKey: event.target.value }))} />
+            <input type="password" placeholder="Secret Key" value={storageForm.secretKey} onChange={(event) => setStorageForm((v) => ({ ...v, secretKey: event.target.value }))} />
           </div>
-          <textarea placeholder='额外配置 (JSON)，例如 {"path_style": true}' value={storageForm.extraConfig} onChange={(e) => setStorageForm((v) => ({ ...v, extraConfig: e.target.value }))} rows={2} />
+          <textarea
+            placeholder='额外配置 (JSON)，例如 {"path_style": true}'
+            value={storageForm.extraConfig}
+            onChange={(event) => setStorageForm((v) => ({ ...v, extraConfig: event.target.value }))}
+            rows={2}
+          />
           <div className="grid two mini-gap">
             <label className="check">
-              <input type="checkbox" checked={storageForm.pathStyle} onChange={(e) => setStorageForm((v) => ({ ...v, pathStyle: e.target.checked }))} />
-              <span>路径风格</span>
+              <input type="checkbox" checked={storageForm.pathStyle} onChange={(event) => setStorageForm((v) => ({ ...v, pathStyle: event.target.checked }))} />
+              <span>Path Style</span>
             </label>
             <label className="check">
-              <input type="checkbox" checked={storageForm.isDefault} onChange={(e) => setStorageForm((v) => ({ ...v, isDefault: e.target.checked }))} />
-              <span>设为默认</span>
+              <input type="checkbox" checked={storageForm.isDefault} onChange={(event) => setStorageForm((v) => ({ ...v, isDefault: event.target.checked }))} />
+              <span>设为默认配置</span>
             </label>
           </div>
           <div className="toolbar-actions">
             <button className="btn primary" type="submit" disabled={busy}>
-              <Icons.Plus size={18} />
-              <span>保存配置</span>
+              <Plus size={18} />
+              <span>创建配置</span>
             </button>
-            <button className="btn ghost" type="button" onClick={() => setShowConfigModal(false)}>取消</button>
+            <button className="btn ghost" type="button" onClick={() => setShowConfigModal(false)}>
+              取消
+            </button>
           </div>
         </form>
       </Modal>
 
-      {/* ── 对象上传弹窗 ── */}
       <Modal open={showUploadModal} title="上传对象" subtitle={`上传到命名空间：${selectedNamespace?.name || ""}`} onClose={() => setShowUploadModal(false)}>
-        <form className="form-grid compact" onSubmit={(e) => { onUploadObject(e); setShowUploadModal(false); }}>
-          <input placeholder="对象键（可选，默认文件名）" value={objectForm.key} onChange={(e) => setObjectForm((v) => ({ ...v, key: e.target.value }))} />
-          <input placeholder="内容类型（可选）" value={objectForm.contentType} onChange={(e) => setObjectForm((v) => ({ ...v, contentType: e.target.value }))} />
-          <input placeholder='元数据 JSON（可选），例如 {"env":"dev"}' value={objectForm.metadata} onChange={(e) => setObjectForm((v) => ({ ...v, metadata: e.target.value }))} />
-          <input type="file" onChange={(e) => setUploadFile(e.target.files?.[0] || null)} required />
+        <form className="form-grid compact" onSubmit={(event) => { onUploadObject(event); setShowUploadModal(false); }}>
+          <input placeholder="对象键（不填则使用文件名）" value={objectForm.key} onChange={(event) => setObjectForm((v) => ({ ...v, key: event.target.value }))} />
+          <input placeholder="Content-Type（可选）" value={objectForm.contentType} onChange={(event) => setObjectForm((v) => ({ ...v, contentType: event.target.value }))} />
+          <input
+            placeholder='metadata JSON（可选），例如 {"env":"dev"}'
+            value={objectForm.metadata}
+            onChange={(event) => setObjectForm((v) => ({ ...v, metadata: event.target.value }))}
+          />
+          <input type="file" onChange={(event) => setUploadFile(event.target.files?.[0] || null)} required />
           <div className="toolbar-actions">
-            <button className="btn primary" type="submit" disabled={busy || !selectedNamespaceID}>上传对象</button>
-            <button className="btn ghost" type="button" onClick={() => setShowUploadModal(false)}>取消</button>
+            <button className="btn primary" type="submit" disabled={busy || !selectedNamespaceID}>
+              上传对象
+            </button>
+            <button className="btn ghost" type="button" onClick={() => setShowUploadModal(false)}>
+              取消
+            </button>
           </div>
         </form>
       </Modal>
@@ -308,22 +343,22 @@ export default function StoragePage({
 
       <ConfirmDialog
         open={Boolean(rollbackTarget)}
-        title="确认恢复选中备份"
-        subtitle={rollbackTarget ? `将对象恢复到版本：${rollbackTarget}` : ""}
-        note="恢复后，当前最新版本会保留为历史版本，数据不会被永久删除。"
+        title="确认回滚版本"
+        subtitle={rollbackTarget ? `将回滚到版本：${rollbackTarget}` : ""}
+        note="回滚后会生成新的最新版本，并保留历史版本。"
         kind="warning"
         changes={
           rollbackTarget
             ? [
                 { label: "目标版本", beforeText: "当前最新", afterText: rollbackTarget },
-                { label: "恢复策略", beforeText: "直接覆盖", afterText: "保留历史并恢复" },
+                { label: "回滚结果", beforeText: "当前版本生效", afterText: "目标版本恢复为最新" },
               ]
             : []
         }
         busy={busy}
         onCancel={() => setRollbackTarget(null)}
         onConfirm={executeRollback}
-        confirmText="确认恢复"
+        confirmText="确认回滚"
         cancelText="取消"
       />
     </section>

@@ -7,6 +7,21 @@ function normalizeResponse(payload) {
   return payload;
 }
 
+function isProxyOrBackendError(status, payloadMessage) {
+  const text = String(payloadMessage || "").toLowerCase();
+  return [502, 503, 504].includes(status) || text.includes("proxy error") || text.includes("econnrefused");
+}
+
+function mapFriendlyError(path, status, payloadMessage, fallbackMessage) {
+  if (path === "/auth/login" && status === 401) {
+    return "邮箱或密码错误";
+  }
+  if (isProxyOrBackendError(status, payloadMessage)) {
+    return "无法连接后端服务，请确认 backend 已启动，并检查前端 VITE_PROXY_TARGET 配置。";
+  }
+  return fallbackMessage;
+}
+
 async function request(path, { method = "GET", token, body, formData, raw = false } = {}) {
   const headers = {};
   if (token) {
@@ -21,7 +36,17 @@ async function request(path, { method = "GET", token, body, formData, raw = fals
     options.body = JSON.stringify(body);
   }
 
-  const response = await fetch(`${API_BASE}${path}`, options);
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, options);
+  } catch (error) {
+    const rawMessage = error?.message || "请求失败";
+    if (String(rawMessage).toLowerCase().includes("failed to fetch")) {
+      throw new Error("无法连接后端服务，请确认 backend 已启动，并检查前端 VITE_PROXY_TARGET 配置。");
+    }
+    throw new Error(rawMessage);
+  }
+
   if (raw) {
     return response;
   }
@@ -30,7 +55,9 @@ async function request(path, { method = "GET", token, body, formData, raw = fals
   const payload = contentType.includes("application/json") ? await response.json() : await response.text();
 
   if (!response.ok) {
-    const message = payload?.error || payload?.message || response.statusText || `HTTP ${response.status}`;
+    const payloadMessage = typeof payload === "string" ? payload : payload?.error || payload?.message;
+    const fallbackMessage = payloadMessage || response.statusText || `HTTP ${response.status}`;
+    const message = mapFriendlyError(path, response.status, payloadMessage, fallbackMessage);
     throw new Error(message);
   }
 
@@ -55,17 +82,7 @@ export const api = {
     return request("/auth/login", { method: "POST", body: payload });
   },
   bootstrap(payload) {
-    return request("/bootstrap/tenant-admin", { method: "POST", body: payload });
-  },
-
-  listTenants(token) {
-    return request("/tenants", { token });
-  },
-  getTenant(token, tenantId) {
-    return request(`/tenants/${tenantId}`, { token });
-  },
-  updateTenant(token, tenantId, payload) {
-    return request(`/tenants/${tenantId}`, { method: "PUT", token, body: payload });
+    return request("/bootstrap/admin", { method: "POST", body: payload });
   },
 
   listUsers(token, params) {
@@ -170,7 +187,7 @@ export const api = {
     const blob = await response.blob();
     const disposition = response.headers.get("content-disposition") || "";
     const match = disposition.match(/filename=\"?([^\"]+)\"?/i);
-    const filename = match?.[1] || params.key || "下载文件.bin";
+    const filename = match?.[1] || params.key || "download.bin";
     return { blob, filename };
   },
 

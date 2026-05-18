@@ -89,26 +89,6 @@ export const shareApi = {
     });
   },
 
-  register(input: { email: string; nickname: string; password: string }) {
-    return request<{ ok: true; user: ExternalSessionUser }>(`${API_ROOT}/auth/register`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(input),
-    });
-  },
-
-  login(input: { email: string; password: string }) {
-    return request<{ ok: true; user: ExternalSessionUser }>(`${API_ROOT}/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(input),
-    });
-  },
-
   logout() {
     return request<{ ok: true }>(`${API_ROOT}/auth/logout`, {
       method: "POST",

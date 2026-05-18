@@ -1,4 +1,4 @@
-﻿export const navItems = [
+export const navItems = [
   { key: "overview", to: "/app/overview", label: "控制台总览", iconName: "LayoutDashboard" },
   {
     key: "group-iam",
@@ -23,10 +23,7 @@
     key: "group-operations",
     label: "运维与审计",
     iconName: "Activity",
-    children: [
-      { key: "audit", to: "/app/audit", label: "操作审计", iconName: "History" },
-      { key: "tenant", to: "/app/tenant", label: "租户配置", iconName: "Building2" },
-    ],
+    children: [{ key: "audit", to: "/app/audit", label: "操作审计", iconName: "History" }],
   },
   {
     key: "group-account",

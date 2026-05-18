@@ -28,14 +28,13 @@ func NewStorageService(db *gorm.DB, logger *zap.Logger, registry *storage.Regist
 	return &StorageService{db: db, logger: logger, registry: registry}
 }
 
-func (s *StorageService) CreateStorageConfig(ctx context.Context, tenantID string, req *CreateStorageConfigRequest) (*model.StorageConfig, error) {
+func (s *StorageService) CreateStorageConfig(ctx context.Context, req *CreateStorageConfigRequest) (*model.StorageConfig, error) {
 	provider := strings.ToLower(req.Provider)
 	if provider == "" {
 		return nil, errors.New("provider is required")
 	}
 
 	config := &model.StorageConfig{
-		TenantID:    tenantID,
 		Name:        req.Name,
 		Provider:    model.StorageProvider(provider),
 		Endpoint:    req.Endpoint,
@@ -48,20 +47,26 @@ func (s *StorageService) CreateStorageConfig(ctx context.Context, tenantID strin
 		Status:      model.StorageConfigStatusActive,
 		ExtraConfig: req.ExtraConfig,
 	}
+	if ownerID := strings.TrimSpace(req.OwnerUserID); ownerID != "" {
+		config.OwnerUserID = &ownerID
+	}
 
 	if err := s.db.WithContext(ctx).Create(config).Error; err != nil {
 		return nil, fmt.Errorf("failed to create storage config: %w", err)
 	}
 
 	if config.IsDefault {
-		_ = s.db.WithContext(ctx).Model(&model.StorageConfig{}).
-			Where("tenant_id = ? AND id != ?", tenantID, config.ID).
-			Update("is_default", false).Error
+		query := s.db.WithContext(ctx).Model(&model.StorageConfig{}).Where("id != ?", config.ID)
+		if config.OwnerUserID == nil {
+			query = query.Where("owner_user_id IS NULL")
+		} else {
+			query = query.Where("owner_user_id = ?", *config.OwnerUserID)
+		}
+		_ = query.Update("is_default", false).Error
 	}
 
 	s.logger.Info("Storage config created",
 		zap.String("config_id", config.ID),
-		zap.String("tenant_id", tenantID),
 		zap.String("provider", string(config.Provider)),
 	)
 
@@ -79,9 +84,9 @@ func (s *StorageService) GetStorageConfig(ctx context.Context, configID string) 
 	return &config, nil
 }
 
-func (s *StorageService) ListStorageConfigs(ctx context.Context, tenantID string) ([]*model.StorageConfig, error) {
+func (s *StorageService) ListStorageConfigs(ctx context.Context) ([]*model.StorageConfig, error) {
 	var configs []*model.StorageConfig
-	if err := s.db.WithContext(ctx).Find(&configs, "tenant_id = ?", tenantID).Error; err != nil {
+	if err := s.db.WithContext(ctx).Find(&configs).Error; err != nil {
 		return nil, fmt.Errorf("failed to list storage configs: %w", err)
 	}
 	return configs, nil
@@ -106,6 +111,7 @@ func (s *StorageService) DeleteStorageConfig(ctx context.Context, configID strin
 		return errors.New("storage config not found")
 	}
 
+	s.registry.Unregister(configID)
 	s.logger.Info("Storage config deleted", zap.String("config_id", configID))
 	return nil
 }
@@ -122,6 +128,13 @@ func (s *StorageService) PutObject(
 	var ns model.Namespace
 	if err := s.db.WithContext(ctx).Preload("StorageConfig").First(&ns, "id = ?", namespaceID).Error; err != nil {
 		return nil, fmt.Errorf("namespace not found: %w", err)
+	}
+
+	if ns.MaxFileSize != nil && *ns.MaxFileSize > 0 && size > *ns.MaxFileSize {
+		return nil, errors.New("namespace max file size exceeded")
+	}
+	if ns.MaxStorage != nil && *ns.MaxStorage > 0 && ns.UsedStorage+size > *ns.MaxStorage {
+		return nil, errors.New("namespace storage quota exceeded")
 	}
 
 	provider, err := s.getProviderForNamespace(ctx, &ns)
@@ -153,6 +166,11 @@ func (s *StorageService) PutObject(
 	}
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
+		if ns.MaxFiles != nil && *ns.MaxFiles > 0 && ns.UsedFiles+1 > *ns.MaxFiles {
+			_ = provider.Delete(ctx, storageKey)
+			return nil, errors.New("namespace max files quota exceeded")
+		}
+
 		object := &model.Object{
 			NamespaceID:  namespaceID,
 			Key:          key,
@@ -671,17 +689,6 @@ func (s *StorageService) FinalizePresignedPut(
 
 	tx := s.db.WithContext(ctx).Begin()
 
-	var tenant model.Tenant
-	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-		First(&tenant, "id = ?", ns.TenantID).Error; err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("tenant not found: %w", err)
-	}
-	if tenant.MaxStorage > 0 && tenant.UsedStorage+size > tenant.MaxStorage {
-		tx.Rollback()
-		return nil, errors.New("storage quota exceeded")
-	}
-
 	var lockedNS model.Namespace
 	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 		First(&lockedNS, "id = ?", namespaceID).Error; err != nil {
@@ -746,10 +753,6 @@ func (s *StorageService) FinalizePresignedPut(
 		}).Error; err != nil {
 			tx.Rollback()
 			return nil, fmt.Errorf("failed to update namespace usage: %w", err)
-		}
-		if err := tx.Model(&tenant).Update("used_storage", gorm.Expr("used_storage + ?", size)).Error; err != nil {
-			tx.Rollback()
-			return nil, fmt.Errorf("failed to update tenant storage usage: %w", err)
 		}
 		if err := tx.Commit().Error; err != nil {
 			return nil, fmt.Errorf("failed to commit finalize presigned upload transaction: %w", err)
@@ -853,10 +856,6 @@ func (s *StorageService) FinalizePresignedPut(
 		tx.Rollback()
 		return nil, fmt.Errorf("failed to update namespace storage usage: %w", err)
 	}
-	if err := tx.Model(&tenant).Update("used_storage", gorm.Expr("used_storage + ?", size)).Error; err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("failed to update tenant storage usage: %w", err)
-	}
 	if err := tx.Commit().Error; err != nil {
 		return nil, fmt.Errorf("failed to commit finalize presigned upload transaction: %w", err)
 	}
@@ -892,7 +891,13 @@ func (s *StorageService) getProviderForNamespace(ctx context.Context, ns *model.
 		cfg = found
 	} else {
 		var defaultConfig model.StorageConfig
-		if err := s.db.WithContext(ctx).First(&defaultConfig, "tenant_id = ? AND is_default = ?", ns.TenantID, true).Error; err != nil {
+		query := s.db.WithContext(ctx).Where("is_default = ?", true)
+		if ns.OwnerUserID == nil {
+			query = query.Where("owner_user_id IS NULL")
+		} else {
+			query = query.Where("owner_user_id = ? OR owner_user_id IS NULL", *ns.OwnerUserID)
+		}
+		if err := query.Order("owner_user_id DESC NULLS LAST, created_at ASC").First(&defaultConfig).Error; err != nil {
 			return nil, fmt.Errorf("no default storage config found: %w", err)
 		}
 		cfg = &defaultConfig
@@ -915,7 +920,7 @@ func (s *StorageService) buildStorageKey(ns *model.Namespace, key string) string
 		prefix := strings.TrimSuffix(ns.PathPrefix, "/")
 		key = prefix + "/" + key
 	}
-	return fmt.Sprintf("%s/%s/%s", ns.TenantID, ns.ID, key)
+	return fmt.Sprintf("%s/%s", ns.ID, key)
 }
 
 func (s *StorageService) buildVersionedStorageKey(ns *model.Namespace, key, versionID string) string {
@@ -943,6 +948,7 @@ func marshalMetadata(metadata map[string]string) string {
 }
 
 type CreateStorageConfigRequest struct {
+	OwnerUserID string `json:"owner_user_id"`
 	Name        string `json:"name" binding:"required"`
 	Provider    string `json:"provider" binding:"required"`
 	Endpoint    string `json:"endpoint"`

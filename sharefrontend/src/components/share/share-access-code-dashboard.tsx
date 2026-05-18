@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/share/app-shell";
-import { AuthCard } from "@/components/share/auth-card";
+import { AuthRedirect } from "@/components/share/auth-redirect";
 import { ShareApiError, getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type { AccessCodeDashboardItem, AccessCodeDashboardResponse, PlatformCard } from "@/lib/shared";
 
@@ -313,11 +313,7 @@ export function ShareAccessCodeDashboard() {
   }
 
   if (!authenticated) {
-    return (
-      <div className="min-h-screen bg-[var(--background)] px-4 py-10 sm:px-6">
-        <AuthCard afterSuccess="/creator/access-codes" />
-      </div>
-    );
+    return <AuthRedirect nextPath="/creator/access-codes" />;
   }
 
   return (

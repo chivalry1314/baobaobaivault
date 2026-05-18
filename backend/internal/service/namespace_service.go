@@ -11,13 +11,12 @@ import (
 	"gorm.io/gorm"
 )
 
-// NamespaceService 命名空间服务
+// NamespaceService manages namespace CRUD.
 type NamespaceService struct {
 	db     *gorm.DB
 	logger *zap.Logger
 }
 
-// NewNamespaceService 创建命名空间服务
 func NewNamespaceService(db *gorm.DB, logger *zap.Logger) *NamespaceService {
 	return &NamespaceService{
 		db:     db,
@@ -25,8 +24,7 @@ func NewNamespaceService(db *gorm.DB, logger *zap.Logger) *NamespaceService {
 	}
 }
 
-// CreateNamespace 创建命名空间
-func (s *NamespaceService) CreateNamespace(ctx context.Context, tenantID string, req *CreateNamespaceRequest) (*model.Namespace, error) {
+func (s *NamespaceService) CreateNamespace(ctx context.Context, req *CreateNamespaceRequest) (*model.Namespace, error) {
 	if req.MaxStorage != nil && *req.MaxStorage <= 0 {
 		return nil, errors.New("max_storage must be greater than 0")
 	}
@@ -37,9 +35,8 @@ func (s *NamespaceService) CreateNamespace(ctx context.Context, tenantID string,
 		return nil, errors.New("max_file_size must be greater than 0")
 	}
 
-	// 检查命名空间名称是否已存在
 	var count int64
-	if err := s.db.Model(&model.Namespace{}).Where("tenant_id = ? AND name = ?", tenantID, req.Name).Count(&count).Error; err != nil {
+	if err := s.db.WithContext(ctx).Model(&model.Namespace{}).Where("name = ?", req.Name).Count(&count).Error; err != nil {
 		return nil, fmt.Errorf("failed to check namespace name: %w", err)
 	}
 	if count > 0 {
@@ -47,36 +44,36 @@ func (s *NamespaceService) CreateNamespace(ctx context.Context, tenantID string,
 	}
 
 	ns := &model.Namespace{
-		TenantID:        tenantID,
-		Name:            req.Name,
-		Description:     req.Description,
-		Status:          model.NSStatusActive,
-		PathPrefix:      req.PathPrefix,
-		MaxStorage:      req.MaxStorage,
-		MaxFiles:        req.MaxFiles,
-		MaxFileSize:     req.MaxFileSize,
+		Name:        req.Name,
+		Description: req.Description,
+		Status:      model.NSStatusActive,
+		PathPrefix:  req.PathPrefix,
+		MaxStorage:  req.MaxStorage,
+		MaxFiles:    req.MaxFiles,
+		MaxFileSize: req.MaxFileSize,
 	}
 	if storageConfigID := strings.TrimSpace(req.StorageConfigID); storageConfigID != "" {
 		ns.StorageConfigID = &storageConfigID
 	}
+	if ownerID := strings.TrimSpace(req.OwnerUserID); ownerID != "" {
+		ns.OwnerUserID = &ownerID
+	}
 
-	if err := s.db.Create(ns).Error; err != nil {
+	if err := s.db.WithContext(ctx).Create(ns).Error; err != nil {
 		return nil, fmt.Errorf("failed to create namespace: %w", err)
 	}
 
 	s.logger.Info("Namespace created",
 		zap.String("namespace_id", ns.ID),
-		zap.String("tenant_id", tenantID),
 		zap.String("name", ns.Name),
 	)
 
 	return ns, nil
 }
 
-// GetNamespace 获取命名空间
 func (s *NamespaceService) GetNamespace(ctx context.Context, namespaceID string) (*model.Namespace, error) {
 	var ns model.Namespace
-	if err := s.db.Preload("StorageConfig").First(&ns, "id = ?", namespaceID).Error; err != nil {
+	if err := s.db.WithContext(ctx).Preload("StorageConfig").First(&ns, "id = ?", namespaceID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("namespace not found")
 		}
@@ -85,16 +82,24 @@ func (s *NamespaceService) GetNamespace(ctx context.Context, namespaceID string)
 	return &ns, nil
 }
 
-// ListNamespaces 列出命名空间
-func (s *NamespaceService) ListNamespaces(ctx context.Context, tenantID string, req *ListNamespaceRequest) ([]*model.Namespace, int64, error) {
+func (s *NamespaceService) ListNamespaces(ctx context.Context, req *ListNamespaceRequest) ([]*model.Namespace, int64, error) {
+	if req == nil {
+		req = &ListNamespaceRequest{Page: 1, PageSize: 20}
+	}
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.PageSize <= 0 || req.PageSize > 100 {
+		req.PageSize = 20
+	}
+
 	var namespaces []*model.Namespace
 	var total int64
 
-	query := s.db.Model(&model.Namespace{}).Where("tenant_id = ?", tenantID)
+	query := s.db.WithContext(ctx).Model(&model.Namespace{})
 	if len(req.NamespaceIDs) > 0 {
 		query = query.Where("id IN ?", req.NamespaceIDs)
 	}
-
 	if req.Status != "" {
 		query = query.Where("status = ?", req.Status)
 	}
@@ -111,7 +116,6 @@ func (s *NamespaceService) ListNamespaces(ctx context.Context, tenantID string, 
 	return namespaces, total, nil
 }
 
-// UpdateNamespace 更新命名空间
 func (s *NamespaceService) UpdateNamespace(ctx context.Context, namespaceID string, req *UpdateNamespaceRequest) (*model.Namespace, error) {
 	ns, err := s.GetNamespace(ctx, namespaceID)
 	if err != nil {
@@ -119,6 +123,9 @@ func (s *NamespaceService) UpdateNamespace(ctx context.Context, namespaceID stri
 	}
 
 	updates := make(map[string]interface{})
+	if req.Name != "" {
+		updates["name"] = req.Name
+	}
 	if req.Description != "" {
 		updates["description"] = req.Description
 	}
@@ -149,28 +156,34 @@ func (s *NamespaceService) UpdateNamespace(ctx context.Context, namespaceID stri
 		}
 		updates["max_file_size"] = *req.MaxFileSize
 	}
+	if req.OwnerUserID != nil {
+		ownerID := strings.TrimSpace(*req.OwnerUserID)
+		if ownerID == "" {
+			updates["owner_user_id"] = nil
+		} else {
+			updates["owner_user_id"] = ownerID
+		}
+	}
 
 	if len(updates) > 0 {
-		if err := s.db.Model(ns).Updates(updates).Error; err != nil {
+		if err := s.db.WithContext(ctx).Model(ns).Updates(updates).Error; err != nil {
 			return nil, fmt.Errorf("failed to update namespace: %w", err)
 		}
 	}
 
-	return ns, nil
+	return s.GetNamespace(ctx, namespaceID)
 }
 
-// DeleteNamespace 删除命名空间
 func (s *NamespaceService) DeleteNamespace(ctx context.Context, namespaceID string) error {
-	// 检查是否有对象
 	var count int64
-	if err := s.db.Model(&model.Object{}).Where("namespace_id = ?", namespaceID).Count(&count).Error; err != nil {
+	if err := s.db.WithContext(ctx).Model(&model.Object{}).Where("namespace_id = ?", namespaceID).Count(&count).Error; err != nil {
 		return fmt.Errorf("failed to check objects: %w", err)
 	}
 	if count > 0 {
 		return errors.New("namespace is not empty, please delete objects first")
 	}
 
-	result := s.db.Delete(&model.Namespace{}, "id = ?", namespaceID)
+	result := s.db.WithContext(ctx).Delete(&model.Namespace{}, "id = ?", namespaceID)
 	if result.Error != nil {
 		return fmt.Errorf("failed to delete namespace: %w", result.Error)
 	}
@@ -182,12 +195,11 @@ func (s *NamespaceService) DeleteNamespace(ctx context.Context, namespaceID stri
 	return nil
 }
 
-// DTO 定义
-
 type CreateNamespaceRequest struct {
 	Name            string `json:"name" binding:"required"`
 	Description     string `json:"description"`
 	StorageConfigID string `json:"storage_config_id"`
+	OwnerUserID     string `json:"owner_user_id"`
 	PathPrefix      string `json:"path_prefix"`
 	MaxStorage      *int64 `json:"max_storage"`
 	MaxFiles        *int   `json:"max_files"`
@@ -195,13 +207,15 @@ type CreateNamespaceRequest struct {
 }
 
 type UpdateNamespaceRequest struct {
-	Description     string `json:"description"`
-	Status          string `json:"status"`
-	StorageConfigID string `json:"storage_config_id"`
-	PathPrefix      string `json:"path_prefix"`
-	MaxStorage      *int64 `json:"max_storage"`
-	MaxFiles        *int   `json:"max_files"`
-	MaxFileSize     *int64 `json:"max_file_size"`
+	Name            string  `json:"name"`
+	Description     string  `json:"description"`
+	Status          string  `json:"status"`
+	StorageConfigID string  `json:"storage_config_id"`
+	OwnerUserID     *string `json:"owner_user_id"`
+	PathPrefix      string  `json:"path_prefix"`
+	MaxStorage      *int64  `json:"max_storage"`
+	MaxFiles        *int    `json:"max_files"`
+	MaxFileSize     *int64  `json:"max_file_size"`
 }
 
 type ListNamespaceRequest struct {
