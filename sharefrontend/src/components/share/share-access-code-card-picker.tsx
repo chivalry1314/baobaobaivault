@@ -383,7 +383,7 @@ export function ShareAccessCodeCardPicker() {
             >
               <Link
                 href="/creator/new"
-                className="rounded-full bg-[linear-gradient(135deg,#ffb5c4_0%,#ff99b0_100%)] px-6 py-3 text-base font-semibold text-white shadow-[0_20px_40px_-28px_rgba(255,110,146,0.68)] transition hover:-translate-y-0.5"
+                className="btn-primary rounded-full px-6 py-3 text-base font-semibold"
               >
                 去创作卡片
               </Link>
@@ -404,7 +404,7 @@ export function ShareAccessCodeCardPicker() {
               <button
                 type="button"
                 onClick={() => setVisibilityFilter("all")}
-                className="rounded-full bg-[linear-gradient(135deg,#ffb5c4_0%,#ff99b0_100%)] px-6 py-3 text-base font-semibold text-white shadow-[0_20px_40px_-28px_rgba(255,110,146,0.68)] transition hover:-translate-y-0.5"
+                className="btn-primary rounded-full px-6 py-3 text-base font-semibold"
               >
                 显示全部卡片
               </button>
@@ -543,7 +543,7 @@ export function ShareAccessCodeCardPicker() {
                     type="button"
                     disabled={!selectedCard}
                     onClick={handleNext}
-                    className="inline-flex min-w-[190px] items-center justify-center gap-3 rounded-full bg-[linear-gradient(135deg,#f7d1e8_0%,#f7c0f2_100%)] px-8 py-4 text-2xl font-semibold text-[#3f2731] shadow-[0_20px_44px_-26px_rgba(214,113,145,0.42)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="btn-rose inline-flex min-w-[190px] items-center justify-center gap-3 rounded-full px-8 py-4 text-2xl font-semibold disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <span>下一步</span>
                     <ArrowRightIcon className="h-6 w-6" />

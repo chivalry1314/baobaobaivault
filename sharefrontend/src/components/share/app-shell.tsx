@@ -44,7 +44,7 @@ export function AppShell({ currentPath = "", children, headerSlot, footerSlot }:
                     href={item.href}
                     className={`rounded-full px-4 py-2 text-sm transition ${
                       active
-                        ? "bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] text-white shadow-[var(--shadow-glow)]"
+                        ? "btn-primary"
                         : "chip-pill text-[var(--foreground)]/74 hover:text-[var(--brand-strong)]"
                     }`}
                   >
@@ -66,7 +66,7 @@ export function AppShell({ currentPath = "", children, headerSlot, footerSlot }:
                   href={item.href}
                   className={`shrink-0 rounded-full px-4 py-2 text-sm transition ${
                     active
-                      ? "bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] text-white shadow-[var(--shadow-glow)]"
+                      ? "btn-primary"
                       : "chip-pill text-[var(--foreground)]/74"
                   }`}
                 >

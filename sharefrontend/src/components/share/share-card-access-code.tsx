@@ -357,7 +357,7 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
                     <button
                       type="button"
                       onClick={() => setCode(generateAccessCode())}
-                      className="inline-flex items-center justify-center gap-3 rounded-full bg-[linear-gradient(135deg,#ecf8fd_0%,#dff2fb_100%)] px-7 py-5 text-xl font-medium text-[var(--primary)] shadow-[0_18px_36px_-28px_rgba(31,122,152,0.3)] transition hover:-translate-y-0.5"
+                      className="btn-subtle inline-flex items-center justify-center gap-3 rounded-full px-7 py-5 text-xl font-medium"
                     >
                       <RefreshIcon className="h-6 w-6" />
                       <span>随机生成</span>
@@ -446,7 +446,7 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
                     type="button"
                     disabled={pending}
                     onClick={() => void handleSubmit()}
-                    className="inline-flex min-w-[320px] items-center justify-center gap-3 rounded-full bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] px-8 py-6 text-[2rem] font-semibold text-white shadow-[0_24px_40px_-26px_rgba(31,122,152,0.56)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="btn-primary inline-flex min-w-[320px] items-center justify-center gap-3 rounded-full px-8 py-6 text-[2rem] font-semibold disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <span>{pending ? "保存中..." : "确认并生成提取码"}</span>
                     <CheckIcon className="h-7 w-7" />

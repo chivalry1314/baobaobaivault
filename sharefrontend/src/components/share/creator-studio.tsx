@@ -194,7 +194,7 @@ function Avatar({
 
   return (
     <div
-      className={`${dimension} flex items-center justify-center rounded-full bg-[linear-gradient(135deg,#e3f4fb_0%,#f5fbff_100%)] font-semibold text-[var(--primary)] shadow-[0_16px_36px_-24px_rgba(55,98,120,0.35)] ${inner}`}
+      className={`${dimension} btn-subtle flex items-center justify-center rounded-full font-semibold shadow-[0_16px_36px_-24px_rgba(55,98,120,0.35)] ${inner}`}
     >
       {getInitials(name)}
     </div>
@@ -216,7 +216,7 @@ function SidebarButton({
 }) {
   const className = `flex w-full items-center gap-3 rounded-full px-5 py-4 text-base transition ${
     active
-      ? "bg-[linear-gradient(135deg,#d7eff9_0%,#c4e5f3_100%)] text-[var(--primary)] shadow-[0_18px_36px_-26px_rgba(57,124,153,0.35)]"
+      ? "btn-subtle text-[var(--primary)] shadow-[0_18px_36px_-26px_rgba(57,124,153,0.35)]"
       : "text-[var(--foreground)]/74 hover:bg-white/78 hover:text-[var(--primary)]"
   }`;
 

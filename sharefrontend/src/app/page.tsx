@@ -349,7 +349,7 @@ export default function LandingPage() {
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
                   href="/creator"
-                  className="glass-button rounded-full bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] px-6 py-3 text-sm font-semibold text-white"
+                  className="glass-button btn-primary rounded-full px-6 py-3 text-sm font-semibold"
                 >
                   进入创作中心
                 </Link>
@@ -393,12 +393,12 @@ export default function LandingPage() {
                   <button
                     key={chip}
                     type="button"
-                    onClick={() => setActiveChip(chip)}
-                    className={`rounded-full px-5 py-2.5 text-sm font-medium transition sm:text-base ${
-                      isActive
-                        ? "bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] text-white shadow-[0_14px_30px_-20px_rgba(31,122,152,0.6)]"
-                        : "chip-pill text-[var(--foreground)]/74 hover:text-[var(--brand-strong)]"
-                    }`}
+                      onClick={() => setActiveChip(chip)}
+                      className={`rounded-full px-5 py-2.5 text-sm font-medium transition sm:text-base ${
+                        isActive
+                          ? "btn-primary"
+                          : "chip-pill text-[var(--foreground)]/74 hover:text-[var(--brand-strong)]"
+                      }`}
                   >
                     {chip}
                   </button>

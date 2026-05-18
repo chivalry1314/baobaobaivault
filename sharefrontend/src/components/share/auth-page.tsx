@@ -198,7 +198,7 @@ export function AuthPage() {
             <button
               type="submit"
               disabled={pending}
-              className="w-full rounded-full bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] px-5 py-3 text-[var(--type-body-sm)] font-semibold text-white shadow-[0_14px_34px_-18px_rgba(76,155,188,0.62)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_38px_-18px_rgba(76,155,188,0.75)] disabled:cursor-not-allowed disabled:opacity-60"
+              className="btn-primary w-full rounded-full px-5 py-3 text-[var(--type-body-sm)] font-semibold disabled:cursor-not-allowed disabled:opacity-60"
             >
               <span className="inline-flex items-center gap-2">
                 {pending ? "处理中..." : "继续"}

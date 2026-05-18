@@ -558,7 +558,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                           }
                           className={`inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-lg transition ${
                             active
-                              ? "border-[rgba(236,180,197,0.86)] bg-[linear-gradient(135deg,#ffd5df_0%,#ffe9ef_100%)] text-[var(--foreground)]"
+                              ? "btn-rose border-[rgba(181,164,174,0.86)] text-[var(--foreground)]"
                               : "border-[rgba(210,185,191,0.78)] bg-white text-[var(--foreground)]/72"
                           }`}
                         >
@@ -625,7 +625,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                 <button
                   type="submit"
                   disabled={publishPending}
-                  className="mt-8 flex w-full items-center justify-center gap-3 rounded-full bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] px-6 py-5 text-[1.9rem] font-semibold text-white shadow-[0_24px_40px_-26px_rgba(31,122,152,0.56)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="btn-primary mt-8 flex w-full items-center justify-center gap-3 rounded-full px-6 py-5 text-[1.9rem] font-semibold disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <ArrowBurstIcon className="h-7 w-7" />
                   <span>

@@ -596,7 +596,7 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
                         type="button"
                         disabled={downloadPending || !normalizedUnlockCode}
                         onClick={() => void handleProtectedDownload()}
-                        className="mt-7 flex w-full items-center justify-center gap-3 rounded-full bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] px-6 py-4 text-lg font-semibold text-white shadow-[0_24px_40px_-26px_rgba(31,122,152,0.56)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 sm:py-5 sm:text-xl"
+                        className="btn-primary mt-7 flex w-full items-center justify-center gap-3 rounded-full px-6 py-4 text-lg font-semibold disabled:cursor-not-allowed disabled:opacity-60 sm:py-5 sm:text-xl"
                       >
                         <span>{downloadPending ? "验证中..." : "提取此卡片"}</span>
                         <DownloadIcon className="h-7 w-7" />
@@ -604,7 +604,7 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
                     ) : (
                       <a
                         href={detail.card.downloadUrl}
-                        className="mt-7 flex w-full items-center justify-center gap-3 rounded-full bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] px-6 py-4 text-lg font-semibold text-white shadow-[0_24px_40px_-26px_rgba(31,122,152,0.56)] transition hover:-translate-y-0.5 sm:py-5 sm:text-xl"
+                        className="btn-primary mt-7 flex w-full items-center justify-center gap-3 rounded-full px-6 py-4 text-lg font-semibold sm:py-5 sm:text-xl"
                       >
                         <span>提取此卡片</span>
                         <DownloadIcon className="h-7 w-7" />

@@ -348,7 +348,7 @@ export function ShareAccessCodeDashboard() {
             <button
               type="button"
               onClick={handleCreateNewAccessCode}
-              className="inline-flex items-center justify-center gap-3 self-start rounded-full bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] px-8 py-5 text-xl font-semibold text-white shadow-[0_24px_48px_-30px_rgba(31,122,152,0.56)] transition hover:-translate-y-0.5"
+              className="btn-primary inline-flex items-center justify-center gap-3 self-start rounded-full px-8 py-5 text-xl font-semibold"
             >
               <PlusIcon className="h-6 w-6" />
               <span>生成新提取码</span>
@@ -394,7 +394,7 @@ export function ShareAccessCodeDashboard() {
                   <button
                     type="button"
                     onClick={handleCreateNewAccessCode}
-                    className="rounded-full bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] px-6 py-3 text-base font-semibold text-white shadow-[0_20px_40px_-28px_rgba(31,122,152,0.56)] transition hover:-translate-y-0.5"
+                    className="btn-primary rounded-full px-6 py-3 text-base font-semibold"
                   >
                     立即生成提取码
                   </button>

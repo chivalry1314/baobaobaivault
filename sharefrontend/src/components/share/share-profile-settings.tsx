@@ -365,7 +365,7 @@ export function ShareProfileSettings({
             <button
               type="button"
               onClick={() => avatarInputRef.current?.click()}
-              className="rounded-full border border-[var(--outline-variant)] bg-[linear-gradient(135deg,#eef8fc_0%,#e1f1f9_100%)] px-8 py-3 text-[1.05rem] text-[var(--foreground)] shadow-[0_16px_34px_-24px_rgba(80,118,140,0.25)] transition hover:-translate-y-0.5"
+              className="btn-subtle rounded-full px-8 py-3 text-[1.05rem]"
             >
               修改
             </button>
@@ -503,7 +503,7 @@ export function ShareProfileSettings({
             type="button"
             disabled={savePending}
             onClick={() => void handleSaveProfile()}
-            className="rounded-full bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] px-10 py-3 text-[1.1rem] font-medium text-white shadow-[0_18px_38px_-24px_rgba(31,122,152,0.52)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn-primary rounded-full px-10 py-3 text-[1.1rem] font-medium disabled:cursor-not-allowed disabled:opacity-60"
           >
             {savePending ? "正在保存..." : "保存修改"}
           </button>
