@@ -65,7 +65,7 @@ export function CardGrid({
             style={{ animationDelay: `${index * 80}ms` }}
           >
             <div className="relative overflow-hidden rounded-[24px] bg-[var(--surface-container-high)]">
-              <span className="absolute left-3 top-3 z-10 rounded-full bg-white/88 px-3 py-1 text-xs font-medium text-[var(--foreground)]/78 shadow-[0_12px_20px_-16px_rgba(120,85,94,0.44)]">
+              <span className="absolute left-3 top-3 z-10 rounded-full border-[3px] border-[var(--outline)] bg-white px-3 py-1 text-xs font-black text-[var(--foreground)] shadow-[0_12px_20px_-16px_rgba(120,85,94,0.44)]">
                 {item.card.visibility === "public" ? "公开" : "私密"}
               </span>
               {isImage ? (
@@ -89,7 +89,7 @@ export function CardGrid({
                     {item.creator.nickname || item.creator.username || "CardShare Creator"}
                   </p>
                 </div>
-                <span className="rounded-full bg-[var(--surface-container)] px-3 py-1 text-xs text-[var(--brand-strong)]">
+                <span className="rounded-full border-[3px] border-[var(--outline)] bg-[var(--accent)] px-3 py-1 text-xs font-black text-[var(--foreground)]">
                   {formatDownloads(item.stats.downloadCount)} 下载
                 </span>
               </div>
@@ -97,7 +97,7 @@ export function CardGrid({
               <p className="type-body-sm mt-3 line-clamp-2 text-[var(--foreground)]/72">{item.card.description || "创作者还没有补充描述。"}</p>
 
               <div className="mt-4 flex items-center justify-between gap-3 text-xs text-[var(--foreground)]/55">
-                <span className="rounded-full bg-white/70 px-2.5 py-1">{formatBytes(item.card.size)}</span>
+                <span className="rounded-full border-[2px] border-[var(--outline)] bg-white px-2.5 py-1">{formatBytes(item.card.size)}</span>
                 <span className="truncate">{item.card.originalFileName}</span>
               </div>
             </div>

@@ -29,16 +29,16 @@ function Field({
 }: FieldProps) {
   return (
     <label className="block">
-      <span className="type-body-sm mb-2 block pl-1 font-medium text-[var(--foreground)]/72">{label}</span>
+      <span className="mb-2 block pl-2 text-sm font-black text-[var(--foreground)]">{label}</span>
       <div className="relative">
-        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--outline)]">{icon}</span>
+        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--foreground)]/55">{icon}</span>
         <input
           type={type}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           autoComplete={autoComplete}
           placeholder={placeholder}
-          className="w-full rounded-2xl border border-[var(--outline-variant)] bg-[var(--surface-container-low)] py-3 pl-11 pr-12 text-[var(--type-body-sm)] text-[var(--foreground)] outline-none transition placeholder:text-[var(--outline)]/80 focus:border-[var(--primary)] focus:bg-white"
+          className="w-full rounded-2xl border-[3px] border-[var(--outline)] bg-[#f8f9fa] py-3 pl-12 pr-12 text-base font-bold text-[var(--foreground)] outline-none transition placeholder:text-[var(--foreground)]/40 focus:bg-[#f0f4f8]"
           required
         />
         {trailing ? <span className="absolute right-4 top-1/2 -translate-y-1/2">{trailing}</span> : null}
@@ -123,7 +123,7 @@ export function AuthPage() {
     setError("");
 
     try {
-      const payload = await shareApi.continueAuth({
+      await shareApi.continueAuth({
         email: trimmedEmail,
         password,
       });
@@ -139,32 +139,44 @@ export function AuthPage() {
 
   if (sessionChecking) {
     return (
-      <div className="relative min-h-[100dvh] overflow-hidden bg-[linear-gradient(180deg,#f4fbff_0%,#f8fdff_44%,#f2faff_100%)]">
-        <div className="relative z-10 mx-auto flex min-h-[100dvh] max-w-6xl items-center justify-center px-4 py-6 sm:px-6">
-          <section className="w-full max-w-[520px] rounded-[36px] border border-white/80 bg-white/90 p-6 text-center text-sm text-[var(--foreground)]/62 shadow-[0_26px_80px_-40px_rgba(120,85,94,0.42)] backdrop-blur-xl sm:p-8">
-            正在检查登录状态...
-          </section>
+      <div className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden px-4 py-8">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="sparkle-orb left-[-8%] top-[10%] h-[18rem] w-[18rem] bg-[rgba(174,231,217,0.45)]" />
+          <div className="sparkle-orb right-[-10%] bottom-[-6%] h-[20rem] w-[20rem] bg-[rgba(250,205,244,0.36)]" />
         </div>
+
+        <section className="relative z-10 w-full max-w-md rounded-[2rem] border-[4px] border-[var(--outline)] bg-white p-8 text-center text-sm font-black text-[var(--foreground)] md:p-12">
+          正在检查登录状态...
+        </section>
       </div>
     );
   }
 
   return (
-    <div className="relative min-h-[100dvh] overflow-hidden bg-[linear-gradient(180deg,#f4fbff_0%,#f8fdff_44%,#f2faff_100%)]">
+    <div className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden px-4 py-8">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-[-8%] top-[-10%] h-[24rem] w-[24rem] rounded-full bg-[rgba(170,229,248,0.36)] blur-[92px]" />
-        <div className="absolute bottom-[-14%] right-[-10%] h-[26rem] w-[26rem] rounded-full bg-[rgba(210,231,250,0.3)] blur-[112px]" />
+        <div className="sparkle-orb left-[-8%] top-[10%] h-[18rem] w-[18rem] bg-[rgba(174,231,217,0.45)]" />
+        <div className="sparkle-orb right-[-10%] bottom-[-6%] h-[20rem] w-[20rem] bg-[rgba(250,205,244,0.36)]" />
       </div>
 
-      <div className="relative z-10 mx-auto flex min-h-[100dvh] max-w-6xl items-center justify-center px-4 py-6 sm:px-6">
-        <section className="w-full max-w-[520px] rounded-[36px] border border-white/80 bg-white/90 p-6 shadow-[0_26px_80px_-40px_rgba(120,85,94,0.42)] backdrop-blur-xl sm:p-8">
-          <h1 className="type-h1 text-[var(--primary)]">CardShare</h1>
+      <section className="relative z-10 w-full max-w-md overflow-hidden rounded-[2rem] border-[4px] border-[var(--outline)] bg-white p-8 md:p-12">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[var(--tertiary)] opacity-60 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-[var(--secondary)] opacity-60 blur-3xl" />
+
+        <div className="relative z-10">
+          <div className="mb-8 flex flex-col items-center gap-3">
+            <div className="mb-2 flex h-16 w-16 -rotate-6 items-center justify-center rounded-2xl border-[3px] border-[var(--outline)] bg-white">
+              <div className="h-10 w-10 rounded-lg border-[3px] border-[var(--outline)] bg-[linear-gradient(135deg,#cdb4f3_0%,#a2d2fb_100%)]" />
+            </div>
+            <h1 className="text-4xl font-black tracking-tight text-[var(--foreground)]">Dreamy</h1>
+            <p className="text-sm font-extrabold text-[var(--foreground)]/80">CardShare 账号登录</p>
+          </div>
 
           {error ? (
-            <p className="mt-5 rounded-2xl border border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-sm text-[#9a3412]">{error}</p>
+            <p className="mb-5 rounded-xl border-[3px] border-[#e59273] bg-[#ffe8dd] px-4 py-2 text-sm font-bold text-[#8a2a14]">{error}</p>
           ) : null}
 
-          <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
+          <form className="space-y-5" onSubmit={handleSubmit}>
             <Field
               label="邮箱"
               placeholder="you@example.com"
@@ -172,7 +184,7 @@ export function AuthPage() {
               onChange={setEmail}
               type="email"
               autoComplete="email"
-              icon={<MailIcon className="h-4 w-4" />}
+              icon={<MailIcon className="h-5 w-5" />}
             />
 
             <Field
@@ -182,15 +194,15 @@ export function AuthPage() {
               onChange={setPassword}
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
-              icon={<LockIcon className="h-4 w-4" />}
+              icon={<LockIcon className="h-5 w-5" />}
               trailing={
                 <button
                   type="button"
                   onClick={() => setShowPassword((value) => !value)}
-                  className="text-[var(--outline)] transition hover:text-[var(--primary)]"
+                  className="text-[var(--foreground)]/55 transition hover:text-[var(--foreground)]"
                   aria-label={showPassword ? "隐藏密码" : "显示密码"}
                 >
-                  {showPassword ? <EyeOpenIcon className="h-4 w-4" /> : <EyeClosedIcon className="h-4 w-4" />}
+                  {showPassword ? <EyeOpenIcon className="h-5 w-5" /> : <EyeClosedIcon className="h-5 w-5" />}
                 </button>
               }
             />
@@ -198,26 +210,24 @@ export function AuthPage() {
             <button
               type="submit"
               disabled={pending}
-              className="btn-primary w-full rounded-full px-5 py-3 text-[var(--type-body-sm)] font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-[3px] border-[var(--outline)] bg-[var(--button-primary)] px-5 py-3.5 text-lg font-black text-[var(--foreground)] transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <span className="inline-flex items-center gap-2">
-                {pending ? "处理中..." : "继续"}
-                <ArrowRightIcon className="h-4 w-4" />
-              </span>
+              {pending ? "处理中..." : "继续"}
+              <ArrowRightIcon className="h-5 w-5" />
             </button>
           </form>
 
-          <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-[var(--foreground)]/60">
-            <Link href="/discover" className="font-medium text-[var(--primary)] transition hover:text-[var(--secondary)]">
+          <div className="mt-6 flex items-center justify-center gap-4 text-sm font-bold text-[var(--foreground)]/70">
+            <Link href="/discover" className="transition hover:underline hover:text-[var(--foreground)]">
               去发现页
             </Link>
-            <span>·</span>
-            <Link href="/" className="font-medium text-[var(--primary)] transition hover:text-[var(--secondary)]">
+            <span className="opacity-40">|</span>
+            <Link href="/" className="transition hover:underline hover:text-[var(--foreground)]">
               返回首页
             </Link>
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
     </div>
   );
 }

@@ -12,8 +12,8 @@ import {
   type ReactNode,
 } from "react";
 
-import { ShareProfileSettings } from "@/components/share/share-profile-settings";
 import { AuthRedirect } from "@/components/share/auth-redirect";
+import { ShareProfileSettings } from "@/components/share/share-profile-settings";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type { DashboardCard, DashboardResponse, ExternalSessionUser, PlatformCard } from "@/lib/shared";
 
@@ -68,7 +68,6 @@ function formatUid(raw: string) {
   for (const char of raw) {
     hash = (hash * 31 + char.charCodeAt(0)) % 900000;
   }
-
   return String(hash + 100000);
 }
 
@@ -122,7 +121,7 @@ function getUserTagline(user: ExternalSessionUser | null) {
     return bio;
   }
 
-  return "在 Card Share 收集每一个灵感瞬间 ✨";
+  return "在 Card Share 展示你的创作，让更多人看见你的灵感。";
 }
 
 function isImageCard(card: PlatformCard) {
@@ -142,7 +141,7 @@ function getCardRank(item: DashboardCard) {
 }
 
 function getVisibilityLabel(value: PlatformCard["visibility"]) {
-  return value === "public" ? "公开展示" : "仅自己可见";
+  return value === "public" ? "公开" : "私密";
 }
 
 function getStatusLabel(value: PlatformCard["status"]) {
@@ -162,7 +161,7 @@ function defaultCardDescription(card: PlatformCard) {
     return text;
   }
 
-  return "把喜欢的画面和情绪收藏成一张卡片，随时分享给同频的人。";
+  return "这张卡片还没有填写描述，点击管理可补充详情。";
 }
 
 function revokePreview(url: string) {
@@ -194,7 +193,7 @@ function Avatar({
 
   return (
     <div
-      className={`${dimension} btn-subtle flex items-center justify-center rounded-full font-semibold shadow-[0_16px_36px_-24px_rgba(55,98,120,0.35)] ${inner}`}
+      className={`${dimension} btn-subtle flex items-center justify-center rounded-full font-black shadow-[0_16px_36px_-24px_rgba(55,98,120,0.35)] ${inner}`}
     >
       {getInitials(name)}
     </div>
@@ -214,7 +213,7 @@ function SidebarButton({
   icon: ReactNode;
   children: ReactNode;
 }) {
-  const className = `flex w-full items-center gap-3 rounded-full px-5 py-4 text-base transition ${
+  const className = `flex w-full items-center gap-3 rounded-full px-5 py-4 text-base font-black transition ${
     active
       ? "btn-subtle text-[var(--primary)] shadow-[0_18px_36px_-26px_rgba(57,124,153,0.35)]"
       : "text-[var(--foreground)]/74 hover:bg-white/78 hover:text-[var(--primary)]"
@@ -274,8 +273,8 @@ function ToggleChip({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-4 py-2 text-sm transition ${
-        active ? "bg-[var(--primary)] text-white" : "bg-[var(--surface-container-low)] text-[var(--foreground)]/72"
+      className={`rounded-full px-4 py-2 text-sm font-black transition ${
+        active ? "btn-primary text-[var(--foreground)]" : "btn-subtle text-[var(--foreground)]/72"
       }`}
     >
       {children}
@@ -297,14 +296,11 @@ function EmptyState({
   onAction?: () => void;
 }) {
   return (
-    <div className="rounded-[32px] border border-white/80 bg-white/84 px-6 py-14 text-center shadow-[0_24px_56px_-38px_rgba(120,85,94,0.28)]">
+    <div className="dream-panel px-6 py-14 text-center">
       <p className="type-h2 text-[var(--foreground)]">{title}</p>
       <p className="type-body-sm mx-auto mt-3 max-w-xl text-[var(--foreground)]/62">{description}</p>
       {actionLabel && actionHref ? (
-        <Link
-          href={actionHref}
-          className="mt-6 inline-flex rounded-full bg-[var(--primary)] px-6 py-3 text-sm font-medium text-white shadow-[0_16px_34px_-22px_rgba(120,85,94,0.45)] transition hover:-translate-y-0.5"
-        >
+        <Link href={actionHref} className="btn-primary mt-6 inline-flex rounded-full px-6 py-3 text-sm font-black">
           {actionLabel}
         </Link>
       ) : null}
@@ -312,7 +308,7 @@ function EmptyState({
         <button
           type="button"
           onClick={onAction}
-          className="mt-6 rounded-full bg-[var(--primary)] px-6 py-3 text-sm font-medium text-white shadow-[0_16px_34px_-22px_rgba(120,85,94,0.45)] transition hover:-translate-y-0.5"
+          className="btn-primary mt-6 rounded-full px-6 py-3 text-sm font-black"
         >
           {actionLabel}
         </button>
@@ -323,31 +319,26 @@ function EmptyState({
 
 function CreatorCard({
   item,
-  onManage,
 }: {
   item: DashboardCard;
-  onManage: (card: DashboardCard) => void;
 }) {
   const rank = getCardRank(item);
   const editHref = `/creator/cards/${encodeURIComponent(item.card.id)}/edit`;
   const accessCodeHref = `/creator/cards/${encodeURIComponent(item.card.id)}/access-code`;
 
   return (
-    <article className="rounded-[32px] border border-white/80 bg-white/84 p-5 shadow-[0_24px_56px_-38px_rgba(120,85,94,0.28)]">
-      <Link
-        href={editHref}
-        className="relative block overflow-hidden rounded-[26px] bg-[linear-gradient(135deg,#20161a_0%,#3f2b32_100%)]"
-      >
+    <article className="dream-panel p-5">
+      <Link href={editHref} className="relative block overflow-hidden rounded-[26px] bg-[linear-gradient(135deg,#20161a_0%,#3f2b32_100%)]">
         {isImageCard(item.card) ? (
           <img src={item.card.previewUrl} alt={item.card.title} className="h-[248px] w-full object-cover" />
         ) : (
-          <div className="flex h-[248px] items-center justify-center bg-[linear-gradient(135deg,#382129_0%,#71545c_100%)] text-lg font-medium text-white/92">
+          <div className="flex h-[248px] items-center justify-center bg-[linear-gradient(135deg,#382129_0%,#71545c_100%)] text-lg font-black text-white/92">
             {item.card.title}
           </div>
         )}
 
-        <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-sm font-semibold ${rank.className}`}>{rank.label}</span>
-        <span className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/88 text-[var(--primary)] shadow-[0_10px_24px_-16px_rgba(0,0,0,0.35)]">
+        <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-sm font-black ${rank.className}`}>{rank.label}</span>
+        <span className="dream-chip absolute right-4 top-4 flex h-10 w-10 items-center justify-center text-[var(--primary)]">
           <HeartIcon className="h-5 w-5" />
         </span>
       </Link>
@@ -359,28 +350,21 @@ function CreatorCard({
               {item.card.title}
             </Link>
           </div>
-          <span className="rounded-full bg-[var(--surface-container-low)] px-3 py-1 text-xs text-[var(--foreground)]/62">
-            {getVisibilityLabel(item.card.visibility)}
-          </span>
+          <span className="dream-chip px-3 py-1 text-xs text-[var(--foreground)]/62">{getVisibilityLabel(item.card.visibility)}</span>
         </div>
-
         <p className="type-body-sm mt-3 min-h-[84px] text-[var(--foreground)]/72">{defaultCardDescription(item.card)}</p>
       </div>
 
       <div className="mt-4 border-t border-dashed border-[var(--outline-variant)] pt-4">
-        <div className="rounded-[26px] bg-[linear-gradient(180deg,rgba(236,248,253,0.92),rgba(248,253,255,0.9))] px-4 py-4">
-          <div className="text-[11px] uppercase tracking-[0.24em] text-[var(--foreground)]/42">提取码</div>
+        <div className="dream-panel-soft px-4 py-4">
+          <div className="text-[11px] uppercase tracking-[0.24em] text-[var(--foreground)]/42">提取码状态</div>
           <div className="mt-3 flex items-center justify-between gap-3">
             <div>
-              <div className="type-body-sm tracking-[0.1em] text-[var(--primary)]">{item.hasAccessCode ? "已配置" : "未设置"}</div>
-              <div className="mt-1 text-xs text-[var(--foreground)]/52">点击管理设置提取码规则</div>
+              <div className="type-body-sm tracking-[0.1em] text-[var(--primary)]">{item.hasAccessCode ? "已配置" : "未配置"}</div>
+              <div className="mt-1 text-xs text-[var(--foreground)]/52">点击右侧按钮进入提取码管理</div>
             </div>
-
-            <Link
-              href={accessCodeHref}
-              className="rounded-full border border-[var(--outline-variant)] bg-white px-5 py-2.5 text-sm text-[var(--primary)] transition hover:border-[var(--primary)]"
-            >
-              管理
+            <Link href={accessCodeHref} className="btn-subtle rounded-full px-5 py-2.5 text-sm font-black text-[var(--primary)]">
+              去管理
             </Link>
           </div>
         </div>
@@ -391,48 +375,40 @@ function CreatorCard({
 
 function HistoryItem({
   item,
-  onManage,
 }: {
   item: DashboardCard;
-  onManage: (card: DashboardCard) => void;
 }) {
   const editHref = `/creator/cards/${encodeURIComponent(item.card.id)}/edit`;
   const accessCodeHref = `/creator/cards/${encodeURIComponent(item.card.id)}/access-code`;
 
   return (
-    <article className="flex flex-col gap-4 rounded-[30px] border border-white/80 bg-white/84 p-4 shadow-[0_24px_56px_-38px_rgba(120,85,94,0.24)] sm:flex-row sm:items-center sm:justify-between">
+    <article className="dream-panel-soft flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-center gap-4">
-        <Link
-          href={editHref}
-          className="block h-24 w-24 shrink-0 overflow-hidden rounded-[22px] bg-[linear-gradient(135deg,#382129_0%,#71545c_100%)]"
-        >
+        <Link href={editHref} className="block h-24 w-24 shrink-0 overflow-hidden rounded-[22px] bg-[linear-gradient(135deg,#382129_0%,#71545c_100%)]">
           {isImageCard(item.card) ? (
             <img src={item.card.previewUrl} alt={item.card.title} className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full items-center justify-center px-3 text-center text-sm text-white/92">{item.card.title}</div>
+            <div className="flex h-full items-center justify-center px-3 text-center text-sm font-black text-white/92">{item.card.title}</div>
           )}
         </Link>
 
         <div className="min-w-0">
-          <Link href={editHref} className="block truncate text-xl font-semibold text-[var(--foreground)]">
+          <Link href={editHref} className="block truncate text-xl font-black text-[var(--foreground)]">
             {item.card.title}
           </Link>
           <p className="mt-2 text-sm leading-7 text-[var(--foreground)]/62">
-            最近更新于 {formatDate(item.card.updatedAt)}，卡片状态为 {getStatusLabel(item.card.status)}。
+            更新时间：{formatDate(item.card.updatedAt)}，当前状态：{getStatusLabel(item.card.status)}
           </p>
           <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--foreground)]/56">
-            <span className="rounded-full bg-[var(--surface-container-low)] px-3 py-1">{getVisibilityLabel(item.card.visibility)}</span>
-            <span className="rounded-full bg-[var(--surface-container-low)] px-3 py-1">下载 {item.stats.downloadCount} 次</span>
-            <span className="rounded-full bg-[var(--surface-container-low)] px-3 py-1">编号 {formatCardCode(item.card.id)}</span>
+            <span className="dream-chip px-3 py-1">{getVisibilityLabel(item.card.visibility)}</span>
+            <span className="dream-chip px-3 py-1">下载 {item.stats.downloadCount} 次</span>
+            <span className="dream-chip px-3 py-1">编号 {formatCardCode(item.card.id)}</span>
           </div>
         </div>
       </div>
 
-      <Link
-        href={accessCodeHref}
-        className="rounded-full border border-[var(--outline-variant)] bg-white px-5 py-2.5 text-sm text-[var(--primary)] transition hover:border-[var(--primary)] sm:shrink-0"
-      >
-        管理
+      <Link href={accessCodeHref} className="btn-subtle rounded-full px-5 py-2.5 text-sm font-black text-[var(--primary)] sm:shrink-0">
+        管理提取码
       </Link>
     </article>
   );
@@ -447,7 +423,7 @@ function PanelField({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium text-[var(--foreground)]/72">{label}</span>
+      <span className="mb-2 block text-sm font-black text-[var(--foreground)]/72">{label}</span>
       {children}
     </label>
   );
@@ -497,15 +473,14 @@ export function CreatorStudio() {
     if (!currentUser) {
       return "";
     }
-
     const username = currentUser.username.trim();
     return username ? `@${username}` : currentUser.email;
   }, [currentUser]);
 
   const heroStats = useMemo(
     () => [
-      { value: formatMetricValue(dashboard?.stats.totalCards ?? 0), label: "创作卡片" },
-      { value: formatMetricValue(dashboard?.stats.totalPublic ?? 0), label: "公开展示" },
+      { value: formatMetricValue(dashboard?.stats.totalCards ?? 0), label: "卡片总数" },
+      { value: formatMetricValue(dashboard?.stats.totalPublic ?? 0), label: "公开卡片" },
       { value: formatMetricValue(dashboard?.stats.totalDownloads ?? 0), label: "累计下载", accent: true },
     ],
     [dashboard],
@@ -562,16 +537,14 @@ export function CreatorStudio() {
           if (!active) {
             return;
           }
-
-          setLoadError(getShareErrorMessage(error, "加载用户详情失败，请稍后重试"));
+          setLoadError(getShareErrorMessage(error, "加载创作者中心失败，请稍后重试"));
           setDashboard(null);
         }
       } catch (error) {
         if (!active) {
           return;
         }
-
-        setLoadError(getShareErrorMessage(error, "检查登录状态失败，请稍后重试"));
+        setLoadError(getShareErrorMessage(error, "会话验证失败，请刷新页面后重试"));
         setCurrentUser(null);
         setDashboard(null);
       } finally {
@@ -613,7 +586,18 @@ export function CreatorStudio() {
   }
 
   function openEditPanel(card: DashboardCard) {
-    router.push(`/creator/cards/${encodeURIComponent(card.card.id)}/access-code`);
+    setPanelMode("edit");
+    setSelectedCard(card);
+    setDraft({
+      title: card.card.title,
+      description: card.card.description,
+      visibility: card.card.visibility,
+      status: card.card.status,
+      file: null,
+      previewUrl: card.card.previewUrl,
+    });
+    setPanelPending(false);
+    setPanelError("");
   }
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -624,7 +608,6 @@ export function CreatorStudio() {
 
     revokePreview(draft.previewUrl);
     const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : "";
-
     setDraft((current) => ({
       ...current,
       file,
@@ -644,7 +627,7 @@ export function CreatorStudio() {
     event.preventDefault();
 
     if (!draft.file) {
-      setPanelError("请先上传要发布的卡片文件。");
+      setPanelError("请先上传卡片文件后再创建");
       return;
     }
 
@@ -659,7 +642,6 @@ export function CreatorStudio() {
         status: draft.status,
         file: draft.file,
       });
-
       await loadDashboard();
       closePanel();
     } catch (error) {
@@ -685,7 +667,6 @@ export function CreatorStudio() {
         visibility: draft.visibility,
         status: draft.status,
       });
-
       await loadDashboard();
       closePanel();
     } catch (error) {
@@ -699,7 +680,7 @@ export function CreatorStudio() {
       return;
     }
 
-    const confirmed = window.confirm(`确认删除「${selectedCard.card.title}」吗？`);
+    const confirmed = window.confirm(`确认删除卡片「${selectedCard.card.title}」吗？`);
     if (!confirmed) {
       return;
     }
@@ -727,8 +708,8 @@ export function CreatorStudio() {
   if (sessionChecking) {
     return (
       <div className="min-h-screen bg-[var(--background)] px-4 py-10 sm:px-6">
-        <div className="mx-auto max-w-7xl rounded-[32px] border border-white/80 bg-white/82 px-6 py-14 text-center text-[var(--foreground)]/72 shadow-[0_24px_64px_-42px_rgba(120,85,94,0.32)]">
-          正在加载你的创作空间...
+        <div className="dream-panel mx-auto max-w-7xl px-6 py-14 text-center text-[var(--foreground)]/72">
+          正在加载创作者中心...
         </div>
       </div>
     );
@@ -747,7 +728,7 @@ export function CreatorStudio() {
       </div>
 
       <div className="relative z-10 mx-auto grid max-w-[1560px] gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[290px_minmax(0,1fr)]">
-        <aside className="rounded-[38px] border border-white/80 bg-white/84 p-6 shadow-[0_30px_70px_-46px_rgba(120,85,94,0.35)] backdrop-blur-xl lg:sticky lg:top-6 lg:self-start">
+        <aside className="dream-panel p-6 lg:sticky lg:top-6 lg:self-start">
           <div className="flex flex-col gap-10 lg:min-h-[calc(100vh-3rem)]">
             <div>
               <div className="flex items-center gap-4">
@@ -760,24 +741,16 @@ export function CreatorStudio() {
 
               <div className="mt-10 space-y-3">
                 <SidebarButton href="/" icon={<HomeIcon className="h-5 w-5" />}>
-                  首页
+                  返回首页
                 </SidebarButton>
-                <SidebarButton
-                  active={activeSection === "dashboard"}
-                  onClick={() => setActiveSection("dashboard")}
-                  icon={<CardIcon className="h-5 w-5" />}
-                >
-                  我的卡片
+                <SidebarButton active={activeSection === "dashboard"} onClick={() => setActiveSection("dashboard")} icon={<CardIcon className="h-5 w-5" />}>
+                  卡片管理
                 </SidebarButton>
                 <SidebarButton href="/creator/access-codes" icon={<KeyIcon className="h-5 w-5" />}>
                   提取码管理
                 </SidebarButton>
-                <SidebarButton
-                  active={activeSection === "settings"}
-                  onClick={() => setActiveSection("settings")}
-                  icon={<SettingsIcon className="h-5 w-5" />}
-                >
-                  个人信息设置
+                <SidebarButton active={activeSection === "settings"} onClick={() => setActiveSection("settings")} icon={<SettingsIcon className="h-5 w-5" />}>
+                  个人资料设置
                 </SidebarButton>
               </div>
             </div>
@@ -785,7 +758,7 @@ export function CreatorStudio() {
             <button
               type="button"
               onClick={handleLogout}
-              className="rounded-full border border-[var(--outline-variant)] px-4 py-3 text-sm text-[var(--foreground)]/68 transition hover:border-[var(--primary)] hover:text-[var(--primary)] lg:mt-auto"
+              className="btn-subtle rounded-full px-4 py-3 text-sm font-black text-[var(--foreground)]/68 lg:mt-auto"
             >
               退出登录
             </button>
@@ -794,13 +767,9 @@ export function CreatorStudio() {
 
         <main className="space-y-6">
           {loadError ? (
-            <div className="flex flex-col gap-3 rounded-[28px] border border-[#f3c8ad] bg-[#fff6ef] px-5 py-4 text-sm text-[#9a3412] shadow-[0_20px_40px_-34px_rgba(154,52,18,0.4)] sm:flex-row sm:items-center sm:justify-between">
+            <div className="dream-panel-soft flex flex-col gap-3 border-[#f3c8ad] bg-[#fff6ef] px-5 py-4 text-sm text-[#9a3412] sm:flex-row sm:items-center sm:justify-between">
               <span>{loadError}</span>
-              <button
-                type="button"
-                onClick={() => void handleReload()}
-                className="w-fit rounded-full border border-[#f1b18a] px-4 py-2 text-sm transition hover:bg-white/80"
-              >
+              <button type="button" onClick={() => void handleReload()} className="btn-subtle w-fit rounded-full border-[#f1b18a] px-4 py-2 text-sm">
                 重新加载
               </button>
             </div>
@@ -808,20 +777,15 @@ export function CreatorStudio() {
 
           {activeSection === "dashboard" ? (
             <>
-              <section className="overflow-hidden rounded-[40px] border border-white/80 bg-white/84 p-3 shadow-[0_30px_70px_-46px_rgba(120,85,94,0.35)] backdrop-blur-xl">
+              <section className="dream-panel overflow-hidden p-3">
                 <div
                   className="relative overflow-hidden rounded-[36px] bg-[linear-gradient(135deg,rgba(255,255,255,0.94) 0%,rgba(233,247,252,0.86) 52%,rgba(246,252,255,0.95) 100%)] px-6 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-12"
                   style={heroSurfaceStyle}
                 >
                   <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
                     <div className="absolute left-[-2%] top-[-12%] h-44 w-44 rounded-full bg-[rgba(177,232,249,0.48)] blur-[36px]" />
-                    <div className="absolute left-[10%] top-[6%] h-24 w-24 rounded-full bg-[rgba(255,255,255,0.9)] blur-[12px]" />
-                    <div className="absolute left-[16%] top-[18%] h-20 w-20 rounded-full bg-[rgba(209,239,251,0.55)] blur-[18px]" />
                     <div className="absolute right-[18%] top-[8%] h-28 w-28 rounded-full bg-[rgba(214,236,250,0.55)] blur-[24px]" />
                     <div className="absolute bottom-[10%] right-[14%] h-36 w-36 rounded-full bg-[rgba(243,251,255,0.72)] blur-[34px]" />
-                    <div className="absolute left-[6%] bottom-[14%] h-24 w-24 rounded-full bg-[rgba(247,219,230,0.34)] blur-[22px]" />
-                    <div className="absolute left-[22%] top-[2%] h-16 w-8 rotate-[-26deg] rounded-full bg-[rgba(207,160,100,0.32)] blur-[2px]" />
-                    <div className="absolute left-[25%] top-[5%] h-16 w-8 rotate-[18deg] rounded-full bg-[rgba(166,126,78,0.22)] blur-[2px]" />
                   </div>
 
                   <div className="relative flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
@@ -840,7 +804,7 @@ export function CreatorStudio() {
                       </div>
                     </div>
 
-                    <div className="grid gap-3 rounded-[30px] border border-white/70 bg-white/78 p-4 shadow-[0_22px_54px_-38px_rgba(120,85,94,0.35)] sm:grid-cols-3">
+                    <div className="dream-panel-soft grid gap-3 p-4 sm:grid-cols-3">
                       {heroStats.map((item) => (
                         <div key={item.label} className="min-w-[112px] rounded-[22px] px-4 py-4 text-center">
                           <div className={`type-h2 ${item.accent ? "text-[var(--brand-strong)]" : "text-[var(--foreground)]"}`}>{item.value}</div>
@@ -852,27 +816,23 @@ export function CreatorStudio() {
                 </div>
               </section>
 
-              <section className="rounded-[40px] border border-white/80 bg-white/84 px-6 py-6 shadow-[0_30px_70px_-46px_rgba(120,85,94,0.3)] backdrop-blur-xl sm:px-8 sm:py-8">
+              <section className="dream-panel px-6 py-6 sm:px-8 sm:py-8">
                 <div className="flex flex-col gap-4 border-b border-[rgba(220,173,187,0.35)] pb-4 sm:flex-row sm:items-end sm:justify-between">
                   <div className="flex flex-wrap gap-6">
                     <TabButton active={activeTab === "cards"} onClick={() => setActiveTab("cards")}>
-                      我的创作
+                      我的卡片
                     </TabButton>
                     <TabButton active={activeTab === "collections"} onClick={() => setActiveTab("collections")}>
-                      我的收藏
+                      收藏夹
                     </TabButton>
                     <TabButton active={activeTab === "history"} onClick={() => setActiveTab("history")}>
-                      历史记录
+                      最近更新
                     </TabButton>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={openCreatePanel}
-                    className="inline-flex items-center justify-center gap-2 rounded-full bg-[var(--primary)] px-5 py-3 text-sm font-medium text-white shadow-[0_16px_34px_-20px_rgba(120,85,94,0.45)] transition hover:-translate-y-0.5"
-                  >
+                  <button type="button" onClick={openCreatePanel} className="btn-primary inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-black">
                     <PlusIcon className="h-4 w-4" />
-                    创作卡片
+                    新建卡片
                   </button>
                 </div>
 
@@ -881,14 +841,14 @@ export function CreatorStudio() {
                     cards.length > 0 ? (
                       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                         {cards.map((item) => (
-                          <CreatorCard key={item.card.id} item={item} onManage={openEditPanel} />
+                          <CreatorCard key={item.card.id} item={item} />
                         ))}
                       </div>
                     ) : (
                       <EmptyState
-                        title="还没有卡片"
-                        description="先创建你的第一张卡片，把灵感和内容收藏进个人主页。"
-                        actionLabel="创建卡片"
+                        title="还没有卡片内容"
+                        description="点击右上角新建卡片，上传素材并填写描述后即可开始分享。"
+                        actionLabel="创建第一张卡片"
                         onAction={openCreatePanel}
                       />
                     )
@@ -896,9 +856,9 @@ export function CreatorStudio() {
 
                   {activeTab === "collections" ? (
                     <EmptyState
-                      title="收藏功能正在准备中"
-                      description="你以后收藏的卡片会出现在这里，现在可以先去发现页逛逛。"
-                      actionLabel="去发现页"
+                      title="收藏功能即将上线"
+                      description="你很快可以在这里管理收藏的卡片内容，先去发现页浏览更多作品吧。"
+                      actionLabel="前往发现页"
                       actionHref="/discover"
                     />
                   ) : null}
@@ -907,14 +867,14 @@ export function CreatorStudio() {
                     historyItems.length > 0 ? (
                       <div className="space-y-4">
                         {historyItems.map((item) => (
-                          <HistoryItem key={item.card.id} item={item} onManage={openEditPanel} />
+                          <HistoryItem key={item.card.id} item={item} />
                         ))}
                       </div>
                     ) : (
                       <EmptyState
-                        title="还没有历史记录"
-                        description="当你创建或更新卡片后，最近操作会在这里出现。"
-                        actionLabel="创建卡片"
+                        title="暂无更新记录"
+                        description="当你创建或编辑卡片后，这里会展示最近的更新时间线。"
+                        actionLabel="去创建卡片"
                         onAction={openCreatePanel}
                       />
                     )
@@ -930,13 +890,13 @@ export function CreatorStudio() {
 
       {panelMode ? (
         <div className="fixed inset-0 z-50 flex items-center justify-end bg-[rgba(38,24,27,0.18)] p-4 backdrop-blur-sm sm:p-6">
-          <button type="button" className="absolute inset-0 cursor-default" aria-label="关闭卡片面板" onClick={closePanel} />
+          <button type="button" className="absolute inset-0 cursor-default" aria-label="关闭卡片编辑抽屉" onClick={closePanel} />
 
-          <aside className="relative z-10 h-full w-full max-w-[480px] overflow-y-auto rounded-[34px] border border-white/80 bg-white/94 p-6 shadow-[0_34px_90px_-40px_rgba(38,24,27,0.4)] sm:p-7">
+          <aside className="dream-panel relative z-10 h-full w-full max-w-[520px] overflow-y-auto p-6 sm:p-7">
             {panelMode === "create" ? (
-              <PanelSection title="创建卡片" description="上传新的卡片素材，补充标题和说明后即可保存到你的个人主页。">
+              <PanelSection title="新建卡片" description="上传文件并填写基础信息后，即可发布或保存为草稿。">
                 {panelError ? (
-                  <p className="rounded-2xl border border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-sm text-[#9a3412]">{panelError}</p>
+                  <p className="dream-panel-soft border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-sm text-[#9a3412]">{panelError}</p>
                 ) : null}
 
                 <form className="space-y-4" onSubmit={handleCreate}>
@@ -945,29 +905,29 @@ export function CreatorStudio() {
                       type="text"
                       value={draft.title}
                       onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
-                      className="w-full rounded-2xl border border-[var(--outline-variant)] bg-[var(--surface-container-low)] px-4 py-3 outline-none transition focus:border-[var(--primary)]"
-                      placeholder="输入这张卡片的标题"
+                      className="dream-input w-full px-4 py-3"
+                      placeholder="请输入卡片标题"
                       required
                     />
                   </PanelField>
 
-                  <PanelField label="卡片说明">
+                  <PanelField label="卡片描述">
                     <textarea
                       value={draft.description}
                       onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))}
                       rows={5}
-                      className="w-full rounded-2xl border border-[var(--outline-variant)] bg-[var(--surface-container-low)] px-4 py-3 outline-none transition focus:border-[var(--primary)]"
-                      placeholder="写下这张卡片的灵感、场景或分享说明"
+                      className="dream-textarea w-full px-4 py-3"
+                      placeholder="补充这张卡片的故事、亮点或使用说明"
                     />
                   </PanelField>
 
                   <PanelField label="可见范围">
                     <div className="flex flex-wrap gap-3">
                       <ToggleChip active={draft.visibility === "public"} onClick={() => setDraft((current) => ({ ...current, visibility: "public" }))}>
-                        公开展示
+                        公开
                       </ToggleChip>
                       <ToggleChip active={draft.visibility === "private"} onClick={() => setDraft((current) => ({ ...current, visibility: "private" }))}>
-                        仅自己可见
+                        私密
                       </ToggleChip>
                     </div>
                   </PanelField>
@@ -987,37 +947,33 @@ export function CreatorStudio() {
                   </PanelField>
 
                   <PanelField label="上传卡片文件">
-                    <label className="flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-[24px] border border-dashed border-[var(--outline-variant)] bg-[var(--surface-container-low)] px-4 py-6 text-center">
+                    <label className="dream-panel-soft flex min-h-[220px] cursor-pointer flex-col items-center justify-center border-dashed px-4 py-6 text-center">
                       {draft.previewUrl ? (
                         <img src={draft.previewUrl} alt="上传预览" className="max-h-[220px] rounded-[18px] object-cover" />
                       ) : (
                         <>
-                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-[var(--primary)] shadow-[0_16px_34px_-22px_rgba(120,85,94,0.35)]">
+                          <div className="dream-chip flex h-12 w-12 items-center justify-center text-[var(--primary)]">
                             <PlusIcon className="h-5 w-5" />
                           </div>
-                          <p className="mt-4 text-base font-medium text-[var(--foreground)]">点击选择图片或卡片文件</p>
-                          <p className="mt-2 text-sm leading-6 text-[var(--foreground)]/58">如果上传的是图片，会在这里显示预览。</p>
+                          <p className="mt-4 text-base font-black text-[var(--foreground)]">点击上传文件</p>
+                          <p className="mt-2 text-sm leading-6 text-[var(--foreground)]/58">支持常见图片格式，也可上传其他可分享文件</p>
                         </>
                       )}
                       <input type="file" className="hidden" onChange={handleFileChange} />
                     </label>
-                    <div className="mt-3 text-sm text-[var(--foreground)]/58">{draft.file ? draft.file.name : "还没有选择文件"}</div>
+                    <div className="mt-3 text-sm text-[var(--foreground)]/58">{draft.file ? draft.file.name : "尚未选择文件"}</div>
                   </PanelField>
 
                   <div className="flex items-center justify-between gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={closePanel}
-                      className="rounded-full border border-[var(--outline-variant)] px-5 py-3 text-sm text-[var(--foreground)]/72 transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
-                    >
+                    <button type="button" onClick={closePanel} className="btn-subtle rounded-full px-5 py-3 text-sm font-black">
                       取消
                     </button>
                     <button
                       type="submit"
                       disabled={panelPending}
-                      className="rounded-full bg-[var(--primary)] px-6 py-3 text-sm font-medium text-white shadow-[0_16px_34px_-20px_rgba(120,85,94,0.45)] disabled:cursor-not-allowed disabled:opacity-60"
+                      className="btn-primary rounded-full px-6 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {panelPending ? "正在创建..." : "创建卡片"}
+                      {panelPending ? "创建中..." : "创建卡片"}
                     </button>
                   </div>
                 </form>
@@ -1025,16 +981,16 @@ export function CreatorStudio() {
             ) : null}
 
             {panelMode === "edit" && selectedCard ? (
-              <PanelSection title="管理卡片" description="可以在这里修改标题、说明、可见范围和发布状态。卡片文件本身暂不支持替换。">
+              <PanelSection title="编辑卡片" description="你可以更新标题、描述、可见范围和状态信息。">
                 {panelError ? (
-                  <p className="rounded-2xl border border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-sm text-[#9a3412]">{panelError}</p>
+                  <p className="dream-panel-soft border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-sm text-[#9a3412]">{panelError}</p>
                 ) : null}
 
-                <div className="overflow-hidden rounded-[26px] border border-white/80 bg-[var(--surface-container-low)]">
+                <div className="dream-panel-soft overflow-hidden">
                   {draft.previewUrl ? (
                     <img src={draft.previewUrl} alt={selectedCard.card.title} className="h-[220px] w-full object-cover" />
                   ) : (
-                    <div className="flex h-[220px] items-center justify-center bg-[linear-gradient(135deg,#382129_0%,#71545c_100%)] px-6 text-center text-lg font-medium text-white">
+                    <div className="flex h-[220px] items-center justify-center bg-[linear-gradient(135deg,#382129_0%,#71545c_100%)] px-6 text-center text-lg font-black text-white">
                       {selectedCard.card.title}
                     </div>
                   )}
@@ -1046,27 +1002,27 @@ export function CreatorStudio() {
                       type="text"
                       value={draft.title}
                       onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
-                      className="w-full rounded-2xl border border-[var(--outline-variant)] bg-[var(--surface-container-low)] px-4 py-3 outline-none transition focus:border-[var(--primary)]"
+                      className="dream-input w-full px-4 py-3"
                       required
                     />
                   </PanelField>
 
-                  <PanelField label="卡片说明">
+                  <PanelField label="卡片描述">
                     <textarea
                       value={draft.description}
                       onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))}
                       rows={5}
-                      className="w-full rounded-2xl border border-[var(--outline-variant)] bg-[var(--surface-container-low)] px-4 py-3 outline-none transition focus:border-[var(--primary)]"
+                      className="dream-textarea w-full px-4 py-3"
                     />
                   </PanelField>
 
                   <PanelField label="可见范围">
                     <div className="flex flex-wrap gap-3">
                       <ToggleChip active={draft.visibility === "public"} onClick={() => setDraft((current) => ({ ...current, visibility: "public" }))}>
-                        公开展示
+                        公开
                       </ToggleChip>
                       <ToggleChip active={draft.visibility === "private"} onClick={() => setDraft((current) => ({ ...current, visibility: "private" }))}>
-                        仅自己可见
+                        私密
                       </ToggleChip>
                     </div>
                   </PanelField>
@@ -1085,10 +1041,10 @@ export function CreatorStudio() {
                     </div>
                   </PanelField>
 
-                  <div className="rounded-[24px] bg-[var(--surface-container-low)] px-4 py-4 text-sm leading-7 text-[var(--foreground)]/62">
+                  <div className="dream-panel-soft px-4 py-4 text-sm leading-7 text-[var(--foreground)]/62">
                     卡片编号：{formatCardCode(selectedCard.card.id)}
                     <br />
-                    最近更新：{formatDate(selectedCard.card.updatedAt)}
+                    更新时间：{formatDate(selectedCard.card.updatedAt)}
                     <br />
                     当前状态：{getStatusLabel(selectedCard.card.status)}
                   </div>
@@ -1098,25 +1054,21 @@ export function CreatorStudio() {
                       type="button"
                       onClick={handleDelete}
                       disabled={panelPending}
-                      className="rounded-full border border-[#efb8c8] px-5 py-3 text-sm text-[#9d3656] transition hover:border-[#c45a7d] disabled:cursor-not-allowed disabled:opacity-60"
+                      className="btn-subtle rounded-full border-[#efb8c8] px-5 py-3 text-sm font-black text-[#9d3656] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       删除卡片
                     </button>
 
                     <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={closePanel}
-                        className="rounded-full border border-[var(--outline-variant)] px-5 py-3 text-sm text-[var(--foreground)]/72 transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
-                      >
+                      <button type="button" onClick={closePanel} className="btn-subtle rounded-full px-5 py-3 text-sm font-black">
                         取消
                       </button>
                       <button
                         type="submit"
                         disabled={panelPending}
-                        className="rounded-full bg-[var(--primary)] px-6 py-3 text-sm font-medium text-white shadow-[0_16px_34px_-20px_rgba(120,85,94,0.45)] disabled:cursor-not-allowed disabled:opacity-60"
+                        className="btn-primary rounded-full px-6 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        {panelPending ? "正在保存..." : "保存修改"}
+                        {panelPending ? "保存中..." : "保存修改"}
                       </button>
                     </div>
                   </div>

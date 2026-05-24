@@ -17,7 +17,7 @@ const filterOptions: Array<{
   label: string;
   description: string;
 }> = [
-  { value: "all", label: "全部", description: "显示全部可生成提取码的卡片" },
+  { value: "all", label: "全部卡片", description: "显示你可用于创建提取码的所有卡片" },
   { value: "public", label: "仅公开", description: "只显示公开可见的卡片" },
   { value: "private", label: "仅私密", description: "只显示私密卡片" },
 ];
@@ -94,15 +94,15 @@ function StepPill({
   return (
     <div className="flex items-center gap-3">
       <div
-        className={`flex h-12 w-12 items-center justify-center rounded-full border text-[var(--brand-strong)] shadow-[0_18px_36px_-30px_rgba(120,85,94,0.35)] ${
-          active ? "border-[#e9a2b8] bg-[#ffe9f0]" : "border-white/85 bg-white/80 text-[var(--foreground)]/48"
+        className={`dream-chip flex h-11 w-11 items-center justify-center ${
+          active ? "bg-[var(--button-rose)] text-[var(--foreground)]" : "text-[var(--foreground)]/55"
         }`}
       >
         {icon}
       </div>
       <div>
         <div className="text-xs uppercase tracking-[0.18em] text-[var(--foreground)]/42">{label}</div>
-        <div className={`text-base font-medium ${active ? "text-[var(--foreground)]" : "text-[var(--foreground)]/52"}`}>{title}</div>
+        <div className={`text-base font-black ${active ? "text-[var(--foreground)]" : "text-[var(--foreground)]/56"}`}>{title}</div>
       </div>
     </div>
   );
@@ -118,11 +118,11 @@ function EmptyCard({
   children: ReactNode;
 }) {
   return (
-    <section className="mt-10 rounded-[38px] border border-white/80 bg-white/84 px-6 py-14 text-center shadow-[0_28px_70px_-48px_rgba(120,85,94,0.28)] sm:px-10">
+    <section className="dream-panel mt-10 px-6 py-14 text-center sm:px-10">
       <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[rgba(255,223,231,0.92)] text-[var(--brand-strong)]">
         <CardIcon className="h-9 w-9" />
       </div>
-      <h2 className="mt-6 text-3xl font-semibold text-[var(--foreground)]">{title}</h2>
+      <h2 className="mt-6 text-3xl font-black text-[var(--foreground)]">{title}</h2>
       <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-[var(--foreground)]/62">{description}</p>
       <div className="mt-8 flex flex-wrap items-center justify-center gap-3">{children}</div>
     </section>
@@ -172,7 +172,7 @@ export function ShareAccessCodeCardPicker() {
         } else {
           setAuthenticated(true);
           setCards([]);
-          setLoadError(getShareErrorMessage(error, "加载可选卡片失败，请稍后重试。"));
+          setLoadError(getShareErrorMessage(error, "加载卡片失败，请稍后重试"));
           setSelectedCardId("");
         }
       } finally {
@@ -218,7 +218,7 @@ export function ShareAccessCodeCardPicker() {
   const footer = useMemo(
     () => (
       <footer className="relative z-10 px-6 pb-10 pt-12 text-center text-sm tracking-[0.08em] text-[var(--brand)]/55">
-        © 2024 CardShare
+        © 2026 CardShare
       </footer>
     ),
     [],
@@ -236,10 +236,10 @@ export function ShareAccessCodeCardPicker() {
       <AppShell currentPath="/creator" footerSlot={footer}>
         <div className="px-4 py-10 sm:px-6">
           <div className="mx-auto max-w-[1480px] space-y-6">
-            <div className="h-28 animate-pulse rounded-[36px] border border-white/80 bg-white/72" />
+            <div className="dream-panel h-28 animate-pulse" />
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
               {Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="h-[440px] animate-pulse rounded-[34px] border border-white/80 bg-white/72" />
+                <div key={index} className="dream-panel h-[420px] animate-pulse" />
               ))}
             </div>
           </div>
@@ -266,33 +266,35 @@ export function ShareAccessCodeCardPicker() {
             <div>
               <Link
                 href="/creator/access-codes"
-                className="inline-flex items-center gap-2 rounded-full border border-[rgba(226,204,210,0.9)] bg-white/88 px-4 py-2 text-sm text-[var(--foreground)]/72 shadow-[0_16px_36px_-30px_rgba(120,85,94,0.22)] transition hover:-translate-y-0.5 hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                className="btn-subtle inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-black text-[var(--foreground)]/72 transition hover:-translate-y-0.5"
               >
                 <BackIcon className="h-4.5 w-4.5" />
-                <span>返回</span>
+                <span>返回管理</span>
               </Link>
 
-              <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/84 px-4 py-2 text-sm font-medium text-[var(--primary)] shadow-[0_18px_38px_-28px_rgba(80,118,140,0.22)]">
+              <div className="dream-chip mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-black text-[var(--primary)]">
                 <SparkleIcon className="h-4.5 w-4.5" />
-                <span>创作工作室</span>
+                <span>创建提取码流程</span>
               </div>
 
-              <h1 className="mt-6 text-5xl font-semibold tracking-tight text-[var(--foreground)] sm:text-[3.8rem]">选择卡片</h1>
+              <h1 className="mt-6 text-5xl font-black tracking-tight text-[var(--foreground)] sm:text-[3.8rem]">选择目标卡片</h1>
               <p className="mt-4 max-w-3xl text-xl leading-9 text-[var(--foreground)]/66">
-                请从您的画廊中选择一张角色卡片来生成新的提取码。选择那张今天最触动你心弦的卡片吧。
+                先选一张要分享的卡片，再进入下一步配置提取码规则。你可以在这里按公开性筛选卡片，并切换网格或列表查看方式。
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-4 rounded-[32px] border border-white/80 bg-white/76 px-5 py-4 shadow-[0_20px_40px_-34px_rgba(120,85,94,0.24)]">
-              <StepPill active label="STEP01" title="选择分享卡片" icon={<HeartIcon className="h-5 w-5" />} />
-              <div className="hidden h-px w-12 bg-[rgba(223,198,206,0.9)] lg:block" />
-              <StepPill active={false} label="STEP02" title="配置提取规则" icon={<SettingsIcon className="h-5 w-5" />} />
+            <div className="dream-panel-soft flex flex-wrap items-center gap-4 px-5 py-4">
+              <StepPill active label="STEP 01" title="选择目标卡片" icon={<HeartIcon className="h-5 w-5" />} />
+              <div className="dream-divider hidden h-px w-12 border-t lg:block" />
+              <StepPill active={false} label="STEP 02" title="配置提取码规则" icon={<SettingsIcon className="h-5 w-5" />} />
             </div>
           </div>
 
           <div className="mt-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="text-sm tracking-[0.08em] text-[var(--foreground)]/46">
-              {cards.length > 0 ? `当前共有 ${cards.length} 张卡片可生成提取码` : "先选择一张卡片，再进入提取规则配置"}
+              {cards.length > 0
+                ? `当前共有 ${cards.length} 张可用于生成提取码的卡片`
+                : "还没有可用于生成提取码的卡片，先创建一张卡片吧"}
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
@@ -300,14 +302,14 @@ export function ShareAccessCodeCardPicker() {
                 <button
                   type="button"
                   onClick={() => setFilterOpen((current) => !current)}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/86 px-5 py-3 text-base text-[var(--foreground)] shadow-[0_18px_38px_-30px_rgba(120,85,94,0.24)] transition hover:-translate-y-0.5"
+                  className="dream-chip inline-flex items-center gap-2 px-5 py-3 text-base font-black text-[var(--foreground)] transition hover:-translate-y-0.5"
                 >
                   <FilterIcon className="h-5 w-5" />
                   <span>筛选</span>
                 </button>
 
                 {filterOpen ? (
-                  <div className="absolute right-0 top-[calc(100%+0.75rem)] z-20 w-72 rounded-[28px] border border-white/90 bg-white/96 p-3 shadow-[0_28px_60px_-34px_rgba(120,85,94,0.28)] backdrop-blur-xl">
+                  <div className="dream-panel-soft absolute right-0 top-[calc(100%+0.75rem)] z-20 w-80 p-3">
                     {filterOptions.map((option) => {
                       const active = option.value === visibilityFilter;
                       return (
@@ -318,7 +320,7 @@ export function ShareAccessCodeCardPicker() {
                             setVisibilityFilter(option.value);
                             setFilterOpen(false);
                           }}
-                          className={`flex w-full items-start gap-3 rounded-[22px] px-4 py-3 text-left transition ${
+                          className={`flex w-full items-start gap-3 rounded-[18px] px-4 py-3 text-left transition ${
                             active ? "bg-[rgba(221,241,250,0.96)] text-[var(--primary)]" : "hover:bg-[rgba(240,249,253,0.92)]"
                           }`}
                         >
@@ -328,7 +330,7 @@ export function ShareAccessCodeCardPicker() {
                             }`}
                           />
                           <span>
-                            <span className="block text-base font-medium">{option.label}</span>
+                            <span className="block text-base font-black">{option.label}</span>
                             <span className="mt-1 block text-sm text-[var(--foreground)]/56">{option.description}</span>
                           </span>
                         </button>
@@ -338,12 +340,14 @@ export function ShareAccessCodeCardPicker() {
                 ) : null}
               </div>
 
-              <div className="inline-flex items-center rounded-full border border-white/80 bg-white/86 p-1 shadow-[0_18px_38px_-30px_rgba(120,85,94,0.24)]">
+              <div className="dream-chip inline-flex items-center p-1">
                 <button
                   type="button"
                   onClick={() => setViewMode("grid")}
-                  className={`inline-flex h-12 w-12 items-center justify-center rounded-full transition ${
-                    viewMode === "grid" ? "bg-[rgba(221,241,250,0.96)] text-[var(--primary)]" : "text-[var(--foreground)]/52"
+                  className={`inline-flex h-11 w-11 items-center justify-center rounded-full border transition ${
+                    viewMode === "grid"
+                      ? "border-[var(--line-strong)] bg-[var(--button-primary)] text-[var(--foreground)]"
+                      : "border-transparent text-[var(--foreground)]/52"
                   }`}
                   aria-label="网格视图"
                 >
@@ -352,8 +356,10 @@ export function ShareAccessCodeCardPicker() {
                 <button
                   type="button"
                   onClick={() => setViewMode("list")}
-                  className={`inline-flex h-12 w-12 items-center justify-center rounded-full transition ${
-                    viewMode === "list" ? "bg-[rgba(221,241,250,0.96)] text-[var(--primary)]" : "text-[var(--foreground)]/52"
+                  className={`inline-flex h-11 w-11 items-center justify-center rounded-full border transition ${
+                    viewMode === "list"
+                      ? "border-[var(--line-strong)] bg-[var(--button-primary)] text-[var(--foreground)]"
+                      : "border-transparent text-[var(--foreground)]/52"
                   }`}
                   aria-label="列表视图"
                 >
@@ -364,12 +370,12 @@ export function ShareAccessCodeCardPicker() {
           </div>
 
           {loadError ? (
-            <div className="mt-8 flex flex-col gap-3 rounded-[30px] border border-[#f3c8ad] bg-[#fff6ef] px-5 py-4 text-sm text-[#9a3412] shadow-[0_20px_40px_-34px_rgba(154,52,18,0.32)] sm:flex-row sm:items-center sm:justify-between">
+            <div className="dream-panel-soft mt-8 flex flex-col gap-3 border-[#f3c8ad] bg-[#fff6ef] px-5 py-4 text-sm text-[#9a3412] sm:flex-row sm:items-center sm:justify-between">
               <span>{loadError}</span>
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="w-fit rounded-full border border-[#efb893] px-4 py-2 text-sm transition hover:bg-white/80"
+                className="btn-subtle w-fit rounded-full border-[#efb893] px-4 py-2 text-sm"
               >
                 重新加载
               </button>
@@ -378,18 +384,15 @@ export function ShareAccessCodeCardPicker() {
 
           {!loadError && cards.length === 0 ? (
             <EmptyCard
-              title="暂无可生成提取码的卡片"
-              description="你当前的卡片都已经配置过提取码，或还没有完成创作。可以先去创作新的卡片，或者回到提取码管理页继续维护已有提取码。"
+              title="你还没有可选择的卡片"
+              description="先创建一张卡片，发布后就可以为它配置提取码。也可以先回到提取码管理页查看已有配置。"
             >
-              <Link
-                href="/creator/new"
-                className="btn-primary rounded-full px-6 py-3 text-base font-semibold"
-              >
-                去创作卡片
+              <Link href="/creator/new" className="btn-primary rounded-full px-6 py-3 text-base font-black">
+                去创建卡片
               </Link>
               <Link
                 href="/creator/access-codes"
-                className="rounded-full border border-[rgba(226,204,210,0.9)] bg-white px-6 py-3 text-base text-[var(--foreground)]/72 transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                className="btn-subtle rounded-full px-6 py-3 text-base font-black text-[var(--foreground)]/72"
               >
                 返回提取码管理
               </Link>
@@ -397,16 +400,13 @@ export function ShareAccessCodeCardPicker() {
           ) : null}
 
           {!loadError && cards.length > 0 && filteredCards.length === 0 ? (
-            <EmptyCard
-              title="当前筛选条件下没有卡片"
-              description="切换筛选条件后再试，或者直接显示全部卡片。选定卡片后即可进入提取规则配置页面。"
-            >
+            <EmptyCard title="当前筛选下没有卡片" description="你可以切换筛选条件，或者回到全部卡片查看可用项。">
               <button
                 type="button"
                 onClick={() => setVisibilityFilter("all")}
-                className="btn-primary rounded-full px-6 py-3 text-base font-semibold"
+                className="btn-primary rounded-full px-6 py-3 text-base font-black"
               >
-                显示全部卡片
+                查看全部卡片
               </button>
             </EmptyCard>
           ) : null}
@@ -428,22 +428,20 @@ export function ShareAccessCodeCardPicker() {
                         key={item.card.id}
                         type="button"
                         onClick={() => setSelectedCardId(item.card.id)}
-                        className={`flex w-full flex-col gap-5 rounded-[34px] border p-5 text-left shadow-[0_24px_56px_-40px_rgba(120,85,94,0.2)] transition sm:flex-row sm:items-center ${
-                          selected
-                            ? "border-[#e8a4b8] bg-[rgba(255,249,251,0.96)]"
-                            : "border-white/85 bg-white/84 hover:-translate-y-0.5 hover:border-[rgba(233,164,184,0.72)]"
+                        className={`dream-panel-soft flex w-full flex-col gap-5 p-5 text-left transition sm:flex-row sm:items-center ${
+                          selected ? "border-[var(--brand-strong)] bg-[#fff8fb]" : "hover:-translate-y-0.5"
                         }`}
                       >
-                        <div className="relative h-[210px] w-full overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,#2b1c22_0%,#6f545c_100%)] sm:h-[180px] sm:w-[180px] sm:shrink-0">
+                        <div className="relative h-[210px] w-full overflow-hidden rounded-[24px] bg-[#2d2327] sm:h-[180px] sm:w-[180px] sm:shrink-0">
                           {isImageCard(item.card) ? (
                             <img src={item.card.previewUrl} alt={item.card.title} className="h-full w-full object-cover" />
                           ) : (
-                            <div className="flex h-full items-center justify-center px-4 text-center text-lg font-medium text-white/92">
+                            <div className="flex h-full items-center justify-center px-4 text-center text-lg font-black text-white/92">
                               {item.card.title}
                             </div>
                           )}
 
-                          <span className="absolute left-4 top-4 rounded-full bg-[rgba(28,17,23,0.72)] px-3 py-1 text-sm font-semibold text-white">
+                          <span className="absolute left-4 top-4 rounded-full bg-[rgba(28,17,23,0.72)] px-3 py-1 text-sm font-black text-white">
                             {rarityLabel}
                           </span>
                         </div>
@@ -451,17 +449,15 @@ export function ShareAccessCodeCardPicker() {
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <div className="min-w-0">
-                              <div className="truncate text-[2rem] font-semibold leading-none text-[var(--foreground)]">{item.card.title}</div>
+                              <div className="truncate text-[2rem] font-black leading-none text-[var(--foreground)]">{item.card.title}</div>
                               <div className="mt-3 text-sm tracking-[0.08em] text-[var(--foreground)]/48">
-                                创建于 {formatDate(item.card.createdAt)}
+                                创建时间：{formatDate(item.card.createdAt)}
                               </div>
                             </div>
 
                             <span
-                              className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-medium ${
-                                selected
-                                  ? "bg-[rgba(255,232,238,0.96)] text-[var(--brand-strong)]"
-                                  : "bg-[rgba(247,243,245,0.94)] text-[var(--foreground)]/56"
+                              className={`dream-chip inline-flex items-center px-4 py-2 text-sm font-black ${
+                                selected ? "bg-[#fff1f6] text-[var(--brand-strong)]" : "text-[var(--foreground)]/56"
                               }`}
                             >
                               {selected ? "已选中" : "点击选择"}
@@ -469,13 +465,13 @@ export function ShareAccessCodeCardPicker() {
                           </div>
 
                           <div className="mt-5 flex flex-wrap gap-2 text-sm text-[var(--foreground)]/58">
-                            <span className="rounded-full bg-[rgba(255,240,244,0.92)] px-3 py-1">{getVisibilityLabel(item.card)}</span>
-                            <span className="rounded-full bg-[rgba(247,243,245,0.94)] px-3 py-1">下载 {item.stats.downloadCount}</span>
-                            <span className="rounded-full bg-[rgba(247,243,245,0.94)] px-3 py-1">{item.card.originalFileName}</span>
+                            <span className="dream-chip px-3 py-1">{getVisibilityLabel(item.card)}</span>
+                            <span className="dream-chip px-3 py-1">下载 {item.stats.downloadCount}</span>
+                            <span className="dream-chip px-3 py-1">{item.card.originalFileName}</span>
                           </div>
 
                           <p className="mt-4 text-base leading-8 text-[var(--foreground)]/62">
-                            {item.card.description.trim() || "选中这张卡片后，将进入下一步配置提取码使用规则。"}
+                            {item.card.description.trim() || "这张卡片还没有填写描述，进入编辑页可以补充内容。"}
                           </p>
                         </div>
                       </button>
@@ -487,28 +483,26 @@ export function ShareAccessCodeCardPicker() {
                       key={item.card.id}
                       type="button"
                       onClick={() => setSelectedCardId(item.card.id)}
-                      className={`group relative overflow-hidden rounded-[36px] border p-3 text-left shadow-[0_28px_64px_-42px_rgba(120,85,94,0.22)] transition ${
-                        selected
-                          ? "border-[#e8a4b8] bg-[rgba(255,249,251,0.96)]"
-                          : "border-white/85 bg-white/84 hover:-translate-y-1 hover:border-[rgba(233,164,184,0.72)]"
+                      className={`dream-panel-soft group relative overflow-hidden p-3 text-left transition ${
+                        selected ? "border-[var(--brand-strong)] bg-[#fff8fb]" : "hover:-translate-y-1"
                       }`}
                     >
-                      <div className="relative overflow-hidden rounded-[30px] bg-[linear-gradient(135deg,#2b1c22_0%,#6f545c_100%)]">
+                      <div className="relative overflow-hidden rounded-[26px] bg-[#2d2327]">
                         {isImageCard(item.card) ? (
                           <img src={item.card.previewUrl} alt={item.card.title} className="aspect-[4/5] w-full object-cover" />
                         ) : (
-                          <div className="flex aspect-[4/5] items-center justify-center px-5 text-center text-xl font-medium text-white/92">
+                          <div className="flex aspect-[4/5] items-center justify-center px-5 text-center text-xl font-black text-white/92">
                             {item.card.title}
                           </div>
                         )}
 
-                        <span className="absolute left-4 top-4 rounded-full bg-[rgba(28,17,23,0.72)] px-3 py-1 text-sm font-semibold text-white">
+                        <span className="absolute left-4 top-4 rounded-full bg-[rgba(28,17,23,0.72)] px-3 py-1 text-sm font-black text-white">
                           {rarityLabel}
                         </span>
 
                         <span
-                          className={`absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full shadow-[0_12px_28px_-16px_rgba(0,0,0,0.35)] ${
-                            selected ? "bg-[#fff1f5] text-[var(--brand-strong)]" : "bg-white/90 text-[#8c6772]"
+                          className={`dream-chip absolute right-4 top-4 flex h-11 w-11 items-center justify-center ${
+                            selected ? "bg-[#fff1f5] text-[var(--brand-strong)]" : "text-[#8c6772]"
                           }`}
                         >
                           <HeartIcon className="h-5 w-5" />
@@ -518,11 +512,11 @@ export function ShareAccessCodeCardPicker() {
                           <div className="inline-flex rounded-full bg-white/18 px-3 py-1 text-xs tracking-[0.08em] text-white/92">
                             {getVisibilityLabel(item.card)}
                           </div>
-                          <div className="mt-4 text-[2rem] font-semibold leading-none text-white">{item.card.title}</div>
+                          <div className="mt-4 text-[2rem] font-black leading-none text-white">{item.card.title}</div>
                         </div>
 
                         {selected ? (
-                          <div className="pointer-events-none absolute inset-0 rounded-[30px] ring-2 ring-[#f2b0c2] ring-offset-2 ring-offset-white/40" />
+                          <div className="pointer-events-none absolute inset-0 rounded-[26px] ring-2 ring-[var(--button-rose)] ring-offset-2 ring-offset-white/40" />
                         ) : null}
                       </div>
                     </button>
@@ -531,10 +525,10 @@ export function ShareAccessCodeCardPicker() {
               </div>
 
               <div className="sticky bottom-6 mt-10 flex justify-end">
-                <div className="flex w-full max-w-[580px] flex-col gap-4 rounded-[32px] border border-white/85 bg-white/90 px-5 py-5 shadow-[0_28px_60px_-36px_rgba(120,85,94,0.32)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
+                <div className="dream-panel flex w-full max-w-[640px] flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
-                    <div className="text-sm tracking-[0.08em] text-[var(--foreground)]/46">已选择分享卡片</div>
-                    <div className="mt-1 truncate text-2xl font-semibold text-[var(--foreground)]">
+                    <div className="text-sm tracking-[0.08em] text-[var(--foreground)]/46">当前已选择卡片</div>
+                    <div className="mt-1 truncate text-2xl font-black text-[var(--foreground)]">
                       {selectedCard?.card.title || "请选择一张卡片"}
                     </div>
                   </div>
@@ -543,7 +537,7 @@ export function ShareAccessCodeCardPicker() {
                     type="button"
                     disabled={!selectedCard}
                     onClick={handleNext}
-                    className="btn-rose inline-flex min-w-[190px] items-center justify-center gap-3 rounded-full px-8 py-4 text-2xl font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+                    className="btn-rose inline-flex min-w-[190px] items-center justify-center gap-3 rounded-full px-8 py-4 text-2xl font-black disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <span>下一步</span>
                     <ArrowRightIcon className="h-6 w-6" />

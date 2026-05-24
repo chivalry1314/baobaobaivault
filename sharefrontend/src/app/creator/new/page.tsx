@@ -1,5 +1,5 @@
-import { ShareCreatorCenter } from "@/components/share/share-creator-center";
+import { ShareCardEditor } from "@/components/share/share-card-editor";
 
 export default function CreatorNewPage() {
-  return <ShareCreatorCenter />;
+  return <ShareCardEditor mode="create" />;
 }

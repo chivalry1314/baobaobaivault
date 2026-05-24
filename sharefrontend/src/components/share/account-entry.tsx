@@ -94,7 +94,7 @@ export function AccountEntry() {
 
   const href = user ? "/creator" : "/login";
   const label = user ? "进入个人主页" : "登录或注册";
-  const title = user ? `${getDisplayName(user)} 的主页` : "登录或注册";
+  const title = user ? `${getDisplayName(user)} 的个人主页` : "登录或注册";
 
   return (
     <Link
@@ -102,12 +102,12 @@ export function AccountEntry() {
       onClick={handleClick}
       aria-label={label}
       title={title}
-      className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-white/75 bg-[var(--surface-container-low)] text-[var(--brand)] shadow-[0_12px_28px_-18px_rgba(241,93,135,0.55)] transition hover:border-[var(--brand)]/35 hover:bg-white"
+      className="inline-flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-[3px] border-[var(--outline)] bg-[#fcb4c7] text-[var(--foreground)] transition-all hover:opacity-90 sm:h-14 sm:w-14"
     >
       {user?.avatar.trim() ? (
         <img src={user.avatar} alt={getDisplayName(user)} className="h-full w-full object-cover" />
       ) : user ? (
-        <span className="text-sm font-semibold text-[var(--primary)]">{getInitials(user)}</span>
+        <span className="text-sm font-black leading-none text-[var(--foreground)]/78">{getInitials(user)}</span>
       ) : (
         <UserIcon />
       )}

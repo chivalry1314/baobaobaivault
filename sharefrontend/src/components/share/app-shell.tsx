@@ -15,70 +15,73 @@ type AppShellProps = {
 const navItems = [
   { href: "/", label: "首页" },
   { href: "/discover", label: "发现卡片" },
-  { href: "/creator", label: "创作中心" },
+  { href: "/creator/new", label: "创作中心" },
 ];
 
 export function AppShell({ currentPath = "", children, headerSlot, footerSlot }: AppShellProps) {
   return (
     <div className="relative flex min-h-screen flex-col bg-[var(--background)] text-[var(--foreground)]">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="sparkle-orb left-[-120px] top-16 h-72 w-72 bg-[rgba(174,230,248,0.45)]" />
-        <div className="sparkle-orb right-[-80px] top-40 h-80 w-80 bg-[rgba(210,236,249,0.4)]" />
-        <div className="sparkle-orb bottom-[-100px] left-1/4 h-96 w-96 bg-[rgba(248,219,230,0.24)]" />
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        <div className="absolute left-[-5%] top-[8%] h-[150px] w-[400px] rounded-full bg-white/40 blur-2xl" />
+        <div className="absolute left-[-10%] top-[60%] h-[100px] w-[300px] rounded-full bg-white/40 blur-3xl" />
+        <div className="absolute bottom-[5%] right-[-5%] h-[200px] w-[500px] rounded-full bg-white/40 blur-2xl" />
+        <div className="absolute right-[20%] top-[15%] h-[100px] w-[250px] rounded-full bg-white/40 blur-2xl" />
       </div>
 
-      <header className="sticky top-0 z-40 px-3 pb-2 pt-3 sm:px-6 sm:pt-4">
-        <div className="floating-nav mx-auto max-w-7xl rounded-[28px] px-3 py-3 sm:px-5">
-          <div className="flex items-center justify-between gap-3">
-            <Link href="/" className="min-w-0">
-              <p className="type-overline text-[var(--primary)]/68">Card Share</p>
-              <p className="type-h3 mt-1 text-[var(--primary)]">Dreamy Card Gallery</p>
-            </Link>
+      <header className="relative z-10 px-4 pb-1 pt-4 sm:px-6">
+        <div className="mx-auto flex w-full max-w-[1500px] flex-col items-center justify-between gap-4 py-2 sm:flex-row">
+          <Link href="/" className="flex items-center gap-3 self-start sm:self-auto">
+            <div className="flex h-12 w-12 -rotate-6 items-center justify-center rounded-xl border-[3px] border-[var(--outline)] bg-white">
+              <div className="h-8 w-8 rounded bg-gradient-to-tr from-purple-400 to-blue-300 ring-2 ring-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black leading-none tracking-tight text-[var(--foreground)]">Dreamy</h1>
+              <p className="text-sm font-extrabold text-[var(--foreground)]">Card Gallery</p>
+            </div>
+          </Link>
 
-            <nav className="hidden items-center gap-2 md:flex">
-              {navItems.map((item) => {
-                const active = currentPath === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`rounded-full px-4 py-2 text-sm transition ${
-                      active
-                        ? "btn-primary"
-                        : "chip-pill text-[var(--foreground)]/74 hover:text-[var(--brand-strong)]"
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            <div className="flex items-center gap-3">{headerSlot !== undefined ? headerSlot : <AccountEntry />}</div>
-          </div>
-
-          <nav className="mt-3 flex gap-2 overflow-x-auto pb-1 md:hidden">
+          <div className="floating-nav hidden items-center gap-2 rounded-full p-1.5 lg:flex">
             {navItems.map((item) => {
-              const active = currentPath === item.href;
+              const active = item.href === "/creator/new" ? currentPath.startsWith("/creator") : currentPath === item.href;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`shrink-0 rounded-full px-4 py-2 text-sm transition ${
-                    active
-                      ? "btn-primary"
-                      : "chip-pill text-[var(--foreground)]/74"
-                  }`}
+                  className={`${active ? "btn-primary pointer-events-none" : "rounded-full px-6 py-2 font-black text-[var(--foreground)] hover:bg-gray-100"} ${active ? "rounded-full px-8 py-2 font-black" : ""}`}
                 >
                   {item.label}
                 </Link>
               );
             })}
-          </nav>
+          </div>
+
+          <div className="flex items-center gap-3 self-end sm:gap-4 sm:self-auto">
+            <Link href="/creator/new" className="btn-subtle rounded-full px-5 py-2 font-black sm:px-8 sm:py-2.5">
+              创作中心
+            </Link>
+            <div className="flex items-center gap-3">{headerSlot !== undefined ? headerSlot : <AccountEntry />}</div>
+          </div>
+        </div>
+
+        <div className="mx-auto max-w-[1500px] lg:hidden">
+          <div className="floating-nav no-scrollbar flex items-center gap-2 overflow-x-auto rounded-full p-1.5">
+            {navItems.map((item) => {
+              const active = item.href === "/creator/new" ? currentPath.startsWith("/creator") : currentPath === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`shrink-0 rounded-full px-5 py-2 text-sm font-black ${active ? "btn-primary pointer-events-none" : "btn-subtle"}`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </header>
 
-      <main className="relative z-10 flex-1 pb-2">{children}</main>
+      <main className="relative z-10 flex-1">{children}</main>
       {footerSlot}
     </div>
   );

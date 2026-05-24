@@ -18,8 +18,8 @@ import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type { CardDetailResponse, ExternalSessionUser } from "@/lib/shared";
 
 const moodOptions = [
-  { id: "sweet", label: "甜蜜", icon: HeartIcon },
-  { id: "gentle", label: "温柔", icon: DropIcon },
+  { id: "sweet", label: "甜系", icon: HeartIcon },
+  { id: "gentle", label: "柔和", icon: DropIcon },
   { id: "surprise", label: "惊喜", icon: StarIcon },
 ] as const;
 
@@ -47,9 +47,8 @@ function getDisplayName(user: ExternalSessionUser) {
 function composeSearchableSummary(text: string) {
   const clean = text.trim();
   if (!clean) {
-    return "写下你想对 Ta 说的话，让这份心意成为卡片上的主角。";
+    return "这是一张等待你补充故事的卡片，写下灵感后它会更完整。";
   }
-
   return clean.length > 44 ? `${clean.slice(0, 44)}...` : clean;
 }
 
@@ -57,17 +56,27 @@ function inferMoodTags(title: string, description: string) {
   const text = `${title} ${description}`;
   const tags: string[] = [];
 
-  if (/[甜爱恋约浪漫喜欢]/.test(text)) {
+  if (/[甜暖爱花软萌]/.test(text)) {
     tags.push("sweet");
   }
-  if (/[柔风光云陪伴治愈温暖]/.test(text)) {
+  if (/[静柔雾夜慢淡温]/.test(text)) {
     tags.push("gentle");
   }
-  if (/[喜惊星梦愿心动]/.test(text)) {
+  if (/[星惊梦潮闪耀]/.test(text)) {
     tags.push("surprise");
   }
 
   return tags.length > 0 ? Array.from(new Set(tags)) : ["sweet"];
+}
+
+function getStatusLabel(status: CardDetailResponse["card"]["status"]) {
+  if (status === "published") {
+    return "已发布";
+  }
+  if (status === "draft") {
+    return "草稿";
+  }
+  return "已归档";
 }
 
 export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
@@ -143,7 +152,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
     }
 
     if (!cardId) {
-      setLoadError("缺少卡片编号，暂时无法进入编辑页面。");
+      setLoadError("缺少卡片 ID，无法进入编辑页面。");
       setCardLoading(false);
       return () => {
         active = false;
@@ -153,7 +162,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
     async function loadCard() {
       const editingCardId = cardId;
       if (!editingCardId) {
-        setLoadError("缺少卡片编号，暂时无法进入编辑页面。");
+        setLoadError("缺少卡片 ID，无法进入编辑页面。");
         setCardLoading(false);
         return;
       }
@@ -170,7 +179,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
 
         if (!detail.canEdit) {
           setLoadedCard(null);
-          setLoadError("这张卡片暂时不能在这里编辑。");
+          setLoadError("你没有该卡片的编辑权限。");
           return;
         }
 
@@ -187,7 +196,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
         }
 
         setLoadedCard(null);
-        setLoadError(getShareErrorMessage(error, "卡片内容加载失败，请稍后再试。"));
+        setLoadError(getShareErrorMessage(error, "加载卡片信息失败，请稍后重试。"));
       } finally {
         if (active) {
           setCardLoading(false);
@@ -210,12 +219,14 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
     };
   }, [previewUrl]);
 
-  const pageTitle = mode === "edit" ? "编辑卡片" : "创作中心";
+  const pageTitle = mode === "edit" ? "编辑卡片" : "创建卡片";
   const pageDescription =
-    mode === "edit" ? "在完整编辑页里调整标题、心语和发布状态。" : "发布你的浪漫瞬间，编织属于你们的故事。";
-  const submitPrimaryLabel = mode === "edit" ? "保存并发布" : "发布浪漫瞬间";
-  const submitSecondaryLabel = mode === "edit" ? "保存为草稿" : "保存草稿";
-  const previewTitle = title.trim() || "给这份心意起个名字吧";
+    mode === "edit"
+      ? "更新标题、描述和可见性，让卡片内容与分享节奏保持一致。"
+      : "上传封面并写下卡片故事，发布后即可用于访问码分享。";
+  const submitPrimaryLabel = mode === "edit" ? "保存并发布" : "创建并发布";
+  const submitSecondaryLabel = mode === "edit" ? "保存为草稿" : "创建草稿";
+  const previewTitle = title.trim() || "请输入卡片标题";
   const previewDescription = composeSearchableSummary(description);
   const previewTag = moodOptions.find((item) => item.id === selectedTags[0]) ?? moodOptions[0];
   const publishPending = submitMode !== null;
@@ -226,21 +237,19 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
       <footer className="relative z-10 border-t border-white/60 bg-[rgba(255,248,248,0.72)] px-6 py-10 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 text-center md:flex-row md:text-left">
           <div className="text-3xl font-semibold italic tracking-tight text-[var(--brand-strong)]">CardShare</div>
-
-          <div className="text-sm tracking-[0.14em] text-[var(--brand)]/55">© 2024 CARDSHARE. HANDCRAFTED WITH SAKURA DREAMS.</div>
-
+          <div className="text-sm tracking-[0.14em] text-[var(--brand)]/55">© 2026 CARDSHARE. DREAMY STYLE.</div>
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm uppercase tracking-[0.12em] text-[var(--brand)]/48">
             <Link href="/discover" className="transition hover:text-[var(--brand-strong)]">
-              About Us
+              About
             </Link>
             <Link href="/discover" className="transition hover:text-[var(--brand-strong)]">
-              Privacy Policy
+              Privacy
             </Link>
             <Link href="/discover" className="transition hover:text-[var(--brand-strong)]">
-              Terms Of Service
+              Terms
             </Link>
             <Link href="/discover" className="transition hover:text-[var(--brand-strong)]">
-              Help Center
+              Help
             </Link>
           </div>
         </div>
@@ -252,7 +261,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
   function validateFile(nextFile: File) {
     const allowedTypes = new Set(["image/jpeg", "image/png", "image/gif"]);
     if (!allowedTypes.has(nextFile.type)) {
-      return "仅支持 JPG、PNG、GIF 格式图片。";
+      return "仅支持 JPG、PNG、GIF 图片格式。";
     }
 
     if (nextFile.size > 10 * 1024 * 1024) {
@@ -305,17 +314,17 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
 
   async function submitCard(status: "published" | "draft") {
     if (!title.trim()) {
-      setFormError("请先填写卡片标题。");
+      setFormError("请输入卡片标题。");
       return;
     }
 
     if (mode === "create" && !file) {
-      setFormError("请先上传一张卡片封面图片。");
+      setFormError("创建卡片时请先上传图片。");
       return;
     }
 
     if (mode === "edit" && !cardId) {
-      setFormError("当前卡片编号无效，无法保存。");
+      setFormError("缺少卡片 ID，无法保存。");
       return;
     }
 
@@ -346,7 +355,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
       setFormError(
         getShareErrorMessage(
           error,
-          mode === "edit" ? "卡片保存失败，请稍后再试。" : "卡片创建失败，请稍后再试。",
+          mode === "edit" ? "更新卡片失败，请稍后重试。" : "创建卡片失败，请稍后重试。",
         ),
       );
       setSubmitMode(null);
@@ -358,7 +367,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
       return;
     }
 
-    if (!window.confirm("确认删除这张卡片吗？删除后无法恢复。")) {
+    if (!window.confirm("确认删除这张卡片吗？删除后将无法恢复。")) {
       return;
     }
 
@@ -370,7 +379,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
       router.push("/creator");
       router.refresh();
     } catch (error) {
-      setFormError(getShareErrorMessage(error, "删除卡片失败，请稍后再试。"));
+      setFormError(getShareErrorMessage(error, "删除卡片失败，请稍后重试。"));
       setSubmitMode(null);
     }
   }
@@ -384,7 +393,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
     return (
       <div className="min-h-screen bg-[var(--background)] px-4 py-10 sm:px-6">
         <div className="mx-auto max-w-7xl rounded-[32px] border border-white/80 bg-white/82 px-6 py-14 text-center text-[var(--foreground)]/72 shadow-[0_24px_64px_-42px_rgba(120,85,94,0.32)]">
-          正在加载编辑页面...
+          正在加载编辑器...
         </div>
       </div>
     );
@@ -404,7 +413,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
               href="/creator"
               className="mt-6 inline-flex rounded-full bg-[var(--primary)] px-6 py-3 text-sm font-medium text-white transition hover:-translate-y-0.5"
             >
-              返回我的创作
+              返回创作中心
             </Link>
           </div>
         </div>
@@ -421,42 +430,43 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
           <div className="absolute left-[20%] bottom-[12%] h-[26rem] w-[26rem] rounded-full bg-[rgba(248,219,230,0.22)] blur-[120px]" />
         </div>
 
-        <section className="relative z-10 mx-auto max-w-[1520px] px-4 pb-16 pt-16 sm:px-6">
+        <section className="relative z-10 mx-auto max-w-[1200px] px-4 pb-16 pt-10">
           {mode === "edit" ? (
-            <div className="mb-6 flex justify-center sm:justify-start">
+            <div className="mb-6 flex justify-start">
               <Link
                 href="/creator"
-                className="inline-flex rounded-full border border-[var(--outline-variant)] bg-white/80 px-5 py-2.5 text-sm text-[var(--foreground)]/72 transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                className="btn-subtle inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-black shadow-[2px_2px_0px_var(--line-strong)] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none"
               >
-                返回我的创作
+                <BackIcon className="h-4 w-4" />
+                返回创作中心
               </Link>
             </div>
           ) : null}
 
-          <div className="text-center">
-            <SparklesIcon className="mx-auto h-12 w-12 text-[var(--primary)]/72" />
-            <h1 className="mt-5 text-5xl font-semibold tracking-tight text-[var(--foreground)] sm:text-6xl">{pageTitle}</h1>
-            <p className="mt-4 text-lg text-[var(--foreground)]/62">{pageDescription}</p>
+          <div className="mb-10 text-center">
+            <SparklesIcon className="mx-auto h-7 w-7 text-[var(--primary)]/80" />
+            <h1 className="mt-3 text-4xl font-black tracking-tight text-[var(--foreground)]">{pageTitle}</h1>
+            <p className="mt-3 text-sm font-bold text-[var(--foreground)]/62">{pageDescription}</p>
           </div>
 
           {formError ? (
-            <div className="mx-auto mt-8 max-w-5xl rounded-[24px] border border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-sm text-[#9a3412]">
+            <div className="mb-6 rounded-[20px] border border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-sm text-[#9a3412]">
               {formError}
             </div>
           ) : null}
 
-          <form className="mt-12 grid gap-8 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.8fr)]" onSubmit={handleSubmit}>
-            <div className="space-y-8">
-              <section className="rounded-[40px] border border-[rgba(193,219,232,0.72)] bg-[rgba(251,255,255,0.9)] p-6 shadow-[0_30px_70px_-50px_rgba(80,118,140,0.26)] sm:p-8">
-                <div className="flex items-center gap-3 text-[1.1rem] font-medium text-[var(--foreground)]">
-                  <ImageIcon className="h-6 w-6 text-[var(--primary)]" />
-                  <span>{mode === "edit" ? "卡片封面" : "上传浪漫影像"}</span>
+          <form className="flex flex-col gap-6 lg:flex-row lg:items-start" onSubmit={handleSubmit}>
+            <div className="w-full space-y-6 lg:w-[55%]">
+              <section className="dream-panel p-6 shadow-[4px_4px_0px_var(--line-strong)]">
+                <div className="mb-6 flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4 text-[var(--foreground)]/50" />
+                  <h2 className="text-sm font-black text-[var(--foreground)]">{mode === "edit" ? "封面预览" : "上传封面图"}</h2>
                 </div>
 
                 {mode === "create" ? (
                   <label
-                    className={`mt-6 flex min-h-[320px] cursor-pointer flex-col items-center justify-center rounded-[28px] border-2 border-dashed bg-[rgba(244,251,255,0.9)] px-6 py-8 text-center transition ${
-                      dragActive ? "border-[var(--primary)] bg-[rgba(230,246,253,0.94)]" : "border-[rgba(190,216,228,0.82)]"
+                    className={`flex min-h-[320px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-8 text-center transition ${
+                      dragActive ? "border-[var(--primary)] bg-[#eef8ff]" : "border-[var(--line-strong)]/30 bg-[#f8f9fa]"
                     }`}
                     onDragOver={(event) => {
                       event.preventDefault();
@@ -473,14 +483,14 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                     onDrop={handleDrop}
                   >
                     {previewUrl ? (
-                      <img src={previewUrl} alt="卡片预览" className="max-h-[320px] rounded-[24px] object-cover shadow-[0_20px_40px_-32px_rgba(120,85,94,0.45)]" />
+                      <img src={previewUrl} alt="卡片预览" className="max-h-[320px] rounded-xl border-[3px] border-[var(--line-strong)] object-cover shadow-[2px_2px_0px_var(--line-strong)]" />
                     ) : (
                       <>
-                        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[linear-gradient(135deg,#e5f5fc_0%,#d7eef9_100%)] text-[var(--primary)] shadow-[0_18px_40px_-28px_rgba(31,122,152,0.36)]">
-                          <ImageAddIcon className="h-10 w-10" />
+                        <div className="flex h-16 w-16 items-center justify-center rounded-xl border-[3px] border-[var(--line-strong)] bg-[var(--button-primary)] text-[var(--foreground)]">
+                          <ImageAddIcon className="h-8 w-8" />
                         </div>
-                        <p className="mt-8 text-[1.8rem] font-medium text-[var(--foreground)]">点击或拖拽图片到这里</p>
-                        <p className="mt-3 text-xl text-[var(--foreground)]/58">支持 JPG、PNG、GIF，最大 10MB</p>
+                        <p className="mt-6 text-xl font-black text-[var(--foreground)]">拖拽图片到这里，或点击上传</p>
+                        <p className="mt-2 text-sm font-bold text-[var(--foreground)]/56">支持 JPG、PNG、GIF，最大 10MB</p>
                       </>
                     )}
 
@@ -493,57 +503,52 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                     />
                   </label>
                 ) : (
-                  <div className="mt-6 min-h-[320px] rounded-[28px] border-2 border-dashed border-[rgba(190,216,228,0.82)] bg-[rgba(244,251,255,0.9)] px-6 py-8 text-center">
+                  <div className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--line-strong)]/30 bg-[#f8f9fa] px-6 py-8 text-center">
                     {previewUrl ? (
                       <img
                         src={previewUrl}
                         alt={previewTitle}
-                        className="mx-auto max-h-[320px] rounded-[24px] object-cover shadow-[0_20px_40px_-32px_rgba(120,85,94,0.45)]"
+                        className="max-h-[320px] rounded-xl border-[3px] border-[var(--line-strong)] object-cover shadow-[2px_2px_0px_var(--line-strong)]"
                       />
                     ) : (
-                      <>
-                        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[linear-gradient(135deg,#e5f5fc_0%,#d7eef9_100%)] text-[var(--primary)] shadow-[0_18px_40px_-28px_rgba(31,122,152,0.36)]">
-                          <ImageIcon className="h-10 w-10" />
-                        </div>
-                        <p className="mt-8 text-[1.8rem] font-medium text-[var(--foreground)]">当前卡片没有可预览的封面图片</p>
-                      </>
+                      <div className="text-sm font-bold text-[var(--foreground)]/56">当前卡片无封面</div>
                     )}
-                    <p className="mt-6 text-base text-[var(--foreground)]/56">当前版本暂不支持在编辑页更换素材文件。</p>
+                    <p className="mt-5 text-xs font-bold text-[var(--foreground)]/50">编辑模式暂不支持更换文件，后续可扩展。</p>
                   </div>
                 )}
               </section>
 
-              <section className="rounded-[40px] border border-[rgba(193,219,232,0.72)] bg-[rgba(251,255,255,0.9)] p-6 shadow-[0_30px_70px_-50px_rgba(80,118,140,0.26)] sm:p-8">
-                <div className="flex items-center gap-3 text-[1.1rem] font-medium text-[var(--foreground)]">
-                  <EditIcon className="h-6 w-6 text-[var(--primary)]" />
-                  <span>编辑心语</span>
+              <section className="dream-panel p-6 shadow-[4px_4px_0px_var(--line-strong)]">
+                <div className="mb-6 flex items-center gap-2">
+                  <EditIcon className="h-4 w-4 text-[var(--foreground)]/50" />
+                  <h2 className="text-sm font-black text-[var(--foreground)]">卡片信息</h2>
                 </div>
 
-                <div className="mt-8">
-                  <label className="block text-base text-[var(--foreground)]/72">标题</label>
+                <div className="mb-6">
+                  <label className="mb-2 block text-xs font-black text-[var(--foreground)]/70">标题</label>
                   <input
                     type="text"
                     value={title}
                     onChange={(event) => setTitle(event.target.value)}
-                    placeholder="给这份心意起个名字吧..."
-                    className="mt-3 w-full rounded-full border border-[rgba(210,185,191,0.78)] bg-white px-6 py-4 text-xl text-[var(--foreground)] outline-none transition placeholder:text-[var(--foreground)]/28 focus:border-[var(--primary)]"
+                    placeholder="输入卡片标题..."
+                    className="w-full rounded-full border-[2px] border-[var(--line-strong)] bg-white px-4 py-3 font-bold text-[var(--foreground)] outline-none transition focus:ring-2 focus:ring-[var(--primary)]"
                   />
                 </div>
 
-                <div className="mt-8">
-                  <label className="block text-base text-[var(--foreground)]/72">正文</label>
+                <div className="mb-6">
+                  <label className="mb-2 block text-xs font-black text-[var(--foreground)]/70">描述</label>
                   <textarea
                     value={description}
                     onChange={(event) => setDescription(event.target.value)}
                     rows={6}
-                    placeholder="写下你想对 Ta 说的话..."
-                    className="mt-3 w-full rounded-[28px] border border-[rgba(210,185,191,0.78)] bg-white px-6 py-5 text-lg leading-8 text-[var(--foreground)] outline-none transition placeholder:text-[var(--foreground)]/28 focus:border-[var(--primary)]"
+                    placeholder="补充卡片故事、来源或使用说明..."
+                    className="w-full resize-y rounded-xl border-[2px] border-[var(--line-strong)] bg-white px-4 py-3 font-bold leading-7 text-[var(--foreground)] outline-none transition focus:ring-2 focus:ring-[var(--primary)]"
                   />
                 </div>
 
-                <div className="mt-8">
-                  <label className="block text-base text-[var(--foreground)]/72">心情标签</label>
-                  <div className="mt-4 flex flex-wrap gap-3">
+                <div>
+                  <label className="mb-2 block text-xs font-black text-[var(--foreground)]/70">情绪标签</label>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
                     {moodOptions.map((tag) => {
                       const active = selectedTags.includes(tag.id);
                       const Icon = tag.icon;
@@ -556,13 +561,13 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                               current.includes(tag.id) ? current.filter((item) => item !== tag.id) : [...current, tag.id],
                             )
                           }
-                          className={`inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-lg transition ${
+                          className={`inline-flex items-center gap-1.5 rounded-full border-2 px-3 py-1 text-xs font-black transition ${
                             active
-                              ? "btn-rose border-[rgba(181,164,174,0.86)] text-[var(--foreground)]"
-                              : "border-[rgba(210,185,191,0.78)] bg-white text-[var(--foreground)]/72"
+                              ? "border-[var(--line-strong)] bg-[var(--button-rose)] text-[var(--foreground)] shadow-[2px_2px_0px_var(--line-strong)]"
+                              : "border-[var(--line-strong)] bg-white text-[var(--foreground)]"
                           }`}
                         >
-                          <Icon className="h-5 w-5" />
+                          <Icon className="h-3.5 w-3.5" />
                           <span>{tag.label}</span>
                         </button>
                       );
@@ -570,105 +575,107 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
 
                     <button
                       type="button"
-                      className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-dashed border-[rgba(210,185,191,0.78)] bg-white text-[var(--foreground)]/48 transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-dashed border-[var(--line-strong)]/40 text-[var(--foreground)]/60 transition hover:border-[var(--line-strong)] hover:text-[var(--foreground)]"
                     >
-                      <PlusIcon className="h-5 w-5" />
+                      +
                     </button>
                   </div>
                 </div>
               </section>
             </div>
 
-            <div className="space-y-8">
-              <section className="rounded-[40px] border border-[rgba(193,219,232,0.78)] bg-[rgba(251,255,255,0.9)] p-5 shadow-[0_30px_70px_-50px_rgba(80,118,140,0.26)] sm:p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-[1.1rem] font-medium text-[var(--foreground)]">实时预览</h2>
-                  <EyeIcon className="h-6 w-6 text-[var(--foreground)]/24" />
+            <div className="w-full space-y-6 lg:w-[45%]">
+              <section className="dream-panel p-6 shadow-[4px_4px_0px_var(--line-strong)]">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-sm font-black text-[var(--foreground)]">实时预览</h2>
+                  <EyeIcon className="h-4 w-4 text-[var(--foreground)]/40" />
                 </div>
 
-                <article className="mt-4 overflow-hidden rounded-[30px] bg-white shadow-[0_20px_40px_-34px_rgba(120,85,94,0.4)]">
-                  <div className="relative h-[300px] overflow-hidden bg-[linear-gradient(135deg,#3b272d_0%,#5a4049_40%,#2e1c21_100%)]">
+                <div className="overflow-hidden rounded-[24px] border-[3px] border-[var(--line-strong)] bg-white shadow-[4px_4px_0px_var(--line-strong)]">
+                  <div className="relative aspect-[4/3] bg-[linear-gradient(135deg,#3b272d_0%,#5a4049_40%,#2e1c21_100%)]">
                     {previewUrl ? (
                       <img src={previewUrl} alt={previewTitle} className="h-full w-full object-cover" />
                     ) : (
-                      <div className="flex h-full items-center justify-center text-center text-2xl text-white/76">等待封面图片...</div>
+                      <div className="flex h-full items-center justify-center text-sm font-bold text-white/76">等待上传封面...</div>
                     )}
-
-                    <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_0%,transparent_62%,rgba(40,24,29,0.12)_100%)]" />
                   </div>
 
-                  <div className="px-6 py-6">
-                    <h3 className="text-[2rem] font-semibold leading-tight text-[var(--foreground)]">{previewTitle}</h3>
-                    <p className="mt-4 text-lg leading-8 text-[var(--foreground)]/72">{previewDescription}</p>
-
-                    <div className="mt-5 flex items-center gap-2 text-base text-[var(--foreground)]/58">
-                      <HeartIcon className="h-5 w-5 text-[var(--primary)]" />
+                  <div className="p-4">
+                    <h3 className="text-xl font-black text-[var(--foreground)]">{previewTitle}</h3>
+                    <p className="mt-2 text-xs font-bold leading-relaxed text-[var(--foreground)]/60">{previewDescription}</p>
+                    <div className="mt-3 flex items-center gap-2 text-[10px] font-bold text-[var(--foreground)]/58">
+                      <HeartIcon className="h-3 w-3 text-[var(--primary)]" />
                       <span>{previewTag.label}</span>
-                      <span className="text-[var(--foreground)]/36">·</span>
+                      <span>·</span>
                       <span>{getDisplayName(currentUser)}</span>
                     </div>
                   </div>
-                </article>
+                </div>
               </section>
 
-              <section className="rounded-[40px] border border-[rgba(193,219,232,0.78)] bg-[rgba(251,255,255,0.9)] p-5 shadow-[0_30px_70px_-50px_rgba(80,118,140,0.26)] sm:p-6">
-                <label className="flex items-center gap-3 text-xl text-[var(--foreground)]/78">
+              <section className="dream-panel p-6 shadow-[4px_4px_0px_var(--line-strong)]">
+                <label className="mb-6 flex w-fit cursor-pointer items-center gap-3">
+                  <span className={`inline-flex h-5 w-5 items-center justify-center rounded border-[2px] border-[var(--line-strong)] ${publicChecked ? "bg-[var(--button-primary)] text-[var(--foreground)]" : "bg-white text-transparent"}`}>
+                    <CheckIcon className="h-4 w-4" />
+                  </span>
+                  <span className="text-sm font-bold text-[var(--foreground)]">
+                    公开可见 <span className="text-[var(--foreground)]/60">（可在发现页展示）</span>
+                  </span>
                   <input
                     type="checkbox"
                     checked={publicChecked}
                     onChange={(event) => setPublicChecked(event.target.checked)}
-                    className="h-7 w-7 rounded border-[rgba(210,185,191,0.78)] text-[var(--primary)] focus:ring-[var(--primary)]"
+                    className="hidden"
                   />
-                  <span>公开分享到广场</span>
                 </label>
 
-                <button
-                  type="submit"
-                  disabled={publishPending}
-                  className="btn-primary mt-8 flex w-full items-center justify-center gap-3 rounded-full px-6 py-5 text-[1.9rem] font-semibold disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <ArrowBurstIcon className="h-7 w-7" />
-                  <span>
-                    {submitMode === "published" ? (mode === "edit" ? "正在保存..." : "正在发布...") : submitPrimaryLabel}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  disabled={publishPending}
-                  onClick={() => void submitCard("draft")}
-                  className="mt-4 w-full rounded-full border border-[rgba(220,189,196,0.92)] bg-white px-6 py-5 text-[1.9rem] font-semibold text-[var(--foreground)]/72 transition hover:-translate-y-0.5 hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {submitMode === "draft" ? "正在保存..." : submitSecondaryLabel}
-                </button>
-
-                {mode === "edit" && loadedCard ? (
-                  <Link
-                    href={`/creator/cards/${encodeURIComponent(loadedCard.card.id)}/access-code`}
-                    className="mt-4 flex w-full items-center justify-center rounded-full border border-[rgba(236,180,197,0.92)] bg-[rgba(255,244,246,0.92)] px-6 py-4 text-lg font-semibold text-[var(--brand-strong)] transition hover:-translate-y-0.5 hover:border-[var(--primary)] hover:bg-white"
+                <div className="space-y-3">
+                  <button
+                    type="submit"
+                    disabled={publishPending}
+                    className="btn-primary w-full rounded-full py-3 text-sm font-black shadow-[2px_2px_0px_var(--line-strong)] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    提取码管理
-                  </Link>
-                ) : null}
-
-                {mode === "edit" ? (
+                    {submitMode === "published" ? "提交中..." : submitPrimaryLabel}
+                  </button>
                   <button
                     type="button"
                     disabled={publishPending}
-                    onClick={() => void handleDelete()}
-                    className="mt-4 w-full rounded-full border border-[#efb8c8] bg-[rgba(255,244,246,0.9)] px-6 py-4 text-lg font-semibold text-[#9d3656] transition hover:border-[#c45a7d] hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() => void submitCard("draft")}
+                    className="btn-subtle w-full rounded-full py-3 text-sm font-black shadow-[2px_2px_0px_var(--line-strong)] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {submitMode === "delete" ? "正在删除..." : "删除这张卡片"}
+                    {submitMode === "draft" ? "提交中..." : submitSecondaryLabel}
                   </button>
-                ) : null}
+                  {mode === "edit" && loadedCard ? (
+                    <Link
+                      href={`/creator/cards/${encodeURIComponent(loadedCard.card.id)}/access-code`}
+                      className="btn-rose block w-full rounded-full py-3 text-center text-sm font-black shadow-[2px_2px_0px_var(--line-strong)] transition hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none"
+                    >
+                      配置访问码
+                    </Link>
+                  ) : null}
+                  {mode === "edit" ? (
+                    <button
+                      type="button"
+                      disabled={publishPending}
+                      onClick={() => void handleDelete()}
+                      className="mt-2 w-full rounded-full border-[3px] border-[#ff9c9c] bg-[#fce4e4] py-3 text-sm font-black text-[#ff6b6b] shadow-[2px_2px_0px_#ff9c9c] transition hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {submitMode === "delete" ? "删除中..." : "删除这张卡片"}
+                    </button>
+                  ) : null}
+                </div>
 
                 {mode === "edit" && loadedCard ? (
-                  <div className="mt-6 rounded-[24px] bg-[rgba(255,244,246,0.78)] px-5 py-4 text-sm leading-7 text-[var(--foreground)]/58">
-                    卡片编号：{loadedCard.card.id}
-                    <br />
-                    当前状态：{loadedCard.card.status === "draft" ? "草稿" : loadedCard.card.status === "published" ? "已发布" : "已归档"}
+                  <div className="mt-6 space-y-1 text-[10px] font-bold text-[var(--foreground)]/42">
+                    <p>卡片 ID：{loadedCard.card.id}</p>
+                    <p>当前状态：{getStatusLabel(loadedCard.card.status)}</p>
                   </div>
-                ) : null}
+                ) : (
+                  <div className="mt-6 space-y-1 text-[10px] font-bold text-[var(--foreground)]/42">
+                    <p>创建后可在「访问码配置」中继续设置分享规则。</p>
+                    <p>建议先发布，再根据需要调整为草稿或私密。</p>
+                  </div>
+                )}
               </section>
             </div>
           </form>
@@ -682,6 +689,14 @@ function SparklesIcon({ className = "h-6 w-6" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
       <path d="m12 2 1.8 4.2L18 8l-4.2 1.8L12 14l-1.8-4.2L6 8l4.2-1.8L12 2Zm7 9 1 2.4 2.4 1-2.4 1-1 2.4-1-2.4-2.4-1 2.4-1 1-2.4ZM6 14l1.2 2.8L10 18l-2.8 1.2L6 22l-1.2-2.8L2 18l2.8-1.2L6 14Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function BackIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <path d="m13.47 5.47 1.06 1.06-4.47 4.47h9.44v1.5h-9.44l4.47 4.47-1.06 1.06-6.28-6.28 6.28-6.28Z" fill="currentColor" />
     </svg>
   );
 }
@@ -718,10 +733,10 @@ function EyeIcon({ className = "h-5 w-5" }: { className?: string }) {
   );
 }
 
-function ArrowBurstIcon({ className = "h-5 w-5" }: { className?: string }) {
+function CheckIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
-      <path d="M5.25 7.5h13.5L12 18.75 5.25 7.5Z" fill="currentColor" />
+      <path d="m9.55 16.2-3.75-3.75 1.06-1.06 2.69 2.69 7.59-7.58 1.06 1.06-8.65 8.64Z" fill="currentColor" />
     </svg>
   );
 }
@@ -746,14 +761,6 @@ function StarIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
       <path d="m12 2.75 2.4 4.86 5.37.78-3.88 3.78.92 5.35L12 14.97 7.19 17.5l.92-5.35L4.23 8.39l5.37-.78L12 2.75Z" fill="currentColor" />
-    </svg>
-  );
-}
-
-function PlusIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
-      <path d="M11.25 5.25h1.5v5.25h5.25v1.5h-5.25v5.25h-1.5V12h-5.25v-1.5h5.25V5.25Z" fill="currentColor" />
     </svg>
   );
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AppShell } from "@/components/share/app-shell";
 import { AuthRedirect } from "@/components/share/auth-redirect";
@@ -14,9 +14,9 @@ type ShareCardAccessCodeProps = {
 };
 
 const expireOptions = [
-  { value: 1, label: "1天", description: "短期活动" },
-  { value: 7, label: "7天", description: "标准推荐" },
-  { value: 0, label: "永久", description: "无时间限制" },
+  { value: 1, label: "1 天", description: "短期时效分享" },
+  { value: 7, label: "7 天", description: "推荐有效期" },
+  { value: 0, label: "永久", description: "不限制到期时间" },
 ] as const;
 
 function getDisplayName(user: ExternalSessionUser | CardDetailResponse["creator"]) {
@@ -59,6 +59,17 @@ function getRarityLabel(downloadCount: number) {
     return "SR";
   }
   return "R";
+}
+
+function formatDateTime(value: string | null) {
+  if (!value) {
+    return "";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString("zh-CN");
 }
 
 export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
@@ -138,7 +149,7 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
         }
 
         if (!detailResponse.canEdit) {
-          setError("当前卡片暂不支持提取码管理。");
+          setError("你没有该卡片的编辑权限，无法配置访问码。");
           setDetail(null);
           setConfig(null);
           return;
@@ -156,7 +167,7 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
           return;
         }
 
-        setError(getShareErrorMessage(loadError, "提取码配置加载失败，请稍后再试。"));
+        setError(getShareErrorMessage(loadError, "访问码配置加载失败，请稍后重试。"));
       } finally {
         if (active) {
           setLoading(false);
@@ -174,7 +185,7 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
   const footer = useMemo(
     () => (
       <footer className="relative z-10 px-6 pb-10 pt-12 text-center text-sm tracking-[0.08em] text-[var(--brand)]/55">
-        © 2024 CardShare · 为每一份心意赋予分享价值
+        © 2026 CardShare
       </footer>
     ),
     [],
@@ -183,14 +194,14 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
   async function handleSubmit() {
     const normalizedCode = code.trim().toUpperCase();
     if (!normalizedCode) {
-      setError("请先填写提取码。");
+      setError("请输入访问码。");
       return;
     }
 
     if (!unlimited) {
       const numericLimit = Number(usageLimit);
       if (!Number.isFinite(numericLimit) || numericLimit <= 0) {
-        setError("请填写有效的使用次数。");
+        setError("使用次数上限必须是大于 0 的数字。");
         return;
       }
     }
@@ -207,11 +218,7 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
         unlimited,
       });
 
-      if (
-        isWizardFlow &&
-        detail &&
-        (detail.card.visibility !== "public" || detail.card.status !== "published")
-      ) {
+      if (isWizardFlow && detail && (detail.card.visibility !== "public" || detail.card.status !== "published")) {
         const updateCardResponse = await shareApi.updateCard(cardId, {
           title: detail.card.title,
           description: detail.card.description,
@@ -236,9 +243,9 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
       setExpireDays(nextConfig.expireDays);
       setUnlimited(nextConfig.unlimited);
       setUsageLimit(nextConfig.usageLimit > 0 ? String(nextConfig.usageLimit) : usageLimit);
-      setSuccess("提取码规则已保存。");
+      setSuccess("访问码已保存。");
     } catch (submitError) {
-      setError(getShareErrorMessage(submitError, "提取码保存失败，请稍后再试。"));
+      setError(getShareErrorMessage(submitError, "保存访问码失败，请重试。"));
     } finally {
       setPending(false);
     }
@@ -248,7 +255,7 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
     return (
       <div className="min-h-screen bg-[var(--background)] px-4 py-10 sm:px-6">
         <div className="mx-auto max-w-7xl rounded-[32px] border border-white/80 bg-white/82 px-6 py-14 text-center text-[var(--foreground)]/72 shadow-[0_24px_64px_-42px_rgba(120,85,94,0.32)]">
-          正在加载提取码管理...
+          正在验证登录状态...
         </div>
       </div>
     );
@@ -269,23 +276,21 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
 
         <section className="relative z-10 mx-auto max-w-[1460px] px-4 pb-16 pt-10 sm:px-6">
           {isWizardFlow ? (
-            <div className="mb-8 flex flex-wrap items-center gap-4 rounded-[32px] border border-white/80 bg-white/76 px-5 py-4 shadow-[0_20px_40px_-34px_rgba(120,85,94,0.24)]">
-              <StepPill active={false} label="STEP01" title="选择分享卡片" icon={<HeartIcon className="h-5 w-5" />} />
+            <div className="dream-panel-soft mb-8 flex flex-wrap items-center gap-4 px-5 py-4">
+              <StepPill active={false} label="STEP 01" title="选择卡片" icon={<HeartIcon className="h-5 w-5" />} />
               <div className="hidden h-px w-12 bg-[rgba(190,216,228,0.9)] lg:block" />
-              <StepPill active label="STEP02" title="配置提取规则" icon={<SettingsIcon className="h-5 w-5" />} />
+              <StepPill active label="STEP 02" title="配置访问码" icon={<SettingsIcon className="h-5 w-5" />} />
             </div>
           ) : null}
 
           <div className="flex items-start gap-4">
-            <Link
-              href={backHref}
-              className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[var(--outline-variant)] bg-white/82 text-[var(--foreground)] shadow-[0_16px_36px_-28px_rgba(80,118,140,0.3)] transition hover:-translate-y-0.5 hover:border-[var(--primary)] hover:text-[var(--primary)]"
-            >
+            <Link href={backHref} className="btn-subtle inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full">
               <BackIcon className="h-6 w-6" />
             </Link>
 
             <div>
-              <h1 className="mt-1 text-5xl font-semibold tracking-tight text-[var(--foreground)]">设置提取码</h1>
+              <h1 className="mt-1 text-5xl font-semibold tracking-tight text-[var(--foreground)]">卡片访问码设置</h1>
+              <p className="mt-3 text-lg text-[var(--foreground)]/62">设置有效期和次数上限，统一管理该卡片的分享权限。</p>
             </div>
           </div>
 
@@ -304,13 +309,13 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
 
           {!loading && detail ? (
             <div className="mt-10 grid gap-8 xl:grid-cols-[380px_minmax(0,1fr)]">
-              <section className="rounded-[38px] border border-[rgba(193,219,232,0.72)] bg-[rgba(251,255,255,0.9)] p-6 shadow-[0_30px_70px_-46px_rgba(80,118,140,0.26)]">
+              <section className="dream-panel p-6">
                 <div className="flex items-center gap-3 text-[1.15rem] font-medium text-[var(--foreground)]">
                   <CardIcon className="h-6 w-6 text-[var(--primary)]" />
                   <span>目标卡片</span>
                 </div>
 
-                <div className="mt-6 rounded-[32px] bg-[linear-gradient(180deg,rgba(241,250,254,0.92),rgba(247,253,255,0.98))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
+                <div className="dream-panel-soft mt-6 rounded-[32px] bg-[#f8fcff] p-5">
                   <div className="relative overflow-hidden rounded-[34px] bg-[linear-gradient(145deg,#121826_0%,#1c2434_100%)]">
                     {detail.card.mimeType.startsWith("image/") ? (
                       <img src={detail.card.previewUrl} alt={detail.card.title} className="h-[476px] w-full object-cover" />
@@ -322,27 +327,27 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
 
                     <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(20,14,18,0)_0%,rgba(20,14,18,0.82)_100%)] px-6 pb-6 pt-20">
                       <div className="mb-4 inline-flex rounded-full bg-white/88 px-3 py-1 text-sm font-semibold text-[#f59e0b]">
-                        ★★★★★
+                        {getRarityLabel(detail.stats.downloadCount)}
                       </div>
                       <h2 className="text-4xl font-semibold tracking-tight text-white">{detail.card.title}</h2>
                     </div>
                   </div>
 
                   <div className="mt-5 flex items-center justify-between text-lg text-[var(--foreground)]/72">
-                    <span>稀有度：{getRarityLabel(detail.stats.downloadCount)}</span>
-                    <span>画师：@{detail.creator.username || getDisplayName(detail.creator)}</span>
+                    <span>下载 {detail.stats.downloadCount} 次</span>
+                    <span>作者 {detail.creator.username || getDisplayName(detail.creator)}</span>
                   </div>
                 </div>
               </section>
 
-              <section className="rounded-[38px] border border-[rgba(193,219,232,0.72)] bg-[rgba(251,255,255,0.9)] p-8 shadow-[0_30px_70px_-46px_rgba(80,118,140,0.26)] sm:p-10">
+              <section className="dream-panel p-8 sm:p-10">
                 {success ? (
                   <div className="rounded-[22px] border border-[#b5dfc8] bg-[#f0fff4] px-4 py-3 text-sm text-[#166534]">{success}</div>
                 ) : null}
 
                 <div className={success ? "mt-6" : ""}>
                   <label className="block text-2xl font-medium text-[var(--foreground)]">
-                    提取码 <span className="text-[#d74b75]">*</span>
+                    访问码<span className="text-[#d74b75]">*</span>
                   </label>
 
                   <div className="mt-5 flex flex-col gap-4 lg:flex-row">
@@ -350,24 +355,24 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
                       type="text"
                       value={code}
                       onChange={(event) => setCode(event.target.value.toUpperCase())}
-                      className="min-w-0 flex-1 rounded-full border border-[rgba(210,185,191,0.78)] bg-white px-7 py-5 text-[2rem] tracking-[0.16em] text-[var(--foreground)] outline-none transition placeholder:text-[var(--foreground)]/28 focus:border-[var(--primary)]"
-                      placeholder="*** SKR-992-AEX"
+                      className="dream-input min-w-0 flex-1 px-7 py-5 text-[2rem] tracking-[0.16em] placeholder:text-[var(--foreground)]/28"
+                      placeholder="例如 ABC-9KD-7QX"
                     />
 
                     <button
                       type="button"
                       onClick={() => setCode(generateAccessCode())}
-                      className="btn-subtle inline-flex items-center justify-center gap-3 rounded-full px-7 py-5 text-xl font-medium"
+                      className="btn-subtle inline-flex items-center justify-center gap-3 rounded-full px-7 py-5 text-xl font-black"
                     >
                       <RefreshIcon className="h-6 w-6" />
                       <span>随机生成</span>
                     </button>
                   </div>
 
-                  <p className="mt-4 text-lg text-[var(--foreground)]/62">用户将输入此代码来获取卡片。</p>
+                  <p className="mt-4 text-lg text-[var(--foreground)]/62">建议使用字母和数字组合，便于手动输入与分享。</p>
                 </div>
 
-                <div className="mt-10 h-px bg-[rgba(224,205,210,0.76)]" />
+                <div className="dream-divider mt-10 h-px border-t border-dashed" />
 
                 <div className="mt-10">
                   <h3 className="text-[2rem] font-medium text-[var(--foreground)]">有效期</h3>
@@ -380,10 +385,10 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
                           key={option.value}
                           type="button"
                           onClick={() => setExpireDays(option.value)}
-                          className={`relative rounded-[28px] border px-6 py-6 text-center transition ${
+                          className={`relative rounded-[28px] border-[3px] px-6 py-6 text-center transition ${
                             active
-                              ? "border-[rgba(31,122,152,0.85)] bg-[rgba(233,247,253,0.9)] shadow-[0_18px_32px_-28px_rgba(31,122,152,0.32)]"
-                              : "border-[rgba(190,216,228,0.88)] bg-white/84 hover:border-[rgba(31,122,152,0.56)]"
+                              ? "border-[var(--line-strong)] bg-[#eef8ff] shadow-[0_4px_0_rgba(46,40,86,0.2)]"
+                              : "border-[rgba(46,40,86,0.26)] bg-white hover:border-[var(--line-strong)]"
                           }`}
                         >
                           {active ? <HeartMiniIcon className="absolute right-4 top-4 h-5 w-5 text-[var(--brand-strong)]" /> : null}
@@ -397,15 +402,15 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
 
                 <div className="mt-10">
                   <div className="flex items-center justify-between gap-4">
-                    <h3 className="text-[2rem] font-medium text-[var(--foreground)]">使用次数限制</h3>
+                    <h3 className="text-[2rem] font-medium text-[var(--foreground)]">使用次数上限</h3>
 
                     <label className="inline-flex items-center gap-3 text-lg text-[var(--foreground)]/68">
-                      <span>无限制</span>
+                      <span>无限次数</span>
                       <button
                         type="button"
                         onClick={() => setUnlimited((current) => !current)}
-                        className={`relative h-9 w-16 rounded-full transition ${
-                          unlimited ? "bg-[rgba(179,228,246,0.88)]" : "bg-[rgba(228,236,241,0.92)]"
+                        className={`relative h-9 w-16 rounded-full border-[2px] border-[var(--line-strong)] transition ${
+                          unlimited ? "bg-[#b3e4f6]" : "bg-[#e4ecf1]"
                         }`}
                         aria-pressed={unlimited}
                       >
@@ -426,29 +431,29 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
                       disabled={unlimited}
                       value={usageLimit}
                       onChange={(event) => setUsageLimit(event.target.value)}
-                      className="w-full rounded-full border border-[rgba(210,185,191,0.78)] bg-white px-16 py-5 pr-16 text-[2rem] text-[var(--foreground)] outline-none transition disabled:cursor-not-allowed disabled:bg-[rgba(248,243,245,0.82)] disabled:text-[var(--foreground)]/36 focus:border-[var(--primary)]"
+                      className="dream-input w-full px-16 py-5 pr-16 text-[2rem] disabled:cursor-not-allowed disabled:bg-[#f8f3f5] disabled:text-[var(--foreground)]/36"
                     />
                     <span className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 text-2xl text-[var(--foreground)]/58">次</span>
                   </div>
 
                   {config?.isActive ? (
                     <p className="mt-4 text-base text-[var(--foreground)]/58">
-                      当前提取码已启用，已使用 {config.usageCount} 次。
-                      {config.expiresAt ? ` 到期时间：${new Date(config.expiresAt).toLocaleString("zh-CN")}` : " 当前为永久有效。"}
+                      当前访问码已使用 {config.usageCount} 次。
+                      {config.expiresAt ? ` 到期时间：${formatDateTime(config.expiresAt)}` : " 当前为永久有效。"}
                     </p>
                   ) : null}
                 </div>
 
-                <div className="mt-10 h-px bg-[rgba(224,205,210,0.76)]" />
+                <div className="dream-divider mt-10 h-px border-t border-dashed" />
 
                 <div className="mt-8 flex justify-end">
                   <button
                     type="button"
                     disabled={pending}
                     onClick={() => void handleSubmit()}
-                    className="btn-primary inline-flex min-w-[320px] items-center justify-center gap-3 rounded-full px-8 py-6 text-[2rem] font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+                    className="btn-primary inline-flex min-w-[320px] items-center justify-center gap-3 rounded-full px-8 py-6 text-[2rem] font-black disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <span>{pending ? "保存中..." : "确认并生成提取码"}</span>
+                    <span>{pending ? "保存中..." : "保存访问码设置"}</span>
                     <CheckIcon className="h-7 w-7" />
                   </button>
                 </div>
@@ -543,7 +548,7 @@ function StepPill({
   active: boolean;
   label: string;
   title: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
 }) {
   return (
     <div className="flex items-center gap-3">

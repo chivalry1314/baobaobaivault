@@ -12,179 +12,116 @@ type HomeFeedCard = {
   title: string;
   description: string;
   creatorName: string;
-  creatorInitials: string;
   metric: string;
   href: string;
   imageUrl: string;
-  mimeType: string;
-  fileLabel: string;
   searchableText: string;
   tags: string[];
-  isDemo?: boolean;
+  bgClass: string;
 };
 
 const filterChips = ["全部", "二次元", "恋爱", "插画", "动态", "风景", "水彩"] as const;
 
+const chipVisuals: Record<(typeof filterChips)[number], { className: string }> = {
+  全部: { className: "bg-[#aee7d9]" },
+  二次元: { className: "bg-[#facdf4]" },
+  恋爱: { className: "bg-[#ff9c9c]" },
+  插画: { className: "bg-[#fcf1a7]" },
+  动态: { className: "bg-[#cdb4f3]" },
+  风景: { className: "bg-[#aee7d9]" },
+  水彩: { className: "bg-[#ffcda8]" },
+};
+
 const demoCards: HomeFeedCard[] = [
   {
     id: "demo-sakura",
-    title: "樱之梦",
-    description: "粉樱、少女和柔光氛围，适合做梦幻系卡片封面。",
-    creatorName: "Yuka_Art",
-    creatorInitials: "YA",
+    title: "Sakura",
+    description: "轻柔春日与粉色光影，适合恋爱与梦幻氛围主题。",
+    creatorName: "Luna_Art",
     metric: "1.2k",
-    href: "/login",
+    href: "/cards/demo-sakura",
     imageUrl: "/api/demo-media?id=demo-sakura&w=900&h=1300&kind=card",
-    mimeType: "image/jpeg",
-    fileLabel: "插画",
-    searchableText: "樱之梦 Yuka_Art 粉樱 少女 梦幻 插画",
-    tags: ["二次元", "插画", "恋爱"],
-    isDemo: true,
+    searchableText: "sakura anime luna art",
+    tags: ["二次元", "恋爱"],
+    bgClass: "bg-[#cdb4f3]",
   },
   {
     id: "demo-sunset",
-    title: "落日余晖",
-    description: "海平面和晚霞层次，适合风景系公开展示。",
+    title: "Sunset",
+    description: "暮色海岸和暖金色调，适合作为风景类主页封面。",
     creatorName: "Mikan_Studio",
-    creatorInitials: "MS",
     metric: "856",
-    href: "/discover",
+    href: "/cards/demo-sunset",
     imageUrl: "/api/demo-media?id=demo-sunset&w=900&h=1200&kind=card",
-    mimeType: "image/jpeg",
-    fileLabel: "风景",
-    searchableText: "落日余晖 Mikan_Studio 晚霞 海边 风景",
-    tags: ["风景"],
-    isDemo: true,
+    searchableText: "sunset sea landscape",
+    tags: ["风景", "插画"],
+    bgClass: "bg-[#aee7d9]",
   },
   {
     id: "demo-rose",
-    title: "纯白誓言",
-    description: "花语感和留白构图，很适合婚礼或纪念主题。",
+    title: "Rose",
+    description: "玫瑰与奶油高光质感，适合恋爱主题与头像卡面。",
     creatorName: "Shiro_Draws",
-    creatorInitials: "SD",
     metric: "2.1k",
-    href: "/creator",
+    href: "/cards/demo-rose",
     imageUrl: "/api/demo-media?id=demo-rose&w=900&h=1400&kind=card",
-    mimeType: "image/jpeg",
-    fileLabel: "花卉",
-    searchableText: "纯白誓言 Shiro_Draws 白玫瑰 花语 水彩 恋爱",
-    tags: ["恋爱", "水彩"],
-    isDemo: true,
+    searchableText: "rose romance flower",
+    tags: ["恋爱", "插画"],
+    bgClass: "bg-[#fcf1a7]",
   },
   {
     id: "demo-crystal",
-    title: "星语心愿",
-    description: "晶体、微光和紫粉色调，适合少女感封面或情绪海报。",
+    title: "Crystal",
+    description: "通透晶体风格和舞台灯效，适合高亮展示位。",
     creatorName: "Yuka_Art",
-    creatorInitials: "YA",
     metric: "542",
-    href: "/creator",
+    href: "/cards/demo-crystal",
     imageUrl: "/api/demo-media?id=demo-crystal&w=900&h=1100&kind=card",
-    mimeType: "image/jpeg",
-    fileLabel: "视觉",
-    searchableText: "星语心愿 Yuka_Art 晶体 少女 梦幻 插画",
-    tags: ["插画", "二次元"],
-    isDemo: true,
+    searchableText: "crystal fantasy",
+    tags: ["插画", "动态"],
+    bgClass: "bg-[#facdf4]",
   },
   {
     id: "demo-moon",
-    title: "繁星之夜",
-    description: "月色和渐变夜空，很适合安静系背景卡。",
+    title: "Moon",
+    description: "夜色与月光层次明确，适合暗调插图与故事封面。",
     creatorName: "NightSky",
-    creatorInitials: "NS",
     metric: "980",
-    href: "/discover",
+    href: "/cards/demo-moon",
     imageUrl: "/api/demo-media?id=demo-moon&w=900&h=1300&kind=card",
-    mimeType: "image/jpeg",
-    fileLabel: "夜空",
-    searchableText: "繁星之夜 NightSky 月亮 星空 风景",
-    tags: ["风景"],
-    isDemo: true,
+    searchableText: "moon star night",
+    tags: ["二次元", "风景"],
+    bgClass: "bg-[#cdb4f3]",
   },
   {
-    id: "demo-flower",
-    title: "春之花语",
-    description: "柔和花朵与轻雾质感，适合水彩风格卡片。",
+    id: "demo-watercolor",
+    title: "Watercolor",
+    description: "松弛笔触与淡色叠染，适合水彩与手作风格内容。",
     creatorName: "Flora_Fan",
-    creatorInitials: "FF",
     metric: "731",
-    href: "/creator",
+    href: "/cards/demo-watercolor",
     imageUrl: "/api/demo-media?id=demo-flower&w=900&h=1200&kind=card",
-    mimeType: "image/jpeg",
-    fileLabel: "花语",
-    searchableText: "春之花语 Flora_Fan 花朵 水彩 插画",
+    searchableText: "watercolor brush",
     tags: ["水彩", "插画"],
-    isDemo: true,
+    bgClass: "bg-white",
   },
 ];
-
-function getInitials(name: string) {
-  const compact = name.trim();
-  if (!compact) {
-    return "CS";
-  }
-
-  const parts = compact.split(/[\s_.-]+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  }
-
-  return compact.slice(0, 2).toUpperCase();
-}
 
 function formatMetric(count: number) {
   if (!Number.isFinite(count) || count <= 0) {
     return "0";
   }
-
   if (count >= 1000) {
     return `${(count / 1000).toFixed(1)}k`;
   }
-
   return String(count);
-}
-
-function topVisualClass(index: number) {
-  const classes = [
-    "aspect-[4/4.7]",
-    "aspect-[4/3.6]",
-    "aspect-[4/5.5]",
-    "aspect-[4/3.1]",
-    "aspect-[4/5]",
-    "aspect-[4/3.7]",
-  ];
-
-  return classes[index % classes.length];
 }
 
 function matchesChip(card: HomeFeedCard, chip: (typeof filterChips)[number]) {
   if (chip === "全部") {
     return true;
   }
-
   return card.tags.includes(chip);
-}
-
-function SearchIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6">
-      <path
-        d="M10.5 4a6.5 6.5 0 1 0 4.057 11.58l4.431 4.432 1.061-1.061-4.432-4.431A6.5 6.5 0 0 0 10.5 4Zm0 1.5a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-function HeartIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
-      <path
-        d="M12 20.2 4.94 13.5a4.65 4.65 0 0 1 6.58-6.58L12 7.4l.48-.48a4.65 4.65 0 0 1 6.58 6.58L12 20.2Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
 }
 
 export default function LandingPage() {
@@ -216,8 +153,7 @@ export default function LandingPage() {
         if (!active) {
           return;
         }
-
-        setError(loadError instanceof Error ? loadError.message : "公开卡片加载失败");
+        setError(loadError instanceof Error ? loadError.message : "加载失败，请稍后重试。");
       } finally {
         if (active) {
           setLoading(false);
@@ -226,7 +162,6 @@ export default function LandingPage() {
     }
 
     void loadCards();
-
     return () => {
       active = false;
     };
@@ -235,21 +170,26 @@ export default function LandingPage() {
   const liveCards = useMemo<HomeFeedCard[]>(() => {
     return cards.map((item) => {
       const titleText = item.card.title ?? "未命名作品";
-      const descriptionText = item.card.description || "公开创作者卡片";
+      const descriptionText = item.card.description || "创作者暂未补充描述。";
       const creatorName = item.creator.nickname || item.creator.username || "Creator";
-      const sourceText = `${titleText} ${descriptionText}`;
+      const sourceText = `${titleText} ${descriptionText}`.toLowerCase();
+
+      const tags = [
+        /anime|二次元|插画|角色/.test(sourceText) ? "二次元" : "",
+        /love|恋爱|rose|甜/.test(sourceText) ? "恋爱" : "",
+        item.card.mimeType.startsWith("image/") ? "插画" : "动态",
+        /sunset|sky|landscape|moon|mountain|风景/.test(sourceText) ? "风景" : "",
+        /watercolor|水彩|wash/.test(sourceText) ? "水彩" : "",
+      ].filter(Boolean);
 
       return {
         id: item.card.id,
         title: titleText,
         description: descriptionText,
         creatorName,
-        creatorInitials: getInitials(creatorName),
         metric: formatMetric(item.stats.downloadCount),
         href: `/cards/${encodeURIComponent(item.card.id)}`,
         imageUrl: item.card.previewUrl,
-        mimeType: item.card.mimeType,
-        fileLabel: item.card.originalFileName || "素材",
         searchableText: [
           titleText,
           descriptionText,
@@ -260,252 +200,226 @@ export default function LandingPage() {
           .filter(Boolean)
           .join(" ")
           .toLowerCase(),
-        tags: [
-          item.card.mimeType.startsWith("image/") ? "插画" : "动态",
-          /花|rose|floral|flower|petal/i.test(sourceText) ? "水彩" : "",
-          /夜空|星空|山|海|sky|sunset|landscape|moon/i.test(sourceText) ? "风景" : "",
-          /爱|恋|love|sweet|wedding|romance/i.test(sourceText) ? "恋爱" : "",
-          /anime|二次元|少女|插画|梦幻/i.test(sourceText) ? "二次元" : "",
-        ].filter(Boolean),
+        tags,
+        bgClass: ["bg-[#fcf1a7]", "bg-[#facdf4]", "bg-[#aee7d9]", "bg-[#cdb4f3]"][item.card.id.length % 4],
       };
     });
   }, [cards]);
 
-  const sourceCards = useMemo(
-    () =>
-      liveCards.length > 0
-        ? liveCards
-        : demoCards.map((card) => ({
-            ...card,
-            href: `/cards/${encodeURIComponent(card.id)}`,
-          })),
-    [liveCards],
-  );
+  const sourceCards = useMemo(() => (liveCards.length > 0 ? liveCards : demoCards), [liveCards]);
 
   const filteredCards = useMemo(() => {
     const keyword = deferredQuery.trim().toLowerCase();
-
     return sourceCards.filter((card) => {
       if (!matchesChip(card, activeChip)) {
         return false;
       }
-
       if (!keyword) {
         return true;
       }
-
       return card.searchableText.includes(keyword);
     });
   }, [activeChip, deferredQuery, sourceCards]);
 
-  const quickStats = useMemo(
-    () => [
-      { label: "当前展示", value: `${filteredCards.length}` },
-      { label: "数据来源", value: liveCards.length > 0 ? "实时公开卡片" : "灵感示例库" },
-      { label: "筛选标签", value: activeChip },
-    ],
-    [activeChip, filteredCards.length, liveCards.length],
-  );
-
-  const footerLinks = [
-    { label: "关于我们", href: "/discover" },
-    { label: "隐私政策", href: "/login" },
-    { label: "服务条款", href: "/creator" },
-    { label: "帮助中心", href: "/discover" },
-  ];
+  const featuredCards = filteredCards.slice(0, 6);
 
   const footer = (
-    <footer className="relative z-10 border-t border-white/60 bg-[rgba(240,248,252,0.72)] px-6 py-10 backdrop-blur-md">
-      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 text-center md:flex-row md:text-left">
-        <div className="type-h3 text-[var(--primary)]/72">CardShare</div>
-
-        <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-[var(--primary)]/55">
-          {footerLinks.map((item) => (
-            <Link key={item.label} href={item.href} className="transition hover:text-[var(--brand-strong)]">
-              {item.label}
-            </Link>
-          ))}
-        </div>
-
-        <div className="text-sm tracking-[0.12em] text-[var(--primary)]/55">© 2026 CardShare. 平台公开卡片首页。</div>
+    <footer className="relative z-10 px-6 pb-8 pt-8">
+      <div className="mx-auto max-w-[1500px] rounded-3xl border-[4px] border-[var(--outline)] bg-white px-5 py-4 text-center text-sm font-bold text-[var(--foreground)] sm:text-left">
+        © 2026 Dreamy Card Gallery
       </div>
     </footer>
   );
 
   return (
     <AppShell currentPath="/" footerSlot={footer}>
-      <section className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6">
-        <div className="route-shell overflow-hidden rounded-[38px] p-5 sm:p-7 lg:p-9">
-          <div className="grid gap-8 lg:grid-cols-[1.16fr_0.84fr] lg:items-end">
-            <div>
-              <p className="type-overline text-[var(--primary)]/68">Creative Discovery</p>
-              <h1 className="type-hero mt-3 max-w-2xl text-[var(--foreground)]">
-                探索公开卡片
-                <span className="text-glow block text-[var(--primary)]">收藏灵感并连接同频创作者</span>
-              </h1>
-              <p className="type-body mt-4 max-w-2xl text-[var(--on-surface-variant)]/85">
-                卡片内容会从平台实时同步。你可以按标签筛选、按关键词搜索，也可以直接进入创作中心发布自己的作品。
-              </p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Link
-                  href="/creator"
-                  className="glass-button btn-primary rounded-full px-6 py-3 text-sm font-semibold"
-                >
-                  进入创作中心
-                </Link>
-                <Link href="/discover" className="chip-pill rounded-full px-6 py-3 text-sm font-semibold text-[var(--foreground)]/78">
-                  浏览全部公开卡片
-                </Link>
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-              {quickStats.map((item) => (
-                <div key={item.label} className="metric-pill rounded-[22px] px-4 py-4 text-center sm:text-left lg:text-center">
-                  <p className="type-meta uppercase text-[var(--foreground)]/48">{item.label}</p>
-                  <p className="type-h3 mt-2 text-[var(--foreground)]">{item.value}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-7 lace-divider" />
-
-          <div className="mx-auto mt-7 max-w-4xl">
-            <div className="input-shell relative rounded-full">
-              <div className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-[var(--outline)]">
-                <SearchIcon />
-              </div>
+      <section className="relative z-10 mx-auto mt-4 w-full max-w-[1500px] px-4 pb-8 md:px-8">
+        <main className="mt-6 w-full">
+          <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-8 xl:mx-0">
+            <div className="group relative">
               <input
-                type="search"
+                type="text"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="搜索卡片、作者或标签..."
-                className="w-full rounded-full bg-transparent py-4 pl-16 pr-6 text-[var(--type-body)] text-[var(--foreground)] outline-none placeholder:text-[var(--on-surface-variant)]/82 sm:py-5"
+                placeholder="Search..."
+                className="w-full rounded-full border-[4px] border-[var(--outline)] bg-white px-6 py-4 pr-20 text-xl font-bold text-[var(--foreground)] placeholder-gray-400 transition-all focus:outline-none group-hover:bg-gray-50"
               />
+              <button className="absolute bottom-2 right-2 top-2 flex h-[3.25rem] w-[3.25rem] items-center justify-center rounded-full border-[4px] border-[var(--outline)] bg-[#cdb4f3] transition-all hover:opacity-90">
+                <SearchIcon />
+              </button>
             </div>
 
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <div className="no-scrollbar flex items-end justify-between gap-4 overflow-x-auto px-2 py-2 lg:gap-6">
               {filterChips.map((chip) => {
-                const isActive = chip === activeChip;
-
+                const active = chip === activeChip;
                 return (
                   <button
                     key={chip}
                     type="button"
-                      onClick={() => setActiveChip(chip)}
-                      className={`rounded-full px-5 py-2.5 text-sm font-medium transition sm:text-base ${
-                        isActive
-                          ? "btn-primary"
-                          : "chip-pill text-[var(--foreground)]/74 hover:text-[var(--brand-strong)]"
-                      }`}
+                    onClick={() => setActiveChip(chip)}
+                    className="group shrink-0 cursor-pointer"
                   >
-                    {chip}
+                    <span className="flex flex-col items-center gap-3">
+                      <span
+                        className={`flex h-14 w-14 items-center justify-center rounded-[1.25rem] border-[4px] border-[var(--outline)] xl:h-16 xl:w-16 ${active ? "bg-[#cdb4f3]" : chipVisuals[chip].className} transition-all group-hover:opacity-90`}
+                      >
+                        <ChipIcon chip={chip} />
+                      </span>
+                      <span className="text-sm font-extrabold text-[var(--foreground)] xl:text-base">{chip}</span>
+                    </span>
                   </button>
                 );
               })}
             </div>
 
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-3 text-sm text-[var(--on-surface-variant)]/85">
-              <span className="metric-pill rounded-full px-4 py-1.5">
-                {loading ? "正在同步公开卡片" : liveCards.length > 0 ? "平台公开作品" : "灵感示例"}
-              </span>
-              <span className="metric-pill rounded-full px-4 py-1.5">{filteredCards.length} 张卡片</span>
-            </div>
-          </div>
-        </div>
+            {error ? (
+              <div className="rounded-2xl border-[4px] border-[#c26b5b] bg-[#fff0eb] px-5 py-4 text-sm font-bold text-[#8e2b1b]">{error}</div>
+            ) : null}
 
-        {error ? (
-          <div className="mx-auto mt-6 max-w-3xl rounded-[22px] border border-[#f3c8ad] bg-[#fff4ec] px-5 py-4 text-sm text-[#9a3412]">
-            {error}
-          </div>
-        ) : null}
-
-        {filteredCards.length === 0 ? (
-          <div className="mx-auto mt-12 max-w-3xl rounded-[34px] border border-white/70 bg-white/72 px-8 py-14 text-center shadow-[0_24px_60px_-38px_rgba(120,85,94,0.28)]">
-            <p className="type-h2 text-[var(--foreground)]">没有找到匹配的卡片</p>
-            <p className="type-body mt-4 text-[var(--on-surface-variant)]/80">
-              可以试试更宽泛的关键词，或者切回“全部”继续浏览平台公开内容。
-            </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setQuery("");
-                  setActiveChip("全部");
-                }}
-                className="rounded-full bg-[var(--primary)] px-6 py-3 text-sm font-medium text-white"
-              >
-                清空筛选
-              </button>
-              <Link
-                href="/creator"
-                className="rounded-full border border-[var(--outline-variant)] bg-white px-6 py-3 text-sm font-medium text-[var(--foreground)]/78 transition hover:border-[var(--brand)] hover:text-[var(--brand-strong)]"
-              >
-                去创作中心
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-            {filteredCards.map((card, index) => {
-              const isImage = card.mimeType.startsWith("image/");
-
-              return (
-                <Link
-                  key={card.id}
-                  href={card.href}
-                  className="dream-card card-hover-lift fade-slide-in group rounded-[34px] p-3"
-                  style={{ animationDelay: `${index * 70}ms` }}
-                >
-                  <div className={`overflow-hidden rounded-[24px] bg-[var(--surface-container)] ${topVisualClass(index)}`}>
-                    {isImage ? (
-                      <img
-                        src={card.imageUrl}
-                        alt={card.title}
-                        className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
-                      />
-                    ) : (
-                      <div className="flex h-full min-h-[220px] items-center justify-center bg-[linear-gradient(160deg,#e8f4fa,#dff0f8)] px-6 text-center text-sm text-[var(--on-surface-variant)]">
-                        {card.fileLabel}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex min-h-[170px] flex-col px-3 pb-3 pt-4">
-                    <div className="flex-1">
-                      <h2 className="type-h3 text-[var(--foreground)]">{card.title}</h2>
-                      <p className="type-body-sm mt-2 line-clamp-2 text-[var(--on-surface-variant)]/78">{card.description}</p>
-                    </div>
-
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {card.tags.slice(0, 2).map((tag) => (
-                        <span key={`${card.id}-${tag}`} className="rounded-full bg-white/78 px-2.5 py-1 text-xs text-[var(--foreground)]/62">
-                          #{tag}
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              {featuredCards.length > 0 ? (
+                featuredCards.map((card, index) => (
+                  <Link
+                    key={card.id}
+                    href={card.href}
+                    className={`${card.bgClass} dream-card card-hover-lift fade-slide-in flex flex-col p-4`}
+                    style={{ animationDelay: `${index * 60}ms` }}
+                  >
+                    <div className="relative mb-3">
+                      <div className="absolute left-2 top-2 z-10">
+                        <span className="rounded-full border-[3px] border-[var(--outline)] bg-white px-3 py-0.5 text-xs font-black text-[var(--foreground)]">
+                          #{card.tags[0] || "精选"}
                         </span>
-                      ))}
-                    </div>
-
-                    <div className="mt-4 flex items-center justify-between gap-3">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--primary-container)] text-xs font-semibold text-[var(--on-primary-container)]">
-                          {card.creatorInitials}
-                        </div>
-                        <span className="truncate text-sm text-[var(--on-surface-variant)]">{card.creatorName}</span>
                       </div>
-
-                      <div className="flex items-center gap-1.5 text-[var(--brand)]">
-                        <HeartIcon />
-                        <span className="text-sm">{card.metric}</span>
+                      <div className="aspect-[4/3] overflow-hidden rounded-2xl border-[3px] border-[var(--outline)] bg-white">
+                        <img src={card.imageUrl} className="h-full w-full object-cover object-center" alt={card.title} />
                       </div>
                     </div>
-                  </div>
-                </Link>
-              );
-            })}
+
+                    <h4 className="px-1 text-2xl font-black text-[var(--foreground)]">{card.title}</h4>
+                    <p className="mt-2 line-clamp-2 text-sm font-bold text-[var(--on-surface-variant)]">{card.description}</p>
+                    <div className="mt-3 flex items-center justify-between px-1 text-xs font-bold text-[var(--foreground)]/68">
+                      <span>{card.creatorName}</span>
+                      <span>{card.metric}</span>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <div className="col-span-full rounded-3xl border-[4px] border-[var(--outline)] bg-white px-6 py-12 text-center text-[var(--foreground)]">
+                  <p className="text-2xl font-black">没有找到匹配内容</p>
+                  <p className="mt-3 font-bold">当前筛选无结果，请尝试切换分类或关键词。</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuery("");
+                      setActiveChip("全部");
+                    }}
+                    className="btn-primary mt-5 rounded-full px-6 py-2.5 font-black"
+                  >
+                    重置筛选
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-2 text-sm">
+              <span className="metric-pill rounded-full px-3 py-1.5 font-black">{loading ? "加载中..." : `共 ${sourceCards.length} 张`}</span>
+              <span className="metric-pill rounded-full px-3 py-1.5 font-black">筛选后 {filteredCards.length} 张</span>
+            </div>
           </div>
-        )}
+        </main>
       </section>
     </AppShell>
+  );
+}
+
+function ChipIcon({ chip }: { chip: (typeof filterChips)[number] }) {
+  switch (chip) {
+    case "全部":
+      return <GridIcon />;
+    case "二次元":
+      return <SparkleIcon />;
+    case "恋爱":
+      return <HeartIcon />;
+    case "插画":
+      return <PencilIcon />;
+    case "动态":
+      return <PlayIcon />;
+    case "风景":
+      return <MountainIcon />;
+    case "水彩":
+      return <BrushIcon />;
+    default:
+      return <GridIcon />;
+  }
+}
+
+function SearchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6 text-[var(--foreground)]" fill="none" stroke="currentColor" strokeWidth="4">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.8-3.8" />
+    </svg>
+  );
+}
+
+function GridIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-7 w-7 text-[var(--foreground)]" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <rect x="4" y="4" width="7" height="7" rx="1.5" />
+      <rect x="13" y="4" width="7" height="7" rx="1.5" />
+      <rect x="4" y="13" width="7" height="7" rx="1.5" />
+      <rect x="13" y="13" width="7" height="7" rx="1.5" />
+    </svg>
+  );
+}
+
+function SparkleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-7 w-7 text-[var(--foreground)]" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <path d="M12 2 14 8.8 21 12l-7 3.2L12 22l-2-6.8L3 12l7-3.2L12 2Z" />
+    </svg>
+  );
+}
+
+function HeartIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-7 w-7 text-[var(--foreground)] fill-[#ff9c9c]" stroke="currentColor" strokeWidth="1.5">
+      <path d="M12 20.2 4.94 13.5a4.65 4.65 0 0 1 6.58-6.58L12 7.4l.48-.48a4.65 4.65 0 0 1 6.58 6.58L12 20.2Z" />
+    </svg>
+  );
+}
+
+function PencilIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-7 w-7 text-[var(--foreground)]" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <path d="m14.8 3.6 5.6 5.6-9.9 9.9-6 .4.4-6 9.9-9.9Z" />
+    </svg>
+  );
+}
+
+function PlayIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-7 w-7 text-[var(--foreground)]" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <rect x="4" y="5" width="16" height="14" rx="3" />
+      <path d="m10 8.7 6 3.3-6 3.3V8.7Z" />
+    </svg>
+  );
+}
+
+function MountainIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-7 w-7 text-[var(--foreground)]" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <path d="M3.5 18h17L15 10.5l-3.4 4.1-2.5-2.8L3.5 18Z" />
+      <circle cx="18" cy="7" r="1.6" />
+    </svg>
+  );
+}
+
+function BrushIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-7 w-7 text-[var(--foreground)]" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <path d="m18.6 4.1-9.9 9.9a3.2 3.2 0 0 1-4.5 0L3 15.2a3.2 3.2 0 0 0 0 4.5l1.2 1.2a3.2 3.2 0 0 0 4.5 0l9.9-9.9" />
+    </svg>
   );
 }

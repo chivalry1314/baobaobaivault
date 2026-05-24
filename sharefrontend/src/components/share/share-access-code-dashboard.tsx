@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AppShell } from "@/components/share/app-shell";
 import { AuthRedirect } from "@/components/share/auth-redirect";
 import { ShareApiError, getShareErrorMessage, shareApi } from "@/lib/share-api";
-import type { AccessCodeDashboardItem, AccessCodeDashboardResponse, PlatformCard } from "@/lib/shared";
+import type { AccessCodeDashboardItem, AccessCodeDashboardResponse } from "@/lib/shared";
 
 type FeedbackState =
   | {
@@ -22,10 +21,30 @@ function formatDate(value: string) {
   if (Number.isNaN(date.getTime())) {
     return value;
   }
+
   return date.toLocaleDateString("zh-CN", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
+  });
+}
+
+function formatDateTime(value: string | null) {
+  if (!value) {
+    return "长期有效";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -49,15 +68,18 @@ function isActiveItem(item: AccessCodeDashboardItem) {
 
 function getInactiveReason(item: AccessCodeDashboardItem) {
   if (!item.isPubliclyVisible) {
-    return "当前卡片已下架，分享链接暂不可访问。";
+    return "卡片当前为私密状态，外部用户无法通过提取码访问。";
   }
+
   if (item.config.isExpired) {
-    return "当前提取码已过期，重新激活后可继续分享。";
+    return "提取码已过期，请重新启用后再分享。";
   }
+
   if (isExhausted(item)) {
-    return "当前提取码使用次数已达上限，重新激活后会重置次数。";
+    return "提取码已达到使用次数上限，请调整后再分享。";
   }
-  return "当前提取码暂不可用。";
+
+  return "提取码当前处于停用状态，可重新启用后继续分享。";
 }
 
 async function copyText(value: string) {
@@ -93,7 +115,6 @@ export function ShareAccessCodeDashboard() {
   const [loadError, setLoadError] = useState("");
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [searchValue, setSearchValue] = useState("");
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState("");
 
   async function loadDashboard() {
@@ -111,7 +132,7 @@ export function ShareAccessCodeDashboard() {
         setLoadError("");
       } else {
         setAuthenticated(true);
-        setLoadError(getShareErrorMessage(error, "提取码管理加载失败，请稍后重试。"));
+        setLoadError(getShareErrorMessage(error, "提取码数据加载失败，请稍后重试。"));
       }
     } finally {
       setLoading(false);
@@ -122,44 +143,10 @@ export function ShareAccessCodeDashboard() {
     void loadDashboard();
   }, []);
 
-  const headerSlot = useMemo(
-    () => (
-      <>
-        <label className="hidden min-w-[320px] items-center gap-3 rounded-full border border-[rgba(226,204,210,0.9)] bg-white/92 px-4 py-2.5 shadow-[0_16px_36px_-30px_rgba(120,85,94,0.35)] md:flex">
-          <SearchIcon className="h-5 w-5 text-[var(--foreground)]/38" />
-          <input
-            type="text"
-            value={searchValue}
-            onChange={(event) => setSearchValue(event.target.value)}
-            placeholder="搜索卡片或提取码..."
-            className="w-full bg-transparent text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--foreground)]/35"
-          />
-        </label>
-
-        <button
-          type="button"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[rgba(231,212,216,0.85)] bg-white/88 text-[var(--brand-strong)] shadow-[0_16px_36px_-28px_rgba(120,85,94,0.28)] transition hover:-translate-y-0.5"
-        >
-          <BellIcon className="h-5 w-5" />
-        </button>
-        <button
-          type="button"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[rgba(231,212,216,0.85)] bg-white/88 text-[#e85b8c] shadow-[0_16px_36px_-28px_rgba(120,85,94,0.28)] transition hover:-translate-y-0.5"
-        >
-          <HeartIcon className="h-5 w-5" />
-        </button>
-        <span className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[rgba(231,212,216,0.85)] bg-white/88 text-[var(--brand)] shadow-[0_16px_36px_-28px_rgba(120,85,94,0.28)]">
-          <SparkleIcon className="h-5 w-5" />
-        </span>
-      </>
-    ),
-    [searchValue],
-  );
-
   const footer = useMemo(
     () => (
-      <footer className="relative z-10 px-6 pb-10 pt-16 text-center text-sm tracking-[0.08em] text-[var(--brand)]/55">
-        © 2024 CardShare · 为每一份心意赋予分享价值
+      <footer className="relative z-10 px-6 pb-10 pt-12 text-center text-sm tracking-[0.08em] text-[var(--brand)]/55">
+        © 2026 CardShare
       </footer>
     ),
     [],
@@ -174,7 +161,6 @@ export function ShareAccessCodeDashboard() {
       if (activeDiff !== 0) {
         return activeDiff;
       }
-
       return new Date(right.card.updatedAt).getTime() - new Date(left.card.updatedAt).getTime();
     });
 
@@ -200,7 +186,7 @@ export function ShareAccessCodeDashboard() {
 
     try {
       await copyText(buildCardShareLink(item.card.id, item.config.code));
-      setFeedback({ type: "success", message: `已复制《${item.card.title}》的提取链接。` });
+      setFeedback({ type: "success", message: `已复制「${item.card.title}」提取码链接。` });
     } catch (error) {
       setFeedback({ type: "error", message: getShareErrorMessage(error, "复制链接失败，请稍后重试。") });
     } finally {
@@ -209,7 +195,7 @@ export function ShareAccessCodeDashboard() {
   }
 
   async function handleHide(item: AccessCodeDashboardItem) {
-    if (!window.confirm(`确认下架《${item.card.title}》吗？下架后公开链接将暂时不可访问。`)) {
+    if (!window.confirm(`确认停用「${item.card.title}」的提取码吗？`)) {
       return;
     }
 
@@ -225,9 +211,9 @@ export function ShareAccessCodeDashboard() {
         status: item.card.status,
       });
       await loadDashboard();
-      setFeedback({ type: "success", message: `《${item.card.title}》已下架。` });
+      setFeedback({ type: "success", message: `已停用「${item.card.title}」的提取码。` });
     } catch (error) {
-      setFeedback({ type: "error", message: getShareErrorMessage(error, "下架失败，请稍后重试。") });
+      setFeedback({ type: "error", message: getShareErrorMessage(error, "停用失败，请稍后重试。") });
     } finally {
       setPendingAction("");
     }
@@ -258,16 +244,16 @@ export function ShareAccessCodeDashboard() {
       }
 
       await loadDashboard();
-      setFeedback({ type: "success", message: `《${item.card.title}》已重新激活。` });
+      setFeedback({ type: "success", message: `已重新启用「${item.card.title}」的提取码。` });
     } catch (error) {
-      setFeedback({ type: "error", message: getShareErrorMessage(error, "重新激活失败，请稍后重试。") });
+      setFeedback({ type: "error", message: getShareErrorMessage(error, "重新启用失败，请稍后重试。") });
     } finally {
       setPendingAction("");
     }
   }
 
   async function handleDelete(item: AccessCodeDashboardItem) {
-    if (!window.confirm(`确认删除《${item.card.title}》的提取码记录吗？删除后需要重新生成提取码。`)) {
+    if (!window.confirm(`确认删除「${item.card.title}」的提取码吗？删除后不可恢复。`)) {
       return;
     }
 
@@ -278,9 +264,9 @@ export function ShareAccessCodeDashboard() {
     try {
       await shareApi.deleteCardAccessCode(item.card.id);
       await loadDashboard();
-      setFeedback({ type: "success", message: `《${item.card.title}》的提取码记录已删除。` });
+      setFeedback({ type: "success", message: `已删除「${item.card.title}」的提取码。` });
     } catch (error) {
-      setFeedback({ type: "error", message: getShareErrorMessage(error, "删除提取码失败，请稍后重试。") });
+      setFeedback({ type: "error", message: getShareErrorMessage(error, "删除失败，请稍后重试。") });
     } finally {
       setPendingAction("");
     }
@@ -291,21 +277,18 @@ export function ShareAccessCodeDashboard() {
     router.push("/creator/access-codes/new");
   }
 
-  function handlePickCard(card: PlatformCard) {
-    setPickerOpen(false);
-    router.push(`/creator/cards/${encodeURIComponent(card.id)}/access-code`);
+  function handleCreateCard() {
+    setFeedback(null);
+    router.push("/creator/new");
   }
 
   if (loading && !dashboard && authenticated) {
     return (
-      <AppShell currentPath="/creator" headerSlot={headerSlot} footerSlot={footer}>
-        <div className="px-4 py-10 sm:px-6">
-          <div className="mx-auto max-w-[1480px] space-y-6">
-            <div className="h-32 animate-pulse rounded-[40px] border border-white/80 bg-white/70" />
-            <div className="grid gap-8 xl:grid-cols-2">
-              <div className="h-[320px] animate-pulse rounded-[36px] border border-white/80 bg-white/70" />
-              <div className="h-[320px] animate-pulse rounded-[36px] border border-white/80 bg-white/70" />
-            </div>
+      <AppShell currentPath="/creator" footerSlot={footer}>
+        <div className="px-5 py-10 sm:px-8">
+          <div className="mx-auto max-w-[1460px] space-y-6">
+            <div className="h-28 animate-pulse rounded-[36px] border border-white/80 bg-white/70" />
+            <div className="h-[520px] animate-pulse rounded-[36px] border border-white/80 bg-white/70" />
           </div>
         </div>
       </AppShell>
@@ -317,179 +300,166 @@ export function ShareAccessCodeDashboard() {
   }
 
   return (
-    <AppShell currentPath="/creator" headerSlot={headerSlot} footerSlot={footer}>
-      <div className="relative overflow-hidden bg-[linear-gradient(180deg,#f4fbff_0%,#f8fdff_45%,#f2faff_100%)]">
+    <AppShell currentPath="/creator" footerSlot={footer}>
+      <div className="relative overflow-hidden">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute left-[-10%] top-[6%] h-[26rem] w-[26rem] rounded-full bg-[rgba(176,232,249,0.36)] blur-[120px]" />
-          <div className="absolute right-[-8%] top-[18%] h-[28rem] w-[28rem] rounded-full bg-[rgba(203,234,249,0.3)] blur-[120px]" />
-          <div className="absolute bottom-[-14%] left-[12%] h-[28rem] w-[28rem] rounded-full bg-[rgba(248,219,230,0.24)] blur-[120px]" />
-          <div className="absolute bottom-[6%] right-[4%] h-16 w-16 text-[rgba(100,166,194,0.45)]">
-            <SparkleIcon />
-          </div>
+          <div className="absolute left-[-9%] top-[8%] h-[22rem] w-[22rem] rounded-full bg-[rgba(207,243,250,0.5)] blur-[96px]" />
+          <div className="absolute right-[-8%] bottom-[10%] h-[22rem] w-[22rem] rounded-full bg-[rgba(249,205,205,0.36)] blur-[96px]" />
         </div>
 
-        <section className="relative z-10 mx-auto max-w-[1480px] px-4 pb-16 pt-10 sm:px-6">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div>
+        <section className="relative z-10 mx-auto mt-8 flex w-full max-w-[1460px] flex-col px-5 pb-12 sm:px-8">
+          <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <div className="flex flex-col gap-4">
               <Link
                 href="/creator"
-                className="inline-flex items-center gap-2 rounded-full border border-[rgba(226,204,210,0.9)] bg-white/88 px-4 py-2 text-sm text-[var(--foreground)]/72 shadow-[0_16px_36px_-30px_rgba(120,85,94,0.22)] transition hover:-translate-y-0.5 hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                className="inline-flex w-fit items-center gap-2 rounded-full border-[3px] border-[var(--line-strong)] bg-white px-6 py-2.5 text-[var(--foreground)] shadow-[2px_2px_0px_var(--line-strong)] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none"
               >
-                <BackIcon className="h-4.5 w-4.5" />
-                <span>返回</span>
+                <BackIcon className="h-5 w-5" />
+                <span className="font-black">返回</span>
+                <SparkleIcon className="h-5 w-5 text-[var(--brand)]" />
               </Link>
-              <div className="inline-flex items-center gap-3 text-[rgba(236,171,198,0.9)]">
-                <SparkleIcon className="h-7 w-7" />
+
+              <div>
+                <h1 className="text-4xl font-black tracking-tight text-[var(--foreground)] md:text-5xl">提取码管理</h1>
+                <p className="mt-3 text-lg font-bold text-[var(--foreground)]/70">统一查看、复制、停用与恢复每张卡片的提取码。</p>
               </div>
-              <h1 className="mt-3 text-5xl font-semibold tracking-tight text-[var(--foreground)] sm:text-[3.75rem]">提取码管理</h1>
-              <p className="mt-4 text-xl text-[var(--foreground)]/68">管理和分享您的梦幻卡片合集</p>
             </div>
 
             <button
               type="button"
               onClick={handleCreateNewAccessCode}
-              className="btn-primary inline-flex items-center justify-center gap-3 self-start rounded-full px-8 py-5 text-xl font-semibold"
+              className="inline-flex items-center gap-2 rounded-full border-[4px] border-[var(--line-strong)] bg-[var(--button-primary)] px-6 py-3.5 text-lg font-black text-[var(--foreground)] shadow-[4px_4px_0px_var(--line-strong)] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_var(--line-strong)]"
             >
               <PlusIcon className="h-6 w-6" />
-              <span>生成新提取码</span>
+              新建提取码
             </button>
           </div>
 
           {feedback ? (
             <div
-              className={`mt-8 rounded-[26px] border px-5 py-4 text-sm shadow-[0_20px_40px_-34px_rgba(120,85,94,0.28)] ${
-                feedback.type === "success"
-                  ? "border-[#b8dec8] bg-[#f2fff5] text-[#166534]"
-                  : "border-[#f3c8ad] bg-[#fff6ef] text-[#9a3412]"
+              className={`mb-6 rounded-[20px] border px-5 py-4 text-sm font-bold ${
+                feedback.type === "success" ? "border-[#b8dec8] bg-[#f2fff5] text-[#166534]" : "border-[#f3c8ad] bg-[#fff6ef] text-[#9a3412]"
               }`}
             >
               {feedback.message}
             </div>
           ) : null}
 
-          {loadError ? (
-            <div className="mt-8 flex flex-col gap-3 rounded-[28px] border border-[#f3c8ad] bg-[#fff6ef] px-5 py-4 text-sm text-[#9a3412] shadow-[0_20px_40px_-34px_rgba(154,52,18,0.35)] sm:flex-row sm:items-center sm:justify-between">
-              <span>{loadError}</span>
-              <button
-                type="button"
-                onClick={() => void loadDashboard()}
-                className="w-fit rounded-full border border-[#f1b18a] px-4 py-2 text-sm transition hover:bg-white/80"
-              >
-                重新加载
-              </button>
+          <div className="relative overflow-hidden rounded-3xl border-[4px] border-[var(--line-strong)] bg-white p-6 shadow-[6px_6px_0px_var(--line-strong)] md:p-8">
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+              <div className="absolute left-[8%] top-[12%] h-40 w-40 rounded-full bg-[#cff3fa] opacity-45 blur-3xl" />
+              <div className="absolute bottom-[10%] right-[9%] h-40 w-40 rounded-full bg-[#f9cdcd] opacity-35 blur-3xl" />
             </div>
-          ) : null}
 
-          {!loadError && totalItems === 0 ? (
-            <section className="mt-10 rounded-[36px] border border-white/80 bg-white/84 px-6 py-14 text-center shadow-[0_30px_70px_-46px_rgba(120,85,94,0.28)] sm:px-10">
-              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[rgba(225,243,251,0.9)] text-[var(--primary)]">
-                <KeyIcon className="h-10 w-10" />
-              </div>
-              <h2 className="mt-6 text-3xl font-semibold text-[var(--foreground)]">还没有提取码记录</h2>
-              <p className="mt-4 text-lg text-[var(--foreground)]/62">
-                {availableCards.length > 0 ? "先为一张卡片生成提取码，即可在这里统一管理分享状态。" : "当前还没有可生成提取码的卡片，请先去创作中心发布卡片。"}
-              </p>
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-                {availableCards.length > 0 ? (
+            <div className="relative z-10">
+              {!loadError && totalItems > 0 ? (
+                <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <label className="relative block w-full md:max-w-[520px]">
+                    <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--foreground)]/40" />
+                    <input
+                      type="text"
+                      value={searchValue}
+                      onChange={(event) => setSearchValue(event.target.value)}
+                      placeholder="搜索标题、文件名或提取码..."
+                      className="dream-input w-full py-3 pl-12 pr-4 font-bold"
+                    />
+                  </label>
+
+                  <div className="rounded-full border-[3px] border-[var(--line-strong)] bg-[#fcf1a7] px-4 py-2 text-sm font-black text-[var(--foreground)]">
+                    共 {totalItems} 条，当前显示 {items.length} 条
+                  </div>
+                </div>
+              ) : null}
+
+              {loadError ? (
+                <div className="mb-2 flex flex-col gap-3 rounded-[22px] border border-[#f3c8ad] bg-[#fff6ef] px-5 py-4 text-sm text-[#9a3412] sm:flex-row sm:items-center sm:justify-between">
+                  <span>{loadError}</span>
                   <button
                     type="button"
-                    onClick={handleCreateNewAccessCode}
-                    className="btn-primary rounded-full px-6 py-3 text-base font-semibold"
+                    onClick={() => void loadDashboard()}
+                    className="rounded-full border border-[#f1b18a] px-4 py-2 text-sm font-bold transition hover:bg-white/80"
                   >
-                    立即生成提取码
+                    重新加载
                   </button>
-                ) : null}
-                <Link
-                  href="/creator"
-                  className="rounded-full border border-[rgba(226,204,210,0.9)] bg-white px-6 py-3 text-base text-[var(--foreground)]/72 transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
-                >
-                  返回我的卡片
-                </Link>
-              </div>
-            </section>
-          ) : null}
+                </div>
+              ) : null}
 
-          {!loadError && totalItems > 0 && items.length === 0 ? (
-            <section className="mt-10 rounded-[32px] border border-white/80 bg-white/84 px-6 py-12 text-center shadow-[0_30px_70px_-46px_rgba(120,85,94,0.22)]">
-              <h2 className="text-2xl font-semibold text-[var(--foreground)]">没有匹配的提取码记录</h2>
-              <p className="mt-3 text-base text-[var(--foreground)]/58">换个关键词试试，或者清空搜索后查看全部提取码。</p>
-            </section>
-          ) : null}
-
-          {items.length > 0 ? (
-            <div className="mt-10 grid gap-8 xl:grid-cols-2">
-              {items.map((item) => (
-                <AccessCodeCard
-                  key={item.card.id}
-                  item={item}
-                  pendingAction={pendingAction}
-                  onEdit={() => router.push(`/creator/cards/${encodeURIComponent(item.card.id)}/access-code`)}
-                  onCopy={() => void handleCopyLink(item)}
-                  onHide={() => void handleHide(item)}
-                  onReactivate={() => void handleReactivate(item)}
-                  onDelete={() => void handleDelete(item)}
+              {!loadError && totalItems === 0 ? (
+                <EmptyState
+                  availableCards={availableCards.length}
+                  onCreateAccessCode={handleCreateNewAccessCode}
+                  onCreateCard={handleCreateCard}
                 />
-              ))}
-            </div>
-          ) : null}
-        </section>
-      </div>
+              ) : null}
 
-      {pickerOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8">
-          <button
-            type="button"
-            aria-label="关闭"
-            className="absolute inset-0 bg-[rgba(64,40,49,0.32)] backdrop-blur-[2px]"
-            onClick={() => setPickerOpen(false)}
-          />
-          <div className="relative z-10 w-full max-w-2xl rounded-[34px] border border-white/80 bg-white/96 p-6 shadow-[0_32px_80px_-38px_rgba(120,85,94,0.48)] sm:p-8">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-3xl font-semibold text-[var(--foreground)]">选择要生成提取码的卡片</h2>
-                <p className="mt-2 text-sm text-[var(--foreground)]/58">从未设置提取码的卡片中选择一张，进入配置页继续设置。</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPickerOpen(false)}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[rgba(231,212,216,0.85)] bg-white text-[var(--foreground)]/58 transition hover:text-[var(--primary)]"
-              >
-                <CloseIcon className="h-5 w-5" />
-              </button>
-            </div>
+              {!loadError && totalItems > 0 && items.length === 0 ? (
+                <div className="rounded-[24px] border-[3px] border-[var(--line-strong)] bg-[#f8fcff] px-6 py-12 text-center">
+                  <h2 className="text-2xl font-black text-[var(--foreground)]">没有匹配到提取码</h2>
+                  <p className="mt-3 text-sm font-bold text-[var(--foreground)]/62">试试更短的关键词，或清空搜索后查看全部提取码。</p>
+                </div>
+              ) : null}
 
-            <div className="mt-6 max-h-[60vh] space-y-3 overflow-y-auto pr-1">
-              {availableCards.map((card) => (
-                <button
-                  key={card.id}
-                  type="button"
-                  onClick={() => handlePickCard(card)}
-                  className="flex w-full items-center gap-4 rounded-[26px] border border-[rgba(237,221,225,0.92)] bg-[rgba(255,248,249,0.94)] px-4 py-4 text-left transition hover:-translate-y-0.5 hover:border-[rgba(231,167,188,0.9)] hover:bg-white"
-                >
-                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-[20px] bg-[linear-gradient(135deg,#2a1a21_0%,#72545c_100%)]">
-                    {card.mimeType.startsWith("image/") ? (
-                      <img src={card.previewUrl} alt={card.title} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full items-center justify-center px-3 text-center text-xs text-white/92">{card.title}</div>
-                    )}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-xl font-semibold text-[var(--foreground)]">{card.title}</div>
-                    <div className="mt-2 text-sm text-[var(--foreground)]/54">创建于 {formatDate(card.createdAt)}</div>
-                    <div className="mt-2 inline-flex rounded-full bg-[rgba(255,229,236,0.92)] px-3 py-1 text-xs text-[var(--brand-strong)]">
-                      {card.visibility === "public" ? "公开卡片" : "私密卡片"}
-                    </div>
-                  </div>
-
-                  <span className="rounded-full border border-[rgba(231,167,188,0.9)] px-4 py-2 text-sm text-[var(--brand-strong)]">立即设置</span>
-                </button>
-              ))}
+              {items.length > 0 ? (
+                <div className="grid gap-6 xl:grid-cols-2">
+                  {items.map((item) => (
+                    <AccessCodeCard
+                      key={item.card.id}
+                      item={item}
+                      pendingAction={pendingAction}
+                      onEdit={() => router.push(`/creator/cards/${encodeURIComponent(item.card.id)}/access-code`)}
+                      onCopy={() => void handleCopyLink(item)}
+                      onHide={() => void handleHide(item)}
+                      onReactivate={() => void handleReactivate(item)}
+                      onDelete={() => void handleDelete(item)}
+                    />
+                  ))}
+                </div>
+              ) : null}
             </div>
           </div>
-        </div>
-      ) : null}
+        </section>
+      </div>
     </AppShell>
+  );
+}
+
+function EmptyState({
+  availableCards,
+  onCreateAccessCode,
+  onCreateCard,
+}: {
+  availableCards: number;
+  onCreateAccessCode: () => void;
+  onCreateCard: () => void;
+}) {
+  const hasAvailableCard = availableCards > 0;
+
+  return (
+    <div className="relative min-h-[480px] overflow-hidden rounded-[30px] border-[3px] border-[var(--line-strong)] bg-[#fcfeff] px-6 py-12 text-center">
+      <div className="absolute left-[18%] top-[22%] h-36 w-36 rounded-full bg-[#cff3fa] opacity-60 blur-3xl" />
+      <div className="absolute bottom-[18%] right-[18%] h-36 w-36 rounded-full bg-[#f9cdcd] opacity-50 blur-3xl" />
+
+      <div className="relative z-10 flex h-full flex-col items-center justify-center">
+        <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-full border-[4px] border-[var(--line-strong)] bg-[#cff3fa] shadow-[3px_3px_0px_var(--line-strong)]">
+          <KeyIcon className="h-8 w-8 text-[var(--primary)]" />
+        </div>
+
+        <h2 className="text-3xl font-black text-[var(--foreground)]">还没有提取码</h2>
+        <p className="mt-4 max-w-xl text-lg font-bold text-[var(--foreground)]/70">
+          {hasAvailableCard
+            ? "你已有可用卡片，现在可以为它们创建提取码，便于受控分享。"
+            : "你还没有可配置提取码的卡片，先去创建并发布一张卡片吧。"}
+        </p>
+
+        <button
+          type="button"
+          onClick={hasAvailableCard ? onCreateAccessCode : onCreateCard}
+          className="mt-10 rounded-full border-[3px] border-[var(--line-strong)] bg-white px-8 py-3.5 text-lg font-black text-[var(--foreground)] shadow-[3px_3px_0px_var(--line-strong)] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0px_var(--line-strong)]"
+        >
+          {hasAvailableCard ? "新建提取码" : "去创建卡片"}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -511,15 +481,15 @@ function AccessCodeCard({
   onDelete: () => void;
 }) {
   const active = isActiveItem(item);
-  const codeLabel = active ? "当前提取码" : "历史提取码";
-  const actionPrefix = active ? "当前链接可正常分享。" : getInactiveReason(item);
+  const codeLabel = active ? "当前提取码" : "已停用提取码";
+  const statusTip = active ? "提取码可正常使用，访问链接可直接分发给用户。" : getInactiveReason(item);
 
   return (
-    <article className="overflow-hidden rounded-[38px] border border-white/80 bg-white/86 p-5 shadow-[0_30px_70px_-46px_rgba(120,85,94,0.3)] backdrop-blur-xl sm:p-7">
+    <article className="rounded-[28px] border-[3px] border-[var(--line-strong)] bg-white p-5 shadow-[3px_3px_0px_var(--line-strong)] sm:p-6">
       <div className="flex flex-col gap-5 lg:flex-row">
         <Link
           href={`/cards/${encodeURIComponent(item.card.id)}`}
-          className="relative block h-[160px] w-full overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,#2a1a21_0%,#72545c_100%)] lg:w-[190px] lg:shrink-0"
+          className="relative block h-[160px] w-full overflow-hidden rounded-[22px] border-[3px] border-[var(--line-strong)] bg-[#4f4a75] lg:w-[190px] lg:shrink-0"
         >
           {item.card.mimeType.startsWith("image/") ? (
             <img src={item.card.previewUrl} alt={item.card.title} className="h-full w-full object-cover" />
@@ -536,71 +506,77 @@ function AccessCodeCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
-              <h2 className="truncate text-[2.25rem] font-semibold leading-none text-[var(--foreground)]">{item.card.title}</h2>
-              <p className="mt-4 text-lg text-[var(--foreground)]/48">创建于 {formatDate(item.card.createdAt)}</p>
+              <h2 className="truncate text-[1.95rem] font-black leading-none text-[var(--foreground)]">{item.card.title}</h2>
+              <p className="mt-3 text-sm font-bold text-[var(--foreground)]/52">创建于 {formatDate(item.card.createdAt)}</p>
             </div>
 
             <span
-              className={`inline-flex shrink-0 items-center rounded-full px-4 py-2 text-sm font-semibold ${
-                active
-                  ? "border border-[#b9e3c1] bg-[#eefcf1] text-[#248a42]"
-                  : "border border-[#ead2d8] bg-[#f8eef1] text-[#b18a92]"
+              className={`rounded-full border-[3px] px-4 py-1.5 text-sm font-black ${
+                active ? "border-[var(--line-strong)] bg-[#eefcf1] text-[#248a42]" : "border-[var(--line-strong)] bg-[#f8eef1] text-[#b18a92]"
               }`}
             >
-              {active ? "有效" : "已失效"}
+              {active ? "启用中" : "已停用"}
             </span>
           </div>
 
-          <div className="mt-6 border-t border-dashed border-[rgba(236,205,214,0.9)]" />
+          <div className="my-5 border-t border-dashed border-[var(--line-strong)]/24" />
 
-          <div className="mt-5 grid gap-5 sm:grid-cols-[minmax(0,1fr)_160px]">
+          <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_145px]">
             <div>
-              <div className="text-sm text-[var(--foreground)]/48">{codeLabel}</div>
+              <div className="text-xs font-black uppercase tracking-[0.08em] text-[var(--foreground)]/46">{codeLabel}</div>
               <div
-                className={`mt-3 inline-flex max-w-full items-center gap-3 rounded-full px-5 py-3 text-[1.1rem] tracking-[0.12em] ${
-                  active ? "bg-[rgba(250,219,227,0.92)] text-[#7d4a5a]" : "bg-[rgba(246,238,240,0.96)] text-[var(--foreground)]/42"
+                className={`mt-2 inline-flex max-w-full items-center gap-2 rounded-full border-[2px] border-[var(--line-strong)] px-4 py-2 text-base font-black tracking-[0.08em] ${
+                  active ? "bg-[#fdeef4] text-[#7d4a5a]" : "bg-[#f6eef1] text-[var(--foreground)]/42"
                 }`}
               >
-                {active ? <KeyIcon className="h-5 w-5 shrink-0" /> : <LockIcon className="h-5 w-5 shrink-0" />}
+                {active ? <KeyIcon className="h-4 w-4 shrink-0" /> : <LockIcon className="h-4 w-4 shrink-0" />}
                 <span className={`truncate ${active ? "" : "line-through"}`}>{item.config.code}</span>
+              </div>
+
+              <div className="mt-3 inline-flex items-center gap-2 text-xs font-bold text-[var(--foreground)]/54">
+                <CalendarIcon className="h-4 w-4" />
+                到期时间：{formatDateTime(item.config.expiresAt)}
               </div>
             </div>
 
             <div className="sm:text-right">
-              <div className="text-sm text-[var(--foreground)]/48">提取次数</div>
-              <div className="mt-3 inline-flex items-center gap-2 text-[1.1rem] font-semibold text-[var(--foreground)]/72 sm:justify-end">
-                <DownloadMiniIcon className="h-5 w-5 text-[var(--brand)]/55" />
-                <span>{item.config.usageCount} 次</span>
+              <div className="text-xs font-black uppercase tracking-[0.08em] text-[var(--foreground)]/46">使用次数</div>
+              <div className="mt-2 inline-flex items-center gap-2 text-base font-black text-[var(--foreground)]/78 sm:justify-end">
+                <DownloadMiniIcon className="h-4 w-4 text-[var(--brand)]/62" />
+                <span>
+                  {item.config.usageCount}
+                  {item.config.unlimited ? " / 不限" : ` / ${Math.max(item.config.usageLimit, 0)}`}
+                </span>
               </div>
             </div>
           </div>
 
-          <p className="mt-5 text-sm text-[var(--foreground)]/52">{actionPrefix}</p>
+          <p className="mt-4 text-xs font-bold leading-6 text-[var(--foreground)]/58">{statusTip}</p>
 
-          <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+          <div className="mt-5 flex flex-wrap items-center justify-end gap-2.5">
             {active ? (
               <>
-                <ActionButton disabled={pendingAction === `edit:${item.card.id}`} onClick={onEdit}>
-                  <EditIcon className="h-4.5 w-4.5" />
-                  <span>修改码</span>
+                <ActionButton onClick={onEdit}>
+                  <EditIcon className="h-4 w-4" />
+                  编辑规则
                 </ActionButton>
                 <ActionButton disabled={pendingAction === `copy:${item.card.id}`} onClick={onCopy}>
-                  <LinkIcon className="h-4.5 w-4.5" />
-                  <span>{pendingAction === `copy:${item.card.id}` ? "复制中..." : "复制链接"}</span>
+                  <LinkIcon className="h-4 w-4" />
+                  {pendingAction === `copy:${item.card.id}` ? "复制中..." : "复制链接"}
                 </ActionButton>
                 <ActionButton danger disabled={pendingAction === `hide:${item.card.id}`} onClick={onHide}>
-                  <HideIcon className="h-4.5 w-4.5" />
-                  <span>{pendingAction === `hide:${item.card.id}` ? "处理中..." : "下架"}</span>
+                  <HideIcon className="h-4 w-4" />
+                  {pendingAction === `hide:${item.card.id}` ? "停用中..." : "停用"}
                 </ActionButton>
               </>
             ) : (
               <>
                 <ActionButton disabled={pendingAction === `reactivate:${item.card.id}`} onClick={onReactivate}>
-                  <RefreshIcon className="h-4.5 w-4.5" />
-                  <span>{pendingAction === `reactivate:${item.card.id}` ? "激活中..." : "重新激活"}</span>
+                  <RefreshIcon className="h-4 w-4" />
+                  {pendingAction === `reactivate:${item.card.id}` ? "启用中..." : "重新启用"}
                 </ActionButton>
                 <IconActionButton danger disabled={pendingAction === `delete:${item.card.id}`} onClick={onDelete}>
-                  <TrashIcon className="h-4.5 w-4.5" />
+                  <TrashIcon className="h-4 w-4" />
                 </IconActionButton>
               </>
             )}
@@ -627,10 +603,10 @@ function ActionButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`inline-flex items-center gap-2 rounded-full border px-5 py-3 text-base transition disabled:cursor-not-allowed disabled:opacity-60 ${
+      className={`inline-flex items-center gap-1.5 rounded-full border-[3px] px-4 py-2 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${
         danger
           ? "border-[#f1c5cc] bg-white text-[#cf425d] hover:border-[#cf425d] hover:bg-[#fff7f8]"
-          : "border-[rgba(226,204,210,0.92)] bg-white text-[var(--foreground)]/78 hover:border-[var(--primary)] hover:text-[var(--primary)]"
+          : "border-[var(--line-strong)] bg-white text-[var(--foreground)]/78 hover:bg-gray-50"
       }`}
     >
       {children}
@@ -654,10 +630,10 @@ function IconActionButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`inline-flex h-12 w-12 items-center justify-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-60 ${
+      className={`inline-flex h-10 w-10 items-center justify-center rounded-full border-[3px] transition disabled:cursor-not-allowed disabled:opacity-60 ${
         danger
           ? "border-[#ead2d8] bg-white text-[#b18a92] hover:border-[#cf425d] hover:text-[#cf425d]"
-          : "border-[rgba(226,204,210,0.92)] bg-white text-[var(--foreground)]/78 hover:border-[var(--primary)] hover:text-[var(--primary)]"
+          : "border-[var(--line-strong)] bg-white text-[var(--foreground)]/78 hover:bg-gray-50"
       }`}
     >
       {children}
@@ -680,25 +656,6 @@ function BackIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
       <path d="m13.47 5.47 1.06 1.06-4.47 4.47h9.44v1.5h-9.44l4.47 4.47-1.06 1.06-6.28-6.28 6.28-6.28Z" fill="currentColor" />
-    </svg>
-  );
-}
-
-function BellIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
-      <path
-        d="M12 3.75a4.5 4.5 0 0 0-4.5 4.5v2.41c0 .83-.27 1.64-.78 2.29l-1.1 1.39A1.5 1.5 0 0 0 6.8 16.5h10.4a1.5 1.5 0 0 0 1.18-2.36l-1.1-1.39a3.74 3.74 0 0 1-.78-2.29V8.25A4.5 4.5 0 0 0 12 3.75Zm0 16.5a2.63 2.63 0 0 1-2.47-1.75h4.94A2.63 2.63 0 0 1 12 20.25Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-function HeartIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
-      <path d="M12 20.3 4.94 13.6a4.67 4.67 0 0 1 6.6-6.6L12 7.45l.46-.45a4.67 4.67 0 0 1 6.6 6.6L12 20.3Z" fill="currentColor" />
     </svg>
   );
 }
@@ -815,10 +772,13 @@ function StarMiniIcon({ className = "h-5 w-5" }: { className?: string }) {
   );
 }
 
-function CloseIcon({ className = "h-5 w-5" }: { className?: string }) {
+function CalendarIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
-      <path d="m6.53 5.47 5.47 5.47 5.47-5.47 1.06 1.06L13.06 12l5.47 5.47-1.06 1.06L12 13.06l-5.47 5.47-1.06-1.06L10.94 12 5.47 6.53l1.06-1.06Z" fill="currentColor" />
+      <path
+        d="M7.5 3.75h1.5v1.5h6v-1.5h1.5v1.5h1.5a2.25 2.25 0 0 1 2.25 2.25v10.5A2.25 2.25 0 0 1 18 20.25H6a2.25 2.25 0 0 1-2.25-2.25V7.5A2.25 2.25 0 0 1 6 5.25h1.5v-1.5ZM6 9.75v8.25c0 .41.34.75.75.75h10.5a.75.75 0 0 0 .75-.75V9.75H6Z"
+        fill="currentColor"
+      />
     </svg>
   );
 }

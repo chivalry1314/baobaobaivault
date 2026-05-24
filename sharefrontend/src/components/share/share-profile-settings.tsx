@@ -63,7 +63,7 @@ async function readFileAsDataUrl(file: File) {
   return await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
-    reader.onerror = () => reject(new Error("读取图片失败，请稍后重试"));
+    reader.onerror = () => reject(new Error("读取图片失败，请重试"));
     reader.readAsDataURL(file);
   });
 }
@@ -71,7 +71,7 @@ async function readFileAsDataUrl(file: File) {
 function validateImage(file: File) {
   const allowedTypes = new Set(["image/jpeg", "image/png"]);
   if (!allowedTypes.has(file.type)) {
-    return "仅支持 jpg、png 格式图片";
+    return "仅支持 JPG 或 PNG 图片";
   }
 
   if (file.size > 5 * 1024 * 1024) {
@@ -89,9 +89,9 @@ function SectionTitle({
   children: ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-3 text-[1.15rem] text-[var(--foreground)]">
+    <div className="flex items-center gap-3 text-[1.12rem] text-[var(--foreground)]">
       <span className="text-[var(--primary)]">{icon}</span>
-      <span>{children}</span>
+      <span className="font-black">{children}</span>
     </div>
   );
 }
@@ -114,11 +114,15 @@ function SecurityRow({
   return (
     <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-4">
-        <div className={`flex h-14 w-14 items-center justify-center rounded-full ${muted ? "bg-[#f6d4e4]" : "bg-[#f1d2ff]"} text-[var(--primary)]`}>
+        <div
+          className={`dream-chip flex h-14 w-14 items-center justify-center ${
+            muted ? "bg-[#f6d4e4] text-[var(--brand-strong)]" : "bg-[var(--button-primary)] text-[var(--foreground)]"
+          }`}
+        >
           {icon}
         </div>
         <div>
-          <p className="text-[1.15rem] font-medium text-[var(--foreground)]">{title}</p>
+          <p className="text-[1.1rem] font-black text-[var(--foreground)]">{title}</p>
           <p className="mt-1 text-sm text-[var(--foreground)]/58">{description}</p>
         </div>
       </div>
@@ -126,7 +130,7 @@ function SecurityRow({
       <button
         type="button"
         onClick={onClick}
-        className="self-end rounded-full px-5 py-2.5 text-sm text-[var(--foreground)]/76 transition hover:bg-white/70 hover:text-[var(--primary)] sm:self-auto"
+        className="btn-subtle self-end rounded-full px-5 py-2.5 text-sm font-black text-[var(--foreground)]/76 sm:self-auto"
       >
         {buttonLabel}
       </button>
@@ -148,16 +152,16 @@ function ModalCard({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(38,24,27,0.18)] p-4 backdrop-blur-sm sm:p-6">
       <button type="button" className="absolute inset-0 cursor-default" aria-label="关闭弹窗" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-[460px] rounded-[34px] border border-white/80 bg-white/94 p-6 shadow-[0_34px_90px_-40px_rgba(38,24,27,0.4)] sm:p-7">
+      <div className="dream-panel relative z-10 w-full max-w-[500px] p-6 sm:p-7">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-2xl font-semibold text-[var(--foreground)]">{title}</h3>
+            <h3 className="text-2xl font-black text-[var(--foreground)]">{title}</h3>
             <p className="mt-2 text-sm leading-7 text-[var(--foreground)]/62">{description}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--outline-variant)] text-[var(--foreground)]/62 transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
+            className="btn-subtle flex h-10 w-10 items-center justify-center rounded-full text-[var(--foreground)]/62"
             aria-label="关闭"
           >
             <CloseIcon className="h-5 w-5" />
@@ -226,7 +230,7 @@ export function ShareProfileSettings({
       setSaveError("");
       setSaveSuccess("");
     } catch (error) {
-      setSaveError(getShareErrorMessage(error, "读取图片失败，请稍后重试"));
+      setSaveError(getShareErrorMessage(error, "读取图片失败，请重试"));
       setSaveSuccess("");
     }
   }
@@ -240,9 +244,9 @@ export function ShareProfileSettings({
       const payload = await shareApi.updateProfile(draft);
       onSaved(payload.user);
       setDraft(createDraft(payload.user));
-      setSaveSuccess("个人信息已保存");
+      setSaveSuccess("资料已更新");
     } catch (error) {
-      setSaveError(getShareErrorMessage(error, "保存个人信息失败，请稍后重试"));
+      setSaveError(getShareErrorMessage(error, "保存资料失败，请稍后重试"));
     } finally {
       setSavePending(false);
     }
@@ -278,7 +282,7 @@ export function ShareProfileSettings({
     }
 
     if (passwordDraft.newPassword.length < 6) {
-      setModalError("新密码至少需要 6 位");
+      setModalError("新密码长度至少为 6 位");
       return;
     }
 
@@ -296,7 +300,7 @@ export function ShareProfileSettings({
         newPassword: passwordDraft.newPassword,
       });
       closeSecurityModal();
-      setSaveSuccess("密码已更新");
+      setSaveSuccess("密码修改成功");
     } catch (error) {
       setModalError(getShareErrorMessage(error, "修改密码失败，请稍后重试"));
       setModalPending(false);
@@ -320,54 +324,54 @@ export function ShareProfileSettings({
       closeSecurityModal();
       setSaveSuccess("手机号已更新");
     } catch (error) {
-      setModalError(getShareErrorMessage(error, "更新手机号失败，请稍后重试"));
+      setModalError(getShareErrorMessage(error, "保存手机号失败，请稍后重试"));
       setModalPending(false);
     }
   }
 
   return (
     <>
-      <section className="rounded-[40px] border border-white/80 bg-white/88 px-6 py-6 shadow-[0_30px_70px_-46px_rgba(120,85,94,0.3)] backdrop-blur-xl sm:px-8 sm:py-8">
+      <section className="dream-panel px-6 py-6 sm:px-8 sm:py-8">
         <div className="flex items-center justify-between border-b border-[rgba(220,173,187,0.35)] pb-5">
           <div>
-            <h1 className="text-[1.65rem] font-medium text-[var(--foreground)]">个人信息设置</h1>
+            <h1 className="text-[1.65rem] font-black text-[var(--foreground)]">个人资料设置</h1>
           </div>
           <SparklesIcon className="h-9 w-9 text-[rgba(120,85,94,0.24)]" />
         </div>
 
         {saveError ? (
-          <p className="mt-6 rounded-2xl border border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-sm text-[#9a3412]">{saveError}</p>
+          <p className="dream-panel-soft mt-6 border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-sm text-[#9a3412]">{saveError}</p>
         ) : null}
 
         {saveSuccess ? (
-          <p className="mt-6 rounded-2xl border border-[#d9eed6] bg-[#f3fbf1] px-4 py-3 text-sm text-[#2f6d37]">{saveSuccess}</p>
+          <p className="dream-panel-soft mt-6 border-[#d9eed6] bg-[#f3fbf1] px-4 py-3 text-sm text-[#2f6d37]">{saveSuccess}</p>
         ) : null}
 
-        <div className="mt-8 rounded-[34px] border border-[rgba(193,219,232,0.76)] bg-[rgba(251,255,255,0.9)] p-5 sm:p-6">
+        <div className="dream-panel-soft mt-8 p-5 sm:p-6">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-5">
               <div className="overflow-hidden rounded-full border-[5px] border-white bg-white shadow-[0_20px_42px_-30px_rgba(120,85,94,0.45)]">
                 {draft.avatar ? (
-                  <img src={draft.avatar} alt={draft.nickname} className="h-[96px] w-[96px] object-cover" />
+                  <img src={draft.avatar} alt={draft.nickname || "头像"} className="h-[96px] w-[96px] object-cover" />
                 ) : (
-                  <div className="flex h-[96px] w-[96px] items-center justify-center bg-[linear-gradient(135deg,#e5f5fc_0%,#d7eef9_100%)] text-3xl font-semibold text-[var(--primary)]">
+                  <div className="flex h-[96px] w-[96px] items-center justify-center bg-[var(--button-primary)] text-3xl font-black text-[var(--foreground)]">
                     {getInitials(user)}
                   </div>
                 )}
               </div>
 
               <div>
-                <p className="text-[1.2rem] font-medium text-[var(--foreground)]">头像</p>
-                <p className="mt-2 text-sm text-[var(--foreground)]/58">支持 jpg、png 格式，大小不超过 5MB</p>
+                <p className="text-[1.1rem] font-black text-[var(--foreground)]">头像</p>
+                <p className="mt-2 text-sm text-[var(--foreground)]/58">支持 JPG/PNG，大小不超过 5MB</p>
               </div>
             </div>
 
             <button
               type="button"
               onClick={() => avatarInputRef.current?.click()}
-              className="btn-subtle rounded-full px-8 py-3 text-[1.05rem]"
+              className="btn-subtle rounded-full px-8 py-3 text-[1.02rem] font-black"
             >
-              修改
+              更换头像
             </button>
           </div>
 
@@ -382,12 +386,12 @@ export function ShareProfileSettings({
         </div>
 
         <div className="mt-8">
-          <SectionTitle icon={<HeartIcon className="h-5 w-5" />}>基本信息</SectionTitle>
+          <SectionTitle icon={<HeartIcon className="h-5 w-5" />}>基础资料</SectionTitle>
         </div>
 
-        <div className="mt-5 rounded-[34px] border border-[rgba(193,219,232,0.76)] bg-[rgba(251,255,255,0.9)] p-5 sm:p-6">
+        <div className="dream-panel-soft mt-5 p-5 sm:p-6">
           <label className="block">
-            <span className="text-[1.1rem] text-[var(--foreground)]">昵称</span>
+            <span className="text-[1.05rem] font-black text-[var(--foreground)]">昵称</span>
             <input
               type="text"
               value={draft.nickname}
@@ -399,14 +403,14 @@ export function ShareProfileSettings({
                 setSaveError("");
                 setSaveSuccess("");
               }}
-              className="mt-4 w-full rounded-full border border-[var(--outline-variant)] bg-white px-6 py-4 text-[1.15rem] outline-none transition focus:border-[var(--primary)]"
-              placeholder="请输入昵称"
+              className="dream-input mt-4 w-full px-6 py-4 text-[1.08rem]"
+              placeholder="请输入你的昵称"
               maxLength={40}
             />
           </label>
 
           <div className="mt-8 flex items-center justify-between gap-4">
-            <span className="text-[1.1rem] text-[var(--foreground)]">个人简介</span>
+            <span className="text-[1.05rem] font-black text-[var(--foreground)]">个人简介</span>
             <span className="text-sm text-[var(--foreground)]/48">{draft.bio.length}/100</span>
           </div>
 
@@ -421,31 +425,31 @@ export function ShareProfileSettings({
               setSaveSuccess("");
             }}
             rows={5}
-            className="mt-4 w-full rounded-[34px] border border-[rgba(204,171,180,0.72)] bg-white px-6 py-5 text-[1.1rem] leading-8 outline-none transition focus:border-[var(--primary)]"
-            placeholder="写一段个人简介"
+            className="dream-textarea mt-4 w-full px-6 py-5 text-[1.05rem] leading-8"
+            placeholder="写点关于你的内容，让别人更了解你"
           />
         </div>
 
         <div className="mt-8">
-          <SectionTitle icon={<LandscapeIcon className="h-5 w-5" />}>背景封面</SectionTitle>
+          <SectionTitle icon={<LandscapeIcon className="h-5 w-5" />}>主页封面</SectionTitle>
         </div>
 
-        <div className="mt-5 rounded-[34px] border border-[rgba(193,219,232,0.76)] bg-[rgba(251,255,255,0.9)] p-5 sm:p-6">
-          <div className="relative overflow-hidden rounded-[34px] border border-dashed border-[rgba(204,171,180,0.8)] bg-[linear-gradient(135deg,#7a9ae2_0%,#9b88df_45%,#f1a4bd_100%)]">
+        <div className="dream-panel-soft mt-5 p-5 sm:p-6">
+          <div className="relative overflow-hidden rounded-[30px] border-2 border-dashed border-[var(--outline-variant)] bg-[linear-gradient(135deg,#e9f6ff_0%,#f6f2ff_60%,#ffeef5_100%)]">
             {draft.coverImage ? (
-              <img src={draft.coverImage} alt="背景封面" className="h-[220px] w-full object-cover sm:h-[260px]" />
+              <img src={draft.coverImage} alt="主页封面" className="h-[220px] w-full object-cover sm:h-[260px]" />
             ) : (
-              <div className="flex h-[220px] items-center justify-center text-center text-base text-white/92 sm:h-[260px]">
-                点击上传背景封面
+              <div className="flex h-[220px] items-center justify-center text-center text-base font-black text-[var(--foreground)]/70 sm:h-[260px]">
+                点击右上角按钮上传封面图
               </div>
             )}
 
             <button
               type="button"
               onClick={() => coverInputRef.current?.click()}
-              className="absolute right-4 top-4 rounded-full bg-white/88 px-4 py-2 text-sm text-[var(--foreground)] shadow-[0_16px_32px_-24px_rgba(38,24,27,0.55)] transition hover:bg-white"
+              className="btn-subtle absolute right-4 top-4 rounded-full px-4 py-2 text-sm font-black"
             >
-              修改封面
+              更换封面
             </button>
           </div>
 
@@ -463,25 +467,25 @@ export function ShareProfileSettings({
           <SectionTitle icon={<LockIcon className="h-5 w-5" />}>账号安全</SectionTitle>
         </div>
 
-        <div className="mt-5 overflow-hidden rounded-[34px] border border-[rgba(193,219,232,0.76)] bg-[rgba(251,255,255,0.9)]">
+        <div className="dream-panel-soft mt-5 overflow-hidden">
           <SecurityRow
             icon={<KeyIcon className="h-6 w-6" />}
             title="修改密码"
-            description="定期修改密码有助于保护账号安全"
-            buttonLabel="修改"
+            description="定期更新密码，提升账号安全性"
+            buttonLabel="去修改"
             onClick={() => {
               setSecurityModal("password");
               setModalError("");
             }}
           />
 
-          <div className="border-t border-dashed border-[rgba(220,173,187,0.45)]" />
+          <div className="dream-divider border-t border-dashed" />
 
           <SecurityRow
             icon={<PhoneIcon className="h-6 w-6" />}
-            title="绑定手机"
-            description={user.phone.trim() ? `已绑定：${maskPhone(user.phone)}` : "未绑定手机号"}
-            buttonLabel="修改"
+            title="绑定手机号"
+            description={user.phone.trim() ? `当前手机号：${maskPhone(user.phone)}` : "尚未绑定手机号"}
+            buttonLabel="去设置"
             onClick={() => {
               setPhoneValue(user.phone);
               setSecurityModal("phone");
@@ -495,114 +499,110 @@ export function ShareProfileSettings({
           <button
             type="button"
             onClick={handleReset}
-            className="rounded-full border border-[rgba(204,171,180,0.72)] bg-white px-10 py-3 text-[1.1rem] text-[var(--foreground)] shadow-[0_16px_34px_-24px_rgba(120,85,94,0.2)] transition hover:-translate-y-0.5"
+            className="btn-subtle rounded-full px-10 py-3 text-[1.05rem] font-black text-[var(--foreground)]"
           >
-            取消
+            重置
           </button>
           <button
             type="button"
             disabled={savePending}
             onClick={() => void handleSaveProfile()}
-            className="btn-primary rounded-full px-10 py-3 text-[1.1rem] font-medium disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn-primary rounded-full px-10 py-3 text-[1.05rem] font-black disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {savePending ? "正在保存..." : "保存修改"}
+            {savePending ? "保存中..." : "保存修改"}
           </button>
         </div>
       </section>
 
       {securityModal === "password" ? (
-        <ModalCard title="修改密码" description="请输入当前密码，并设置新的登录密码。" onClose={closeSecurityModal}>
+        <ModalCard
+          title="修改密码"
+          description="请输入当前密码并设置新密码，建议使用 6 位以上的组合密码。"
+          onClose={closeSecurityModal}
+        >
           {modalError ? (
-            <p className="mb-4 rounded-2xl border border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-sm text-[#9a3412]">{modalError}</p>
+            <p className="dream-panel-soft mb-4 border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-sm text-[#9a3412]">{modalError}</p>
           ) : null}
 
           <div className="space-y-4">
             <label className="block">
-              <span className="mb-2 block text-sm text-[var(--foreground)]/72">当前密码</span>
+              <span className="mb-2 block text-sm font-black text-[var(--foreground)]/72">当前密码</span>
               <input
                 type="password"
                 value={passwordDraft.oldPassword}
                 onChange={(event) => setPasswordDraft((current) => ({ ...current, oldPassword: event.target.value }))}
-                className="w-full rounded-2xl border border-[var(--outline-variant)] bg-[var(--surface-container-low)] px-4 py-3 outline-none transition focus:border-[var(--primary)]"
+                className="dream-input w-full px-4 py-3"
                 placeholder="请输入当前密码"
               />
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm text-[var(--foreground)]/72">新密码</span>
+              <span className="mb-2 block text-sm font-black text-[var(--foreground)]/72">新密码</span>
               <input
                 type="password"
                 value={passwordDraft.newPassword}
                 onChange={(event) => setPasswordDraft((current) => ({ ...current, newPassword: event.target.value }))}
-                className="w-full rounded-2xl border border-[var(--outline-variant)] bg-[var(--surface-container-low)] px-4 py-3 outline-none transition focus:border-[var(--primary)]"
+                className="dream-input w-full px-4 py-3"
                 placeholder="请输入新密码"
               />
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm text-[var(--foreground)]/72">确认新密码</span>
+              <span className="mb-2 block text-sm font-black text-[var(--foreground)]/72">确认新密码</span>
               <input
                 type="password"
                 value={passwordDraft.confirmPassword}
                 onChange={(event) => setPasswordDraft((current) => ({ ...current, confirmPassword: event.target.value }))}
-                className="w-full rounded-2xl border border-[var(--outline-variant)] bg-[var(--surface-container-low)] px-4 py-3 outline-none transition focus:border-[var(--primary)]"
+                className="dream-input w-full px-4 py-3"
                 placeholder="请再次输入新密码"
               />
             </label>
           </div>
 
           <div className="mt-6 flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={closeSecurityModal}
-              className="rounded-full border border-[var(--outline-variant)] px-5 py-3 text-sm text-[var(--foreground)]/72 transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
-            >
+            <button type="button" onClick={closeSecurityModal} className="btn-subtle rounded-full px-5 py-3 text-sm font-black">
               取消
             </button>
             <button
               type="button"
               disabled={modalPending}
               onClick={() => void handleChangePassword()}
-              className="rounded-full bg-[var(--primary)] px-6 py-3 text-sm font-medium text-white shadow-[0_16px_34px_-20px_rgba(120,85,94,0.45)] disabled:cursor-not-allowed disabled:opacity-60"
+              className="btn-primary rounded-full px-6 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {modalPending ? "正在保存..." : "确认修改"}
+              {modalPending ? "提交中..." : "确认修改"}
             </button>
           </div>
         </ModalCard>
       ) : null}
 
       {securityModal === "phone" ? (
-        <ModalCard title="绑定手机" description="绑定手机号后，可用于后续账号安全验证。" onClose={closeSecurityModal}>
+        <ModalCard title="绑定手机号" description="更新手机号后，可用于账号找回与安全验证。" onClose={closeSecurityModal}>
           {modalError ? (
-            <p className="mb-4 rounded-2xl border border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-sm text-[#9a3412]">{modalError}</p>
+            <p className="dream-panel-soft mb-4 border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-sm text-[#9a3412]">{modalError}</p>
           ) : null}
 
           <label className="block">
-            <span className="mb-2 block text-sm text-[var(--foreground)]/72">手机号</span>
+            <span className="mb-2 block text-sm font-black text-[var(--foreground)]/72">手机号</span>
             <input
               type="tel"
               value={phoneValue}
               onChange={(event) => setPhoneValue(event.target.value)}
-              className="w-full rounded-2xl border border-[var(--outline-variant)] bg-[var(--surface-container-low)] px-4 py-3 outline-none transition focus:border-[var(--primary)]"
+              className="dream-input w-full px-4 py-3"
               placeholder="请输入手机号"
             />
           </label>
 
           <div className="mt-6 flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={closeSecurityModal}
-              className="rounded-full border border-[var(--outline-variant)] px-5 py-3 text-sm text-[var(--foreground)]/72 transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
-            >
+            <button type="button" onClick={closeSecurityModal} className="btn-subtle rounded-full px-5 py-3 text-sm font-black">
               取消
             </button>
             <button
               type="button"
               disabled={modalPending}
               onClick={() => void handleSavePhone()}
-              className="rounded-full bg-[var(--primary)] px-6 py-3 text-sm font-medium text-white shadow-[0_16px_34px_-20px_rgba(120,85,94,0.45)] disabled:cursor-not-allowed disabled:opacity-60"
+              className="btn-primary rounded-full px-6 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {modalPending ? "正在保存..." : "确认修改"}
+              {modalPending ? "保存中..." : "保存手机号"}
             </button>
           </div>
         </ModalCard>
