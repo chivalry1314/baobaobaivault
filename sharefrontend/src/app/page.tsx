@@ -225,7 +225,7 @@ export default function LandingPage() {
 
   const footer = (
     <footer className="relative z-10 px-6 pb-8 pt-8">
-      <div className="mx-auto max-w-[1500px] rounded-3xl border-[4px] border-[var(--outline)] bg-white px-5 py-4 text-center text-sm font-bold text-[var(--foreground)] sm:text-left">
+      <div className="mx-auto max-w-[var(--layout-max)] rounded-3xl border-[4px] border-[var(--outline)] bg-white px-5 py-4 text-center text-sm font-bold text-[var(--foreground)] sm:text-left">
         © 2026 Dreamy Card Gallery
       </div>
     </footer>
@@ -233,7 +233,7 @@ export default function LandingPage() {
 
   return (
     <AppShell currentPath="/" footerSlot={footer}>
-      <section className="relative z-10 mx-auto mt-4 w-full max-w-[1500px] px-4 pb-8 md:px-8">
+      <section className="relative z-10 mx-auto mt-4 w-full max-w-[var(--layout-max)] px-4 pb-8 md:px-8">
         <main className="mt-6 w-full">
           <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-8 xl:mx-0">
             <div className="group relative">
@@ -242,7 +242,7 @@ export default function LandingPage() {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search..."
-                className="w-full rounded-full border-[4px] border-[var(--outline)] bg-white px-6 py-4 pr-20 text-xl font-bold text-[var(--foreground)] placeholder-gray-400 transition-all focus:outline-none group-hover:bg-gray-50"
+                className="w-full rounded-full border-[4px] border-[var(--outline)] bg-white px-6 py-4 pr-20 text-xl font-bold text-[var(--foreground)] placeholder:text-[var(--text-subtle)] transition-all group-hover:bg-gray-50"
               />
               <button className="absolute bottom-2 right-2 top-2 flex h-[3.25rem] w-[3.25rem] items-center justify-center rounded-full border-[4px] border-[var(--outline)] bg-[#cdb4f3] transition-all hover:opacity-90">
                 <SearchIcon />

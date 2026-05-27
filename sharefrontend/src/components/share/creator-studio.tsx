@@ -14,6 +14,7 @@ import {
 
 import { AuthRedirect } from "@/components/share/auth-redirect";
 import { ShareProfileSettings } from "@/components/share/share-profile-settings";
+import { UnifiedFooter } from "@/components/share/unified-footer";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type { DashboardCard, DashboardResponse, ExternalSessionUser, PlatformCard } from "@/lib/shared";
 
@@ -252,7 +253,7 @@ function TabButton({
       className={`type-h3 border-b-2 pb-4 transition ${
         active
           ? "border-[var(--primary)] text-[var(--foreground)]"
-          : "border-transparent text-[var(--foreground)]/54 hover:text-[var(--foreground)]"
+          : "border-transparent text-[var(--text-muted)] hover:text-[var(--foreground)]"
       }`}
     >
       {children}
@@ -357,11 +358,11 @@ function CreatorCard({
 
       <div className="mt-4 border-t border-dashed border-[var(--outline-variant)] pt-4">
         <div className="dream-panel-soft px-4 py-4">
-          <div className="text-[11px] uppercase tracking-[0.24em] text-[var(--foreground)]/42">提取码状态</div>
+          <div className="text-[11px] uppercase tracking-[0.24em] text-[var(--text-subtle)]">提取码状态</div>
           <div className="mt-3 flex items-center justify-between gap-3">
             <div>
               <div className="type-body-sm tracking-[0.1em] text-[var(--primary)]">{item.hasAccessCode ? "已配置" : "未配置"}</div>
-              <div className="mt-1 text-xs text-[var(--foreground)]/52">点击右侧按钮进入提取码管理</div>
+              <div className="mt-1 text-xs text-[var(--text-subtle)]">点击右侧按钮进入提取码管理</div>
             </div>
             <Link href={accessCodeHref} className="btn-subtle rounded-full px-5 py-2.5 text-sm font-black text-[var(--primary)]">
               去管理
@@ -399,7 +400,7 @@ function HistoryItem({
           <p className="mt-2 text-sm leading-7 text-[var(--foreground)]/62">
             更新时间：{formatDate(item.card.updatedAt)}，当前状态：{getStatusLabel(item.card.status)}
           </p>
-          <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--foreground)]/56">
+          <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--text-muted)]">
             <span className="dream-chip px-3 py-1">{getVisibilityLabel(item.card.visibility)}</span>
             <span className="dream-chip px-3 py-1">下载 {item.stats.downloadCount} 次</span>
             <span className="dream-chip px-3 py-1">编号 {formatCardCode(item.card.id)}</span>
@@ -465,7 +466,7 @@ export function CreatorStudio() {
   const [panelPending, setPanelPending] = useState(false);
   const [panelError, setPanelError] = useState("");
 
-  const cards = dashboard?.cards ?? [];
+  const cards = useMemo(() => dashboard?.cards ?? [], [dashboard?.cards]);
 
   const displayName = useMemo(() => (currentUser ? getDisplayName(currentUser) : ""), [currentUser]);
 
@@ -582,22 +583,7 @@ export function CreatorStudio() {
   }
 
   function openCreatePanel() {
-    router.push("/creator/new");
-  }
-
-  function openEditPanel(card: DashboardCard) {
-    setPanelMode("edit");
-    setSelectedCard(card);
-    setDraft({
-      title: card.card.title,
-      description: card.card.description,
-      visibility: card.card.visibility,
-      status: card.card.status,
-      file: null,
-      previewUrl: card.card.previewUrl,
-    });
-    setPanelPending(false);
-    setPanelError("");
+    router.push("/creator");
   }
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -727,7 +713,7 @@ export function CreatorStudio() {
         <div className="absolute bottom-[-120px] left-1/3 h-96 w-96 rounded-full bg-[rgba(248,219,230,0.26)] blur-3xl" />
       </div>
 
-      <div className="relative z-10 mx-auto grid max-w-[1560px] gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[290px_minmax(0,1fr)]">
+      <div className="relative z-10 mx-auto grid max-w-[var(--layout-max)] gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[290px_minmax(0,1fr)]">
         <aside className="dream-panel p-6 lg:sticky lg:top-6 lg:self-start">
           <div className="flex flex-col gap-10 lg:min-h-[calc(100vh-3rem)]">
             <div>
@@ -735,7 +721,7 @@ export function CreatorStudio() {
                 <Avatar user={currentUser} size="sm" />
                 <div className="min-w-0">
                   <p className="type-h3 truncate text-[var(--foreground)]">{displayName}</p>
-                  <p className="type-body-sm mt-1 text-[var(--foreground)]/54">UID: {formatUid(currentUser.id)}</p>
+                  <p className="type-body-sm mt-1 text-[var(--text-muted)]">UID: {formatUid(currentUser.id)}</p>
                 </div>
               </div>
 
@@ -800,7 +786,7 @@ export function CreatorStudio() {
                         <p className="type-overline text-[var(--primary)]/55">Card Share</p>
                         <h1 className="type-hero mt-3 text-[var(--foreground)]">{displayName}</h1>
                         <p className="type-h3 mt-3 text-[var(--foreground)]/68">{getUserTagline(currentUser)}</p>
-                        <p className="type-body-sm mt-4 text-[var(--foreground)]/50">{accountLabel}</p>
+                        <p className="type-body-sm mt-4 text-[var(--text-subtle)]">{accountLabel}</p>
                       </div>
                     </div>
 
@@ -890,7 +876,7 @@ export function CreatorStudio() {
 
       {panelMode ? (
         <div className="fixed inset-0 z-50 flex items-center justify-end bg-[rgba(38,24,27,0.18)] p-4 backdrop-blur-sm sm:p-6">
-          <button type="button" className="absolute inset-0 cursor-default" aria-label="关闭卡片编辑抽屉" onClick={closePanel} />
+          <button type="button" className="absolute inset-0 cursor-pointer" aria-label="关闭卡片编辑抽屉" onClick={closePanel} />
 
           <aside className="dream-panel relative z-10 h-full w-full max-w-[520px] overflow-y-auto p-6 sm:p-7">
             {panelMode === "create" ? (
@@ -956,12 +942,12 @@ export function CreatorStudio() {
                             <PlusIcon className="h-5 w-5" />
                           </div>
                           <p className="mt-4 text-base font-black text-[var(--foreground)]">点击上传文件</p>
-                          <p className="mt-2 text-sm leading-6 text-[var(--foreground)]/58">支持常见图片格式，也可上传其他可分享文件</p>
+                          <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">支持常见图片格式，也可上传其他可分享文件</p>
                         </>
                       )}
                       <input type="file" className="hidden" onChange={handleFileChange} />
                     </label>
-                    <div className="mt-3 text-sm text-[var(--foreground)]/58">{draft.file ? draft.file.name : "尚未选择文件"}</div>
+                    <div className="mt-3 text-sm text-[var(--text-muted)]">{draft.file ? draft.file.name : "尚未选择文件"}</div>
                   </PanelField>
 
                   <div className="flex items-center justify-between gap-3 pt-2">
@@ -1078,6 +1064,8 @@ export function CreatorStudio() {
           </aside>
         </div>
       ) : null}
+
+      <UnifiedFooter />
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 
 import { AppShell } from "@/components/share/app-shell";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
@@ -284,10 +284,11 @@ type CardDetailClientPageProps = {
 
 export default function CardDetailClientPage({ cardId }: CardDetailClientPageProps) {
   const searchParams = useSearchParams();
+  const codeFromQuery = useMemo(() => searchParams.get("code")?.trim().toUpperCase() ?? "", [searchParams]);
   const [detail, setDetail] = useState<CardDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [unlockCode, setUnlockCode] = useState("");
+  const [manualUnlockCode, setManualUnlockCode] = useState("");
   const [downloadPending, setDownloadPending] = useState(false);
   const [downloadError, setDownloadError] = useState("");
 
@@ -333,20 +334,21 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
     };
   }, [cardId]);
 
-  useEffect(() => {
-    const codeFromQuery = searchParams.get("code")?.trim();
-    if (!codeFromQuery) {
-      return;
-    }
-
-    setUnlockCode(codeFromQuery.toUpperCase());
-    setDownloadError("");
-  }, [searchParams]);
+  const unlockCode = manualUnlockCode || codeFromQuery;
+  const updateUnlockCode = useCallback(
+    (value: string) => {
+      setManualUnlockCode(value.toUpperCase());
+      if (downloadError) {
+        setDownloadError("");
+      }
+    },
+    [downloadError],
+  );
 
   const footer = useMemo(
     () => (
       <footer className="relative z-10 border-t-[4px] border-[var(--outline)] bg-white/92 px-5 py-10">
-        <div className="mx-auto flex w-full max-w-[1500px] flex-col items-center justify-between gap-5 md:flex-row">
+        <div className="mx-auto flex w-full max-w-[var(--layout-max)] flex-col items-center justify-between gap-5 md:flex-row">
           <div className="text-2xl font-black text-[var(--foreground)]">Dreamy CardShare</div>
 
           <div className="text-center text-xs font-extrabold uppercase tracking-[0.12em] text-[var(--foreground)]/70 md:text-left">
@@ -461,7 +463,7 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
           <div className="sparkle-orb right-[-10%] top-[42%] h-[20rem] w-[20rem] bg-[rgba(250,205,244,0.34)]" />
         </div>
 
-        <section className="relative z-10 mx-auto w-full max-w-[1500px] px-4 pb-16 pt-10 sm:px-6">
+        <section className="relative z-10 mx-auto w-full max-w-[var(--layout-max)] px-4 pb-16 pt-10 sm:px-6">
           {loading ? (
             <div className="flex flex-col gap-8 lg:flex-row xl:gap-12">
               <div className="h-[580px] w-full animate-pulse rounded-[2rem] border-[4px] border-[var(--outline)] bg-white/70 lg:h-[700px] lg:w-[58%]" />
@@ -502,7 +504,7 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
                     )}
 
                     <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
-                      <h1 className="text-5xl font-black leading-[1.05] tracking-wide text-white drop-shadow-[0_8px_24px_rgba(0,0,0,0.5)] md:text-7xl">
+                      <h1 className="text-[2.5rem] font-black leading-[1.05] tracking-wide text-white drop-shadow-[0_8px_24px_rgba(0,0,0,0.5)] sm:text-5xl md:text-7xl">
                         {detail.card.title}
                       </h1>
                       <p className="mt-3 text-lg font-black text-white/90 drop-shadow-[0_6px_18px_rgba(0,0,0,0.45)] md:text-2xl">CardShare</p>
@@ -595,14 +597,11 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
                       type="text"
                       value={unlockCode}
                       onChange={(event) => {
-                        setUnlockCode(event.target.value.toUpperCase());
-                        if (downloadError) {
-                          setDownloadError("");
-                        }
+                        updateUnlockCode(event.target.value);
                       }}
                       disabled={!requiresAccessCode}
                       placeholder={unlockPlaceholder}
-                      className="w-full rounded-2xl border-[3px] border-[var(--outline)] bg-white px-4 py-3 pr-12 text-base font-bold text-[var(--foreground)] outline-none placeholder:text-[var(--foreground)]/38 disabled:cursor-not-allowed disabled:bg-white/70"
+                      className="w-full rounded-2xl border-[3px] border-[var(--outline)] bg-white px-4 py-3 pr-12 text-base font-bold text-[var(--foreground)] placeholder:text-[var(--text-subtle)] disabled:cursor-not-allowed disabled:bg-white/70"
                     />
                     <LockIcon className="pointer-events-none absolute right-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--foreground)]/36" />
                   </div>

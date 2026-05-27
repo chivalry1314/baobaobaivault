@@ -96,7 +96,7 @@ export function CardGrid({
 
               <p className="type-body-sm mt-3 line-clamp-2 text-[var(--foreground)]/72">{item.card.description || "创作者还没有补充描述。"}</p>
 
-              <div className="mt-4 flex items-center justify-between gap-3 text-xs text-[var(--foreground)]/55">
+              <div className="mt-4 flex items-center justify-between gap-3 text-xs text-[var(--text-muted)]">
                 <span className="rounded-full border-[2px] border-[var(--outline)] bg-white px-2.5 py-1">{formatBytes(item.card.size)}</span>
                 <span className="truncate">{item.card.originalFileName}</span>
               </div>

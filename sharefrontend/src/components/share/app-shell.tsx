@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { AccountEntry } from "@/components/share/account-entry";
+import { UnifiedFooter } from "@/components/share/unified-footer";
 
 type AppShellProps = {
   currentPath?: string;
@@ -15,10 +16,13 @@ type AppShellProps = {
 const navItems = [
   { href: "/", label: "首页" },
   { href: "/discover", label: "发现卡片" },
-  { href: "/creator/new", label: "创作中心" },
+  { href: "/creator", label: "创作中心" },
 ];
 
 export function AppShell({ currentPath = "", children, headerSlot, footerSlot }: AppShellProps) {
+  void footerSlot;
+  const normalizedFooter = <UnifiedFooter />;
+
   return (
     <div className="relative flex min-h-screen flex-col bg-[var(--background)] text-[var(--foreground)]">
       <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
@@ -29,7 +33,7 @@ export function AppShell({ currentPath = "", children, headerSlot, footerSlot }:
       </div>
 
       <header className="relative z-10 px-4 pb-1 pt-4 sm:px-6">
-        <div className="mx-auto flex w-full max-w-[1500px] flex-col items-center justify-between gap-4 py-2 sm:flex-row">
+        <div className="mx-auto flex w-full max-w-[var(--layout-max)] flex-col items-center justify-between gap-4 py-2 sm:flex-row">
           <Link href="/" className="flex items-center gap-3 self-start sm:self-auto">
             <div className="flex h-12 w-12 -rotate-6 items-center justify-center rounded-xl border-[3px] border-[var(--outline)] bg-white">
               <div className="h-8 w-8 rounded bg-gradient-to-tr from-purple-400 to-blue-300 ring-2 ring-white" />
@@ -42,12 +46,16 @@ export function AppShell({ currentPath = "", children, headerSlot, footerSlot }:
 
           <div className="floating-nav hidden items-center gap-2 rounded-full p-1.5 lg:flex">
             {navItems.map((item) => {
-              const active = item.href === "/creator/new" ? currentPath.startsWith("/creator") : currentPath === item.href;
+              const active = item.href === "/creator" ? currentPath.startsWith("/creator") : currentPath === item.href;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`${active ? "btn-primary pointer-events-none" : "rounded-full px-6 py-2 font-black text-[var(--foreground)] hover:bg-gray-100"} ${active ? "rounded-full px-8 py-2 font-black" : ""}`}
+                  className={`${
+                    active
+                      ? "btn-primary pointer-events-none inline-flex min-h-11 items-center justify-center"
+                      : "inline-flex min-h-11 items-center justify-center rounded-full px-6 py-2.5 font-black text-[var(--foreground)] hover:bg-gray-100"
+                  } ${active ? "rounded-full px-8 py-2.5 font-black" : ""}`}
                 >
                   {item.label}
                 </Link>
@@ -56,22 +64,24 @@ export function AppShell({ currentPath = "", children, headerSlot, footerSlot }:
           </div>
 
           <div className="flex items-center gap-3 self-end sm:gap-4 sm:self-auto">
-            <Link href="/creator/new" className="btn-subtle rounded-full px-5 py-2 font-black sm:px-8 sm:py-2.5">
+            <Link href="/creator" className="btn-subtle inline-flex min-h-11 items-center justify-center rounded-full px-5 py-2.5 font-black sm:px-8 sm:py-2.5">
               创作中心
             </Link>
             <div className="flex items-center gap-3">{headerSlot !== undefined ? headerSlot : <AccountEntry />}</div>
           </div>
         </div>
 
-        <div className="mx-auto max-w-[1500px] lg:hidden">
+        <div className="mx-auto max-w-[var(--layout-max)] lg:hidden">
           <div className="floating-nav no-scrollbar flex items-center gap-2 overflow-x-auto rounded-full p-1.5">
             {navItems.map((item) => {
-              const active = item.href === "/creator/new" ? currentPath.startsWith("/creator") : currentPath === item.href;
+              const active = item.href === "/creator" ? currentPath.startsWith("/creator") : currentPath === item.href;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`shrink-0 rounded-full px-5 py-2 text-sm font-black ${active ? "btn-primary pointer-events-none" : "btn-subtle"}`}
+                  className={`shrink-0 inline-flex min-h-11 items-center justify-center rounded-full px-5 py-2.5 text-sm font-black ${
+                    active ? "btn-primary pointer-events-none" : "btn-subtle"
+                  }`}
                 >
                   {item.label}
                 </Link>
@@ -82,7 +92,7 @@ export function AppShell({ currentPath = "", children, headerSlot, footerSlot }:
       </header>
 
       <main className="relative z-10 flex-1">{children}</main>
-      {footerSlot}
+      {normalizedFooter}
     </div>
   );
 }

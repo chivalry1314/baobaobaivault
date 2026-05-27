@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
@@ -31,14 +31,14 @@ function Field({
     <label className="block">
       <span className="mb-2 block pl-2 text-sm font-black text-[var(--foreground)]">{label}</span>
       <div className="relative">
-        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--foreground)]/55">{icon}</span>
+        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">{icon}</span>
         <input
           type={type}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           autoComplete={autoComplete}
           placeholder={placeholder}
-          className="w-full rounded-2xl border-[3px] border-[var(--outline)] bg-[#f8f9fa] py-3 pl-12 pr-12 text-base font-bold text-[var(--foreground)] outline-none transition placeholder:text-[var(--foreground)]/40 focus:bg-[#f0f4f8]"
+          className="w-full rounded-2xl border-[3px] border-[var(--outline)] bg-[#f8f9fa] py-3 pl-12 pr-12 text-base font-bold text-[var(--foreground)] transition placeholder:text-[var(--text-subtle)] focus:bg-[#f0f4f8]"
           required
         />
         {trailing ? <span className="absolute right-4 top-1/2 -translate-y-1/2">{trailing}</span> : null}
@@ -62,18 +62,14 @@ function getSafeRedirectPath(value: string | null, fallback: string) {
 
 export function AuthPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [sessionChecking, setSessionChecking] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
-  const [redirectPath, setRedirectPath] = useState("/creator");
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setRedirectPath(getSafeRedirectPath(params.get("next"), "/creator"));
-  }, []);
+  const redirectPath = getSafeRedirectPath(searchParams.get("next"), "/creator");
 
   useEffect(() => {
     let active = true;
@@ -139,7 +135,7 @@ export function AuthPage() {
 
   if (sessionChecking) {
     return (
-      <div className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden px-4 py-8">
+      <div className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden px-4 py-6 sm:py-8">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="sparkle-orb left-[-8%] top-[10%] h-[18rem] w-[18rem] bg-[rgba(174,231,217,0.45)]" />
           <div className="sparkle-orb right-[-10%] bottom-[-6%] h-[20rem] w-[20rem] bg-[rgba(250,205,244,0.36)]" />
@@ -153,7 +149,7 @@ export function AuthPage() {
   }
 
   return (
-    <div className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden px-4 py-8">
+    <div className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden px-4 py-6 sm:py-8">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="sparkle-orb left-[-8%] top-[10%] h-[18rem] w-[18rem] bg-[rgba(174,231,217,0.45)]" />
         <div className="sparkle-orb right-[-10%] bottom-[-6%] h-[20rem] w-[20rem] bg-[rgba(250,205,244,0.36)]" />
@@ -199,7 +195,7 @@ export function AuthPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((value) => !value)}
-                  className="text-[var(--foreground)]/55 transition hover:text-[var(--foreground)]"
+                  className="text-[var(--text-muted)] transition hover:text-[var(--foreground)]"
                   aria-label={showPassword ? "隐藏密码" : "显示密码"}
                 >
                   {showPassword ? <EyeOpenIcon className="h-5 w-5" /> : <EyeClosedIcon className="h-5 w-5" />}

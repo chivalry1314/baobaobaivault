@@ -184,7 +184,7 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
 
   const footer = useMemo(
     () => (
-      <footer className="relative z-10 px-6 pb-10 pt-12 text-center text-sm tracking-[0.08em] text-[var(--brand)]/55">
+      <footer className="relative z-10 px-6 pb-10 pt-12 text-center text-sm tracking-[0.08em] text-[color-mix(in_srgb,var(--brand)_28%,var(--foreground))]">
         © 2026 CardShare
       </footer>
     ),
@@ -253,7 +253,7 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
 
   if (sessionChecking) {
     return (
-      <div className="min-h-screen bg-[var(--background)] px-4 py-10 sm:px-6">
+      <div className="min-h-screen bg-[var(--background)] px-4 py-8 sm:px-6 sm:py-10">
         <div className="mx-auto max-w-7xl rounded-[32px] border border-white/80 bg-white/82 px-6 py-14 text-center text-[var(--foreground)]/72 shadow-[0_24px_64px_-42px_rgba(120,85,94,0.32)]">
           正在验证登录状态...
         </div>
@@ -274,7 +274,7 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
           <div className="absolute left-[18%] bottom-[8%] h-[24rem] w-[24rem] rounded-full bg-[rgba(248,219,230,0.22)] blur-[120px]" />
         </div>
 
-        <section className="relative z-10 mx-auto max-w-[1460px] px-4 pb-16 pt-10 sm:px-6">
+        <section className="relative z-10 mx-auto max-w-[var(--layout-max)] px-4 pb-14 pt-8 sm:px-6 sm:pb-16 sm:pt-10">
           {isWizardFlow ? (
             <div className="dream-panel-soft mb-8 flex flex-wrap items-center gap-4 px-5 py-4">
               <StepPill active={false} label="STEP 01" title="选择卡片" icon={<HeartIcon className="h-5 w-5" />} />
@@ -289,8 +289,8 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
             </Link>
 
             <div>
-              <h1 className="mt-1 text-5xl font-semibold tracking-tight text-[var(--foreground)]">卡片访问码设置</h1>
-              <p className="mt-3 text-lg text-[var(--foreground)]/62">设置有效期和次数上限，统一管理该卡片的分享权限。</p>
+              <h1 className="mt-1 text-[2.2rem] font-semibold tracking-tight text-[var(--foreground)] sm:text-4xl lg:text-5xl">卡片访问码设置</h1>
+              <p className="mt-3 text-base text-[var(--foreground)]/62 sm:text-lg">设置有效期和次数上限，统一管理该卡片的分享权限。</p>
             </div>
           </div>
 
@@ -329,7 +329,7 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
                       <div className="mb-4 inline-flex rounded-full bg-white/88 px-3 py-1 text-sm font-semibold text-[#f59e0b]">
                         {getRarityLabel(detail.stats.downloadCount)}
                       </div>
-                      <h2 className="text-4xl font-semibold tracking-tight text-white">{detail.card.title}</h2>
+                      <h2 className="text-[1.9rem] font-semibold tracking-tight text-white sm:text-3xl lg:text-4xl">{detail.card.title}</h2>
                     </div>
                   </div>
 
@@ -393,7 +393,7 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
                         >
                           {active ? <HeartMiniIcon className="absolute right-4 top-4 h-5 w-5 text-[var(--brand-strong)]" /> : null}
                           <div className="text-[2rem] font-semibold text-[var(--foreground)]">{option.label}</div>
-                          <div className="mt-2 text-lg text-[var(--foreground)]/58">{option.description}</div>
+                          <div className="mt-2 text-lg text-[var(--text-muted)]">{option.description}</div>
                         </button>
                       );
                     })}
@@ -433,11 +433,11 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
                       onChange={(event) => setUsageLimit(event.target.value)}
                       className="dream-input w-full px-16 py-5 pr-16 text-[2rem] disabled:cursor-not-allowed disabled:bg-[#f8f3f5] disabled:text-[var(--foreground)]/36"
                     />
-                    <span className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 text-2xl text-[var(--foreground)]/58">次</span>
+                    <span className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 text-2xl text-[var(--text-muted)]">次</span>
                   </div>
 
                   {config?.isActive ? (
-                    <p className="mt-4 text-base text-[var(--foreground)]/58">
+                    <p className="mt-4 text-base text-[var(--text-muted)]">
                       当前访问码已使用 {config.usageCount} 次。
                       {config.expiresAt ? ` 到期时间：${formatDateTime(config.expiresAt)}` : " 当前为永久有效。"}
                     </p>
@@ -554,14 +554,14 @@ function StepPill({
     <div className="flex items-center gap-3">
       <div
         className={`flex h-12 w-12 items-center justify-center rounded-full border text-[var(--brand-strong)] shadow-[0_18px_36px_-30px_rgba(120,85,94,0.35)] ${
-          active ? "border-[#e9a2b8] bg-[#ffe9f0]" : "border-white/85 bg-white/80 text-[var(--foreground)]/48"
+          active ? "border-[#e9a2b8] bg-[#ffe9f0]" : "border-white/85 bg-white/80 text-[var(--text-muted)]"
         }`}
       >
         {icon}
       </div>
       <div>
-        <div className="text-xs uppercase tracking-[0.18em] text-[var(--foreground)]/42">{label}</div>
-        <div className={`text-base font-medium ${active ? "text-[var(--foreground)]" : "text-[var(--foreground)]/52"}`}>{title}</div>
+        <div className="text-xs uppercase tracking-[0.18em] text-[var(--text-subtle)]">{label}</div>
+        <div className={`text-base font-medium ${active ? "text-[var(--foreground)]" : "text-[var(--text-subtle)]"}`}>{title}</div>
       </div>
     </div>
   );

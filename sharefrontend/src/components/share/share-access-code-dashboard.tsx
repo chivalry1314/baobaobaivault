@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AppShell } from "@/components/share/app-shell";
 import { AuthRedirect } from "@/components/share/auth-redirect";
+import { UnifiedFooter } from "@/components/share/unified-footer";
 import { ShareApiError, getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type { AccessCodeDashboardItem, AccessCodeDashboardResponse } from "@/lib/shared";
 
@@ -140,17 +141,13 @@ export function ShareAccessCodeDashboard() {
   }
 
   useEffect(() => {
-    void loadDashboard();
+    const timer = window.setTimeout(() => {
+      void loadDashboard();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
-  const footer = useMemo(
-    () => (
-      <footer className="relative z-10 px-6 pb-10 pt-12 text-center text-sm tracking-[0.08em] text-[var(--brand)]/55">
-        © 2026 CardShare
-      </footer>
-    ),
-    [],
-  );
+  const footer = useMemo(() => <UnifiedFooter />, []);
 
   const items = useMemo(() => {
     const source = dashboard?.items ?? [];

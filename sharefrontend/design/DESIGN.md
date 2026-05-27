@@ -1,150 +1,149 @@
 ---
-name: Dreamy ACG Aesthetic
-colors:
-  surface: '#fff8f8'
-  surface-dim: '#eed4d8'
-  surface-bright: '#fff8f8'
-  surface-container-lowest: '#ffffff'
-  surface-container-low: '#fff0f2'
-  surface-container: '#ffe8ec'
-  surface-container-high: '#fde2e6'
-  surface-container-highest: '#f7dce0'
-  on-surface: '#26181b'
-  on-surface-variant: '#4f4446'
-  inverse-surface: '#3d2c30'
-  inverse-on-surface: '#ffecef'
-  outline: '#817476'
-  outline-variant: '#d3c3c5'
-  surface-tint: '#78555e'
-  primary: '#78555e'
-  on-primary: '#ffffff'
-  primary-container: '#ffd1dc'
-  on-primary-container: '#7a5761'
-  inverse-primary: '#e7bbc6'
-  secondary: '#725477'
-  on-secondary: '#ffffff'
-  secondary-container: '#fad3fd'
-  on-secondary-container: '#77587c'
-  tertiary: '#615e57'
-  on-tertiary: '#ffffff'
-  tertiary-container: '#e2dcd3'
-  on-tertiary-container: '#64605a'
-  error: '#ba1a1a'
-  on-error: '#ffffff'
-  error-container: '#ffdad6'
-  on-error-container: '#93000a'
-  primary-fixed: '#ffd9e2'
-  primary-fixed-dim: '#e7bbc6'
-  on-primary-fixed: '#2d141c'
-  on-primary-fixed-variant: '#5e3e47'
-  secondary-fixed: '#fcd7ff'
-  secondary-fixed-dim: '#dfbbe4'
-  on-secondary-fixed: '#2a1131'
-  on-secondary-fixed-variant: '#593d5f'
-  tertiary-fixed: '#e7e2d9'
-  tertiary-fixed-dim: '#cbc6bd'
-  on-tertiary-fixed: '#1d1b16'
-  on-tertiary-fixed-variant: '#494640'
-  background: '#fff8f8'
-  on-background: '#26181b'
-  surface-variant: '#f7dce0'
-typography:
-  h1:
-    fontFamily: Plus Jakarta Sans
-    fontSize: 32px
-    fontWeight: '700'
-    lineHeight: '1.2'
-    letterSpacing: -0.02em
-  h2:
-    fontFamily: Plus Jakarta Sans
-    fontSize: 24px
-    fontWeight: '600'
-    lineHeight: '1.3'
-  body-lg:
-    fontFamily: Be Vietnam Pro
-    fontSize: 18px
-    fontWeight: '400'
-    lineHeight: '1.6'
-  body-md:
-    fontFamily: Be Vietnam Pro
-    fontSize: 16px
-    fontWeight: '400'
-    lineHeight: '1.5'
-  label-caps:
-    fontFamily: Plus Jakarta Sans
-    fontSize: 12px
-    fontWeight: '700'
-    lineHeight: '1'
-    letterSpacing: 0.05em
-rounded:
-  sm: 0.5rem
-  DEFAULT: 1rem
-  md: 1.5rem
-  lg: 2rem
-  xl: 3rem
-  full: 9999px
-spacing:
-  unit: 4px
-  xs: 4px
-  sm: 8px
-  md: 16px
-  lg: 24px
-  xl: 40px
-  container-margin: 20px
-  gutter: 16px
+name: Dreamy Bubble Outline
+source: sharefrontend/src/app/globals.css
 ---
 
-## Brand & Style
+## Overview
 
-This design system is built to evoke a "healing" (iyashikei) emotional response, tailored for Gen-Z female users immersed in ACG culture. The aesthetic draws heavily from modern Otome game interfaces, prioritizing high visual fidelity, emotional warmth, and romantic charm.
+This document describes the **actual UI style currently implemented** in `sharefrontend`.
+It replaces the previous dreamy-glass spec and aligns with the live visual system used by shared pages.
 
-The design style is a hybrid of **Glassmorphism** and **Tactile Softness**. It utilizes translucent, frosted surfaces to create a sense of weightlessness, combined with soft, "squishy" neomorphic shadows that make elements feel touchable. The visual narrative is reinforced by decorative motifs including floating sparkles (glitter), subtle lace-patterned borders, and heart icons used as structural accents rather than just decoration.
+Core visual direction:
 
-## Colors
+- Pastel background with high-contrast ink outline
+- Solid white panels instead of translucent glass cards
+- Rounded geometry + comic-like thick borders
+- Bold typography hierarchy optimized for quick scanning
 
-The palette is anchored in "Sakura Pink" and "Lavender Purple" to create a romantic, twilight-garden atmosphere. 
+## Color Tokens
 
-- **Primary (Sakura):** Used for key actions and focal points.
-- **Secondary (Lavender):** Used for interactive states and secondary navigation elements.
-- **Tertiary (Creamy White):** The base for surfaces, providing a warmer, more "expensive" feel than pure white.
-- **Neutral (Cocoa):** A soft, desaturated brown-grey used for text to maintain high readability without the harshness of black.
+Primary tokens (from `:root` in `globals.css`):
 
-Gradients should be used generously on large surfaces, transitioning softly between the primary pink and secondary purple with low opacity.
+- `--background: #a2d2fb`
+- `--foreground: #2e2856`
+- `--outline: #2e2856`
+- `--primary: #cdb4f3`
+- `--secondary: #aee7d9`
+- `--tertiary: #facdf4`
+- `--accent: #fcf1a7`
+- `--brand: #ff9c9c`
+- `--brand-strong: #ff7f9d`
+
+Interaction tokens:
+
+- `--button-primary`, `--button-primary-hover`, `--button-primary-active`
+- `--button-subtle`, `--button-subtle-hover`, `--button-subtle-text`
+- `--button-rose`, `--button-rose-hover`, `--button-rose-text`
+
+Readability tokens:
+
+- `--text-secondary`
+- `--text-muted`
+- `--text-subtle`
 
 ## Typography
 
-The typography selection prioritizes a "friendly-modern" look. **Plus Jakarta Sans** is utilized for headings and labels due to its open apertures and inherently optimistic, rounded geometric shapes. **Be Vietnam Pro** serves as the body face, offering exceptional legibility for long-form narrative text (common in ACG/Otome styles) while maintaining a warm, contemporary feel.
+Global body font:
 
-All type should be rendered with slightly higher line-heights to enhance the "airy" and "dreamy" quality of the layout. Headlines may occasionally use a subtle "glow" text-shadow in the primary color for a magical effect.
+- `Nunito` first, with Chinese fallbacks: `PingFang SC`, `Microsoft YaHei`, `Noto Sans CJK SC`
 
-## Layout & Spacing
+Type utility scale:
 
-This design system employs a **Fluid Grid** with generous inner padding to create a sense of "breathable luxury." The layout relies on an 8px rhythmic scale, but with larger exterior margins (20px+) to frame the content like a storybook.
+- `type-hero`
+- `type-h1`
+- `type-h2`
+- `type-h3`
+- `type-body`
+- `type-body-sm`
+- `type-meta`
 
-Elements should be grouped within floating containers rather than edge-to-edge strips. Use "Cloud-grouping"—where related elements sit on a shared semi-transparent "cloud" surface—to organize information without hard dividers.
+Tone guidelines:
 
-## Elevation & Depth
+- Headings use heavy weight (`black`/`900`) and compact line-height
+- Supporting text uses lower contrast (`foreground` with alpha)
+- Overlines and metadata use uppercase tracking
 
-Hierarchy is established through **Soft Tonal Layering** and **Color-Tinted Shadows**. 
+## Shape and Borders
 
-1.  **Base Layer:** The creamy white background or a soft pink-to-peach gradient.
-2.  **Surface Layer:** Translucent "Glass" panels (80-90% opacity) with a heavy backdrop blur (20px).
-3.  **Floating Layer:** Interactive elements like buttons and cards use a dual-shadow system: one soft, wide-cast shadow tinted with Lavender (#E0BBE4) and a smaller, tighter highlight on the top-left edge to simulate 3D roundness.
+System shape language:
 
-Avoid using harsh black shadows. Every elevation change should feel like a soft pillow resting on a silken sheet.
+- Card radius: usually `1.5rem` to `2rem+`
+- Inputs/buttons: mostly full pill or soft rounded corners
+- Borders: strong visible outlines (`3px` to `4px`) using `--line-strong` / `--outline`
 
-## Shapes
+This is intentionally not minimal; it should feel playful and tactile.
 
-The shape language is defined by **Extreme Roundness**. There are no sharp corners in this design system. 
+## Layout Tokens
 
-All primary buttons and input fields utilize "Pill-shaped" geometry. Cards and containers use an extra-large radius (min 24px). A distinctive feature of this system is the **"Lace Edge"**: a decorative scalloped or perforated border applied to the bottom or top of key modal headers and card dividers, mimicking delicate fabric. Sparkle shapes (four-pointed stars) should be used as background ornaments near focal points.
+- `--layout-max: 1500px`
 
-## Components
+Container policy:
 
-- **Buttons:** High-gloss, pill-shaped buttons with a subtle inner-glow. "Primary" buttons feature a gradient from Sakura to a slightly deeper rose. "Secondary" buttons use a frosted glass effect with a lavender border.
-- **Input Fields:** Soft-focus fields with 100% rounded corners. The focus state transitions the border from creamy white to a glowing Sakura pink.
-- **Cards:** Large-radius containers with a "Lace" divider separating the image/header from the body text. Backgrounds are slightly translucent.
-- **Chips/Tags:** Tiny pill shapes with a "sparkle" icon prefix. Use light pastel fills with darker text for contrast.
-- **Checkboxes/Radios:** Customized as small hearts or flowers. When selected, they "bloom" or fill with a saturated pink gradient.
-- **Progress Bars:** Soft, rounded tracks. The filler should have a "shimmer" animation, moving left to right like a sparkling liquid.
-- **Decorative Elements:** Floating 2D sparkle sprites and "Petal Fall" micro-interactions when a user completes a major task (healing feedback).
+- Primary shared pages should use `max-w-[var(--layout-max)]` as the default shell width.
+- Component-local narrower widths are still allowed for dedicated editors/modals/forms.
+
+## Elevation and Shadows
+
+Main shadow tokens:
+
+- `--shadow-card: 0 4px 0 rgba(46, 40, 86, 0.28)`
+- `--shadow-lift: 0 8px 0 rgba(46, 40, 86, 0.26)`
+- `--shadow-soft: 0 4px 0 rgba(46, 40, 86, 0.2)`
+
+Usage:
+
+- Base panels/cards use `shadow-card` or `shadow-soft`
+- Hover-lift surfaces use `card-hover-lift` + `shadow-lift`
+- No heavy black blur shadows; elevation is crisp and outlined
+
+## Core Component Classes
+
+Shared structural classes:
+
+- `dream-panel` / `dream-panel-soft`
+- `dream-card`
+- `route-shell`
+- `floating-nav`
+- `dream-input` / `dream-textarea`
+- `dream-chip` / `metric-pill`
+- `btn-primary` / `btn-subtle` / `btn-rose`
+
+Motion helpers:
+
+- `fade-slide-in`
+- `card-hover-lift`
+- `sparkle`
+
+## Background and Ornament
+
+Background strategy:
+
+- Base page uses solid pastel `--background`
+- Large blurred pastel orbs/clouds are layered as decorative atmosphere
+- Ornaments are subtle and non-interactive (`pointer-events-none`)
+
+## Accessibility and Interaction Notes
+
+- Focus ring is implemented globally for interactive controls (`a`, `button`, `input`, `textarea`, `select`, etc.) via `:focus-visible` outline + glow
+- `prefers-reduced-motion` disables key animation transitions
+- Buttons and chips keep strong border contrast for readability
+- Legacy low-alpha foreground text utilities have been migrated to explicit semantic tokens (`--text-muted` / `--text-subtle`) in components
+
+## Navigation Semantics
+
+- `/creator` is the semantic entry for Creator Center.
+- `/creator/new` is treated as an action route for creating a new card, not a primary nav root.
+
+## Implementation Notes
+
+- The current codebase still contains a compatibility normalization block for legacy translucent surface classes.
+- Text contrast migration is complete at component level; new UI code should use semantic text tokens directly instead of alpha-based foreground classes.
+
+## Drift Policy
+
+When changing UI in this project:
+
+1. Use existing CSS variables first
+2. Prefer shared utility classes over one-off long class strings
+3. Update this file if visual primitives or tokens change
+4. Keep language consistency (Chinese-first product copy unless explicitly bilingual)

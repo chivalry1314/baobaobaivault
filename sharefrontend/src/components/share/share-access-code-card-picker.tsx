@@ -6,6 +6,7 @@ import { type ReactNode, useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/share/app-shell";
 import { AuthRedirect } from "@/components/share/auth-redirect";
+import { UnifiedFooter } from "@/components/share/unified-footer";
 import { ShareApiError, getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type { AccessCodeDashboardItem, DashboardCard, PlatformCard } from "@/lib/shared";
 
@@ -78,6 +79,16 @@ function buildSelectableCardIds(availableCards: PlatformCard[], items: AccessCod
   }
 
   return ids;
+}
+
+function pickSelectedCardId(cards: DashboardCard[], currentId: string) {
+  if (cards.length === 0) {
+    return "";
+  }
+  if (cards.some((item) => item.card.id === currentId)) {
+    return currentId;
+  }
+  return cards[0]?.card.id ?? "";
 }
 
 function StepPill({
@@ -196,44 +207,23 @@ export function ShareAccessCodeCardPicker() {
     return cards.filter((item) => item.card.visibility === visibilityFilter);
   }, [cards, visibilityFilter]);
 
-  useEffect(() => {
-    if (filteredCards.length === 0) {
-      setSelectedCardId("");
-      return;
-    }
-
-    setSelectedCardId((current) => {
-      if (filteredCards.some((item) => item.card.id === current)) {
-        return current;
-      }
-      return filteredCards[0]?.card.id ?? "";
-    });
-  }, [filteredCards]);
+  const effectiveSelectedCardId = useMemo(() => pickSelectedCardId(filteredCards, selectedCardId), [filteredCards, selectedCardId]);
 
   const selectedCard = useMemo(
-    () => filteredCards.find((item) => item.card.id === selectedCardId) ?? null,
-    [filteredCards, selectedCardId],
-  );
-
-  const footer = useMemo(
-    () => (
-      <footer className="relative z-10 px-6 pb-10 pt-12 text-center text-sm tracking-[0.08em] text-[var(--brand)]/55">
-        © 2026 CardShare
-      </footer>
-    ),
-    [],
+    () => filteredCards.find((item) => item.card.id === effectiveSelectedCardId) ?? null,
+    [effectiveSelectedCardId, filteredCards],
   );
 
   function handleNext() {
-    if (!selectedCardId) {
+    if (!effectiveSelectedCardId) {
       return;
     }
-    router.push(`/creator/cards/${encodeURIComponent(selectedCardId)}/access-code?flow=new-access-code`);
+    router.push(`/creator/cards/${encodeURIComponent(effectiveSelectedCardId)}/access-code?flow=new-access-code`);
   }
 
   if (loading && authenticated) {
     return (
-      <AppShell currentPath="/creator" footerSlot={footer}>
+      <AppShell currentPath="/creator" footerSlot={<UnifiedFooter />}>
         <div className="px-4 py-10 sm:px-6">
           <div className="mx-auto max-w-[1480px] space-y-6">
             <div className="dream-panel h-28 animate-pulse" />
@@ -253,7 +243,7 @@ export function ShareAccessCodeCardPicker() {
   }
 
   return (
-    <AppShell currentPath="/creator" footerSlot={footer}>
+    <AppShell currentPath="/creator" footerSlot={<UnifiedFooter />}>
       <div className="relative overflow-hidden bg-[linear-gradient(180deg,#f4fbff_0%,#f8fdff_52%,#f2faff_100%)]">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute left-[-8%] top-[8%] h-[26rem] w-[26rem] rounded-full bg-[rgba(176,232,249,0.36)] blur-[120px]" />
@@ -419,7 +409,7 @@ export function ShareAccessCodeCardPicker() {
                 }`}
               >
                 {filteredCards.map((item) => {
-                  const selected = item.card.id === selectedCardId;
+                  const selected = item.card.id === effectiveSelectedCardId;
                   const rarityLabel = getRarityLabel(item.stats.downloadCount);
 
                   if (viewMode === "list") {

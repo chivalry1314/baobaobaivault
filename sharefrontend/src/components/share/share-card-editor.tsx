@@ -99,6 +99,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
   const [loadError, setLoadError] = useState("");
   const [formError, setFormError] = useState("");
   const [submitMode, setSubmitMode] = useState<"published" | "draft" | "delete" | null>(null);
+  const isEditMode = mode === "edit";
 
   useEffect(() => {
     let active = true;
@@ -137,9 +138,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
   useEffect(() => {
     let active = true;
 
-    if (mode !== "edit") {
-      setCardLoading(false);
-      setLoadedCard(null);
+    if (!isEditMode) {
       return () => {
         active = false;
       };
@@ -152,27 +151,19 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
     }
 
     if (!cardId) {
-      setLoadError("缺少卡片 ID，无法进入编辑页面。");
-      setCardLoading(false);
       return () => {
         active = false;
       };
     }
+    const targetCardId = cardId;
 
     async function loadCard() {
-      const editingCardId = cardId;
-      if (!editingCardId) {
-        setLoadError("缺少卡片 ID，无法进入编辑页面。");
-        setCardLoading(false);
-        return;
-      }
-
       setCardLoading(true);
       setLoadError("");
       setFormError("");
 
       try {
-        const detail = await shareApi.cardDetail(editingCardId);
+        const detail = await shareApi.cardDetail(targetCardId);
         if (!active) {
           return;
         }
@@ -209,7 +200,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
     return () => {
       active = false;
     };
-  }, [cardId, currentUser, mode]);
+  }, [cardId, currentUser, isEditMode]);
 
   useEffect(() => {
     return () => {
@@ -230,14 +221,14 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
   const previewDescription = composeSearchableSummary(description);
   const previewTag = moodOptions.find((item) => item.id === selectedTags[0]) ?? moodOptions[0];
   const publishPending = submitMode !== null;
-  const afterSuccessPath = mode === "edit" && cardId ? `/creator/cards/${encodeURIComponent(cardId)}/edit` : "/creator/new";
+  const afterSuccessPath = mode === "edit" && cardId ? `/creator/cards/${encodeURIComponent(cardId)}/edit` : "/creator";
 
   const footer = useMemo(
     () => (
       <footer className="relative z-10 border-t border-white/60 bg-[rgba(255,248,248,0.72)] px-6 py-10 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 text-center md:flex-row md:text-left">
           <div className="text-3xl font-semibold italic tracking-tight text-[var(--brand-strong)]">CardShare</div>
-          <div className="text-sm tracking-[0.14em] text-[var(--brand)]/55">© 2026 CARDSHARE. DREAMY STYLE.</div>
+          <div className="text-sm tracking-[0.14em] text-[color-mix(in_srgb,var(--brand)_28%,var(--foreground))]">© 2026 CARDSHARE. DREAMY STYLE.</div>
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm uppercase tracking-[0.12em] text-[var(--brand)]/48">
             <Link href="/discover" className="transition hover:text-[var(--brand-strong)]">
               About
@@ -391,7 +382,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
 
   if (sessionChecking || (mode === "edit" && currentUser && cardLoading)) {
     return (
-      <div className="min-h-screen bg-[var(--background)] px-4 py-10 sm:px-6">
+      <div className="min-h-screen bg-[var(--background)] px-4 py-8 sm:px-6 sm:py-10">
         <div className="mx-auto max-w-7xl rounded-[32px] border border-white/80 bg-white/82 px-6 py-14 text-center text-[var(--foreground)]/72 shadow-[0_24px_64px_-42px_rgba(120,85,94,0.32)]">
           正在加载编辑器...
         </div>
@@ -406,7 +397,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
   if (mode === "edit" && loadError) {
     return (
       <AppShell currentPath="/creator" footerSlot={footer}>
-        <div className="min-h-screen bg-[var(--background)] px-4 py-10 sm:px-6">
+        <div className="min-h-screen bg-[var(--background)] px-4 py-8 sm:px-6 sm:py-10">
           <div className="mx-auto max-w-3xl rounded-[32px] border border-[#f3c8ad] bg-[#fff4ec] px-6 py-10 text-center shadow-[0_24px_64px_-42px_rgba(120,85,94,0.22)]">
             <p className="text-xl font-semibold text-[#9a3412]">{loadError}</p>
             <Link
@@ -445,7 +436,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
 
           <div className="mb-10 text-center">
             <SparklesIcon className="mx-auto h-7 w-7 text-[var(--primary)]/80" />
-            <h1 className="mt-3 text-4xl font-black tracking-tight text-[var(--foreground)]">{pageTitle}</h1>
+            <h1 className="mt-3 text-[2rem] font-black tracking-tight text-[var(--foreground)] sm:text-4xl">{pageTitle}</h1>
             <p className="mt-3 text-sm font-bold text-[var(--foreground)]/62">{pageDescription}</p>
           </div>
 
@@ -459,7 +450,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
             <div className="w-full space-y-6 lg:w-[55%]">
               <section className="dream-panel p-6 shadow-[4px_4px_0px_var(--line-strong)]">
                 <div className="mb-6 flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4 text-[var(--foreground)]/50" />
+                  <ImageIcon className="h-4 w-4 text-[var(--text-subtle)]" />
                   <h2 className="text-sm font-black text-[var(--foreground)]">{mode === "edit" ? "封面预览" : "上传封面图"}</h2>
                 </div>
 
@@ -490,7 +481,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                           <ImageAddIcon className="h-8 w-8" />
                         </div>
                         <p className="mt-6 text-xl font-black text-[var(--foreground)]">拖拽图片到这里，或点击上传</p>
-                        <p className="mt-2 text-sm font-bold text-[var(--foreground)]/56">支持 JPG、PNG、GIF，最大 10MB</p>
+                        <p className="mt-2 text-sm font-bold text-[var(--text-muted)]">支持 JPG、PNG、GIF，最大 10MB</p>
                       </>
                     )}
 
@@ -511,16 +502,16 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                         className="max-h-[320px] rounded-xl border-[3px] border-[var(--line-strong)] object-cover shadow-[2px_2px_0px_var(--line-strong)]"
                       />
                     ) : (
-                      <div className="text-sm font-bold text-[var(--foreground)]/56">当前卡片无封面</div>
+                      <div className="text-sm font-bold text-[var(--text-muted)]">当前卡片无封面</div>
                     )}
-                    <p className="mt-5 text-xs font-bold text-[var(--foreground)]/50">编辑模式暂不支持更换文件，后续可扩展。</p>
+                    <p className="mt-5 text-xs font-bold text-[var(--text-subtle)]">编辑模式暂不支持更换文件，后续可扩展。</p>
                   </div>
                 )}
               </section>
 
               <section className="dream-panel p-6 shadow-[4px_4px_0px_var(--line-strong)]">
                 <div className="mb-6 flex items-center gap-2">
-                  <EditIcon className="h-4 w-4 text-[var(--foreground)]/50" />
+                  <EditIcon className="h-4 w-4 text-[var(--text-subtle)]" />
                   <h2 className="text-sm font-black text-[var(--foreground)]">卡片信息</h2>
                 </div>
 
@@ -531,7 +522,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                     value={title}
                     onChange={(event) => setTitle(event.target.value)}
                     placeholder="输入卡片标题..."
-                    className="w-full rounded-full border-[2px] border-[var(--line-strong)] bg-white px-4 py-3 font-bold text-[var(--foreground)] outline-none transition focus:ring-2 focus:ring-[var(--primary)]"
+                    className="w-full rounded-full border-[2px] border-[var(--line-strong)] bg-white px-4 py-3 font-bold text-[var(--foreground)] transition focus:ring-2 focus:ring-[var(--primary)]"
                   />
                 </div>
 
@@ -542,7 +533,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                     onChange={(event) => setDescription(event.target.value)}
                     rows={6}
                     placeholder="补充卡片故事、来源或使用说明..."
-                    className="w-full resize-y rounded-xl border-[2px] border-[var(--line-strong)] bg-white px-4 py-3 font-bold leading-7 text-[var(--foreground)] outline-none transition focus:ring-2 focus:ring-[var(--primary)]"
+                    className="w-full resize-y rounded-xl border-[2px] border-[var(--line-strong)] bg-white px-4 py-3 font-bold leading-7 text-[var(--foreground)] transition focus:ring-2 focus:ring-[var(--primary)]"
                   />
                 </div>
 
@@ -588,7 +579,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
               <section className="dream-panel p-6 shadow-[4px_4px_0px_var(--line-strong)]">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-sm font-black text-[var(--foreground)]">实时预览</h2>
-                  <EyeIcon className="h-4 w-4 text-[var(--foreground)]/40" />
+                  <EyeIcon className="h-4 w-4 text-[var(--text-subtle)]" />
                 </div>
 
                 <div className="overflow-hidden rounded-[24px] border-[3px] border-[var(--line-strong)] bg-white shadow-[4px_4px_0px_var(--line-strong)]">
@@ -603,7 +594,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                   <div className="p-4">
                     <h3 className="text-xl font-black text-[var(--foreground)]">{previewTitle}</h3>
                     <p className="mt-2 text-xs font-bold leading-relaxed text-[var(--foreground)]/60">{previewDescription}</p>
-                    <div className="mt-3 flex items-center gap-2 text-[10px] font-bold text-[var(--foreground)]/58">
+                    <div className="mt-3 flex items-center gap-2 text-[10px] font-bold text-[var(--text-muted)]">
                       <HeartIcon className="h-3 w-3 text-[var(--primary)]" />
                       <span>{previewTag.label}</span>
                       <span>·</span>
@@ -666,12 +657,12 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                 </div>
 
                 {mode === "edit" && loadedCard ? (
-                  <div className="mt-6 space-y-1 text-[10px] font-bold text-[var(--foreground)]/42">
+                  <div className="mt-6 space-y-1 text-[10px] font-bold text-[var(--text-subtle)]">
                     <p>卡片 ID：{loadedCard.card.id}</p>
                     <p>当前状态：{getStatusLabel(loadedCard.card.status)}</p>
                   </div>
                 ) : (
-                  <div className="mt-6 space-y-1 text-[10px] font-bold text-[var(--foreground)]/42">
+                  <div className="mt-6 space-y-1 text-[10px] font-bold text-[var(--text-subtle)]">
                     <p>创建后可在「访问码配置」中继续设置分享规则。</p>
                     <p>建议先发布，再根据需要调整为草稿或私密。</p>
                   </div>

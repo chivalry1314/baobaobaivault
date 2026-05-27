@@ -71,7 +71,7 @@ export default function DiscoverPage() {
             <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
               {showcaseStats.map((item) => (
                 <div key={item.label} className="metric-pill rounded-[20px] px-4 py-3 text-center sm:text-left lg:text-center">
-                  <p className="type-meta uppercase text-[var(--foreground)]/50">{item.label}</p>
+                  <p className="type-meta uppercase text-[var(--text-subtle)]">{item.label}</p>
                   <p className="type-h3 mt-2 text-[var(--foreground)]">{item.value}</p>
                 </div>
               ))}

@@ -3,6 +3,7 @@
 import {
   useEffect,
   useId,
+  useMemo,
   useRef,
   useState,
   type ChangeEvent,
@@ -123,7 +124,7 @@ function SecurityRow({
         </div>
         <div>
           <p className="text-[1.1rem] font-black text-[var(--foreground)]">{title}</p>
-          <p className="mt-1 text-sm text-[var(--foreground)]/58">{description}</p>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">{description}</p>
         </div>
       </div>
 
@@ -151,7 +152,7 @@ function ModalCard({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(38,24,27,0.18)] p-4 backdrop-blur-sm sm:p-6">
-      <button type="button" className="absolute inset-0 cursor-default" aria-label="关闭弹窗" onClick={onClose} />
+      <button type="button" className="absolute inset-0 cursor-pointer" aria-label="关闭弹窗" onClick={onClose} />
       <div className="dream-panel relative z-10 w-full max-w-[500px] p-6 sm:p-7">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -161,7 +162,7 @@ function ModalCard({
           <button
             type="button"
             onClick={onClose}
-            className="btn-subtle flex h-10 w-10 items-center justify-center rounded-full text-[var(--foreground)]/62"
+            className="btn-subtle flex h-11 w-11 items-center justify-center rounded-full text-[var(--foreground)]/62"
             aria-label="关闭"
           >
             <CloseIcon className="h-5 w-5" />
@@ -184,6 +185,18 @@ export function ShareProfileSettings({
   const coverInputId = useId();
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const userKey = useMemo(
+    () =>
+      [
+        user.id,
+        user.nickname,
+        user.bio,
+        user.avatar,
+        user.coverImage,
+        user.phone,
+      ].join("|"),
+    [user.avatar, user.bio, user.coverImage, user.id, user.nickname, user.phone],
+  );
 
   const [draft, setDraft] = useState<SettingsDraft>(() => createDraft(user));
   const [savePending, setSavePending] = useState(false);
@@ -201,11 +214,14 @@ export function ShareProfileSettings({
   });
 
   useEffect(() => {
-    setDraft(createDraft(user));
-    setPhoneValue(user.phone);
-    setSaveError("");
-    setSaveSuccess("");
-  }, [user]);
+    const timer = window.setTimeout(() => {
+      setDraft(createDraft(user));
+      setPhoneValue(user.phone);
+      setSaveError("");
+      setSaveSuccess("");
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [userKey, user]);
 
   async function handleImageChange(event: ChangeEvent<HTMLInputElement>, target: "avatar" | "coverImage") {
     const file = event.target.files?.[0];
@@ -362,7 +378,7 @@ export function ShareProfileSettings({
 
               <div>
                 <p className="text-[1.1rem] font-black text-[var(--foreground)]">头像</p>
-                <p className="mt-2 text-sm text-[var(--foreground)]/58">支持 JPG/PNG，大小不超过 5MB</p>
+                <p className="mt-2 text-sm text-[var(--text-muted)]">支持 JPG/PNG，大小不超过 5MB</p>
               </div>
             </div>
 
@@ -411,7 +427,7 @@ export function ShareProfileSettings({
 
           <div className="mt-8 flex items-center justify-between gap-4">
             <span className="text-[1.05rem] font-black text-[var(--foreground)]">个人简介</span>
-            <span className="text-sm text-[var(--foreground)]/48">{draft.bio.length}/100</span>
+            <span className="text-sm text-[var(--text-muted)]">{draft.bio.length}/100</span>
           </div>
 
           <textarea
