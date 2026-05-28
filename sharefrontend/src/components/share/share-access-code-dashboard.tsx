@@ -8,7 +8,7 @@ import { AppShell } from "@/components/share/app-shell";
 import { AuthRedirect } from "@/components/share/auth-redirect";
 import { UnifiedFooter } from "@/components/share/unified-footer";
 import { ShareApiError, getShareErrorMessage, shareApi } from "@/lib/share-api";
-import type { AccessCodeDashboardItem, AccessCodeDashboardResponse } from "@/lib/shared";
+import type { AccessCodeDashboardItem, AccessCodeDashboardResponse, PlatformCard } from "@/lib/shared";
 
 type FeedbackState =
   | {
@@ -174,6 +174,10 @@ export function ShareAccessCodeDashboard() {
   }, [dashboard, searchValue]);
 
   const availableCards = dashboard?.availableCards ?? [];
+  const cardsWithoutCode = useMemo(() => {
+    const configuredIds = new Set((dashboard?.items ?? []).map((item) => item.card.id));
+    return availableCards.filter((card) => !configuredIds.has(card.id));
+  }, [availableCards, dashboard?.items]);
   const totalItems = dashboard?.items.length ?? 0;
 
   async function handleCopyLink(item: AccessCodeDashboardItem) {
@@ -269,14 +273,14 @@ export function ShareAccessCodeDashboard() {
     }
   }
 
-  function handleCreateNewAccessCode() {
-    setFeedback(null);
-    router.push("/creator/access-codes/new");
-  }
-
   function handleCreateCard() {
     setFeedback(null);
     router.push("/creator/new");
+  }
+
+  function handleConfigureAccessCode(cardId: string) {
+    setFeedback(null);
+    router.push(`/creator/cards/${encodeURIComponent(cardId)}/access-code`);
   }
 
   if (loading && !dashboard && authenticated) {
@@ -305,7 +309,7 @@ export function ShareAccessCodeDashboard() {
         </div>
 
         <section className="relative z-10 mx-auto mt-8 flex w-full max-w-[1460px] flex-col px-5 pb-12 sm:px-8">
-          <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div className="mb-8 flex flex-col gap-6">
             <div className="flex flex-col gap-4">
               <Link
                 href="/creator"
@@ -321,15 +325,6 @@ export function ShareAccessCodeDashboard() {
                 <p className="mt-3 text-lg font-bold text-[var(--foreground)]/70">统一查看、复制、停用与恢复每张卡片的提取码。</p>
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={handleCreateNewAccessCode}
-              className="inline-flex items-center gap-2 rounded-full border-[4px] border-[var(--line-strong)] bg-[var(--button-primary)] px-6 py-3.5 text-lg font-black text-[var(--foreground)] shadow-[4px_4px_0px_var(--line-strong)] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_var(--line-strong)]"
-            >
-              <PlusIcon className="h-6 w-6" />
-              新建提取码
-            </button>
           </div>
 
           {feedback ? (
@@ -381,10 +376,35 @@ export function ShareAccessCodeDashboard() {
                 </div>
               ) : null}
 
+              {cardsWithoutCode.length > 0 ? (
+                <div className="mb-6 rounded-[24px] border-[3px] border-[var(--line-strong)] bg-[#f8fcff] p-5">
+                  <div className="mb-4 flex items-center gap-2 text-base font-black text-[var(--foreground)]">
+                    <PlusIcon className="h-5 w-5 text-[var(--primary)]" />
+                    未配置提取码的卡片
+                  </div>
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    {cardsWithoutCode.map((card) => (
+                      <div key={card.id} className="rounded-[18px] border-[2px] border-[var(--line-strong)] bg-white px-4 py-3">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-base font-black text-[var(--foreground)]">{card.title}</p>
+                            <p className="mt-1 text-xs text-[var(--foreground)]/56">{card.originalFileName || "未命名文件"}</p>
+                          </div>
+                          <ActionButton onClick={() => handleConfigureAccessCode(card.id)}>
+                            <EditIcon className="h-4 w-4" />
+                            配置提取码
+                          </ActionButton>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
               {!loadError && totalItems === 0 ? (
                 <EmptyState
-                  availableCards={availableCards.length}
-                  onCreateAccessCode={handleCreateNewAccessCode}
+                  cardsWithoutCode={cardsWithoutCode}
+                  onConfigureAccessCode={handleConfigureAccessCode}
                   onCreateCard={handleCreateCard}
                 />
               ) : null}
@@ -403,7 +423,7 @@ export function ShareAccessCodeDashboard() {
                       key={item.card.id}
                       item={item}
                       pendingAction={pendingAction}
-                      onEdit={() => router.push(`/creator/cards/${encodeURIComponent(item.card.id)}/access-code`)}
+                      onEdit={() => handleConfigureAccessCode(item.card.id)}
                       onCopy={() => void handleCopyLink(item)}
                       onHide={() => void handleHide(item)}
                       onReactivate={() => void handleReactivate(item)}
@@ -421,15 +441,15 @@ export function ShareAccessCodeDashboard() {
 }
 
 function EmptyState({
-  availableCards,
-  onCreateAccessCode,
+  cardsWithoutCode,
+  onConfigureAccessCode,
   onCreateCard,
 }: {
-  availableCards: number;
-  onCreateAccessCode: () => void;
+  cardsWithoutCode: PlatformCard[];
+  onConfigureAccessCode: (cardId: string) => void;
   onCreateCard: () => void;
 }) {
-  const hasAvailableCard = availableCards > 0;
+  const hasAvailableCard = cardsWithoutCode.length > 0;
 
   return (
     <div className="relative min-h-[480px] overflow-hidden rounded-[30px] border-[3px] border-[var(--line-strong)] bg-[#fcfeff] px-6 py-12 text-center">
@@ -444,17 +464,37 @@ function EmptyState({
         <h2 className="text-3xl font-black text-[var(--foreground)]">还没有提取码</h2>
         <p className="mt-4 max-w-xl text-lg font-bold text-[var(--foreground)]/70">
           {hasAvailableCard
-            ? "你已有可用卡片，现在可以为它们创建提取码，便于受控分享。"
+            ? "你已有可用卡片，直接点击下面按钮即可进入对应卡片的提取码配置页。"
             : "你还没有可配置提取码的卡片，先去创建并发布一张卡片吧。"}
         </p>
 
-        <button
-          type="button"
-          onClick={hasAvailableCard ? onCreateAccessCode : onCreateCard}
-          className="mt-10 rounded-full border-[3px] border-[var(--line-strong)] bg-white px-8 py-3.5 text-lg font-black text-[var(--foreground)] shadow-[3px_3px_0px_var(--line-strong)] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0px_var(--line-strong)]"
-        >
-          {hasAvailableCard ? "新建提取码" : "去创建卡片"}
-        </button>
+        {hasAvailableCard ? (
+          <div className="mt-8 flex w-full max-w-2xl flex-col gap-3">
+            {cardsWithoutCode.map((card) => (
+              <div
+                key={card.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border-[2px] border-[var(--line-strong)] bg-white px-4 py-3 text-left"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-base font-black text-[var(--foreground)]">{card.title}</p>
+                  <p className="mt-1 text-xs text-[var(--foreground)]/56">{card.originalFileName || "未命名文件"}</p>
+                </div>
+                <ActionButton onClick={() => onConfigureAccessCode(card.id)}>
+                  <EditIcon className="h-4 w-4" />
+                  配置提取码
+                </ActionButton>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onCreateCard}
+            className="mt-10 rounded-full border-[3px] border-[var(--line-strong)] bg-white px-8 py-3.5 text-lg font-black text-[var(--foreground)] shadow-[3px_3px_0px_var(--line-strong)] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0px_var(--line-strong)]"
+          >
+            去创建卡片
+          </button>
+        )}
       </div>
     </div>
   );
@@ -534,6 +574,13 @@ function AccessCodeCard({
                 <CalendarIcon className="h-4 w-4" />
                 到期时间：{formatDateTime(item.config.expiresAt)}
               </div>
+
+              <div className="mt-3">
+                <ActionButton onClick={onEdit}>
+                  <EditIcon className="h-4 w-4" />
+                  配置提取码
+                </ActionButton>
+              </div>
             </div>
 
             <div className="sm:text-right">
@@ -553,10 +600,6 @@ function AccessCodeCard({
           <div className="mt-5 flex flex-wrap items-center justify-end gap-2.5">
             {active ? (
               <>
-                <ActionButton onClick={onEdit}>
-                  <EditIcon className="h-4 w-4" />
-                  编辑规则
-                </ActionButton>
                 <ActionButton disabled={pendingAction === `copy:${item.card.id}`} onClick={onCopy}>
                   <LinkIcon className="h-4 w-4" />
                   {pendingAction === `copy:${item.card.id}` ? "复制中..." : "复制链接"}

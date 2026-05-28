@@ -1,5 +1,5 @@
-import { ShareAccessCodeCardPicker } from "@/components/share/share-access-code-card-picker";
+import { redirect } from "next/navigation";
 
 export default function CreatorAccessCodeNewPage() {
-  return <ShareAccessCodeCardPicker />;
+  redirect("/creator/access-codes");
 }

@@ -364,7 +364,7 @@ function CreatorCard({
               <div className="type-body-sm tracking-[0.1em] text-[var(--primary)]">{item.hasAccessCode ? "已配置" : "未配置"}</div>
               <div className="mt-1 text-xs text-[var(--text-subtle)]">点击右侧按钮进入提取码管理</div>
             </div>
-            <Link href={accessCodeHref} className="btn-subtle rounded-full px-5 py-2.5 text-sm font-black text-[var(--primary)]">
+            <Link href={accessCodeHref} className="btn-subtle shrink-0 whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-black text-[var(--primary)]">
               去管理
             </Link>
           </div>
@@ -408,7 +408,10 @@ function HistoryItem({
         </div>
       </div>
 
-      <Link href={accessCodeHref} className="btn-subtle rounded-full px-5 py-2.5 text-sm font-black text-[var(--primary)] sm:shrink-0">
+      <Link
+        href={accessCodeHref}
+        className="btn-subtle min-w-[7.5rem] shrink-0 whitespace-nowrap rounded-full px-5 py-2.5 text-center text-sm font-black text-[var(--primary)] sm:min-w-[8.5rem]"
+      >
         管理提取码
       </Link>
     </article>

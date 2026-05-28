@@ -89,7 +89,7 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
   const [success, setSuccess] = useState("");
 
   const isWizardFlow = searchParams.get("flow") === "new-access-code";
-  const backHref = isWizardFlow ? "/creator/access-codes/new" : "/creator";
+  const backHref = "/creator/access-codes";
   const afterSuccessHref = isWizardFlow
     ? `/creator/cards/${encodeURIComponent(cardId)}/access-code?flow=new-access-code`
     : `/creator/cards/${encodeURIComponent(cardId)}/access-code`;
