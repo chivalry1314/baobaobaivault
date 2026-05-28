@@ -583,7 +583,7 @@ export function CreatorStudio() {
   }
 
   function openCreatePanel() {
-    router.push("/creator");
+    router.push("/creator/new");
   }
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {

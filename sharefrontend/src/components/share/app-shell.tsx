@@ -16,7 +16,7 @@ type AppShellProps = {
 const navItems = [
   { href: "/", label: "首页" },
   { href: "/discover", label: "发现卡片" },
-  { href: "/creator", label: "创作中心" },
+  { href: "/creator/new", label: "创作中心" },
 ];
 
 export function AppShell({ currentPath = "", children, headerSlot, footerSlot }: AppShellProps) {
@@ -46,7 +46,7 @@ export function AppShell({ currentPath = "", children, headerSlot, footerSlot }:
 
           <div className="floating-nav hidden items-center gap-2 rounded-full p-1.5 lg:flex">
             {navItems.map((item) => {
-              const active = item.href === "/creator" ? currentPath.startsWith("/creator") : currentPath === item.href;
+              const active = item.href.startsWith("/creator") ? currentPath.startsWith("/creator") : currentPath === item.href;
               return (
                 <Link
                   key={item.href}
@@ -63,10 +63,7 @@ export function AppShell({ currentPath = "", children, headerSlot, footerSlot }:
             })}
           </div>
 
-          <div className="flex items-center gap-3 self-end sm:gap-4 sm:self-auto">
-            <Link href="/creator" className="btn-subtle inline-flex min-h-11 items-center justify-center rounded-full px-5 py-2.5 font-black sm:px-8 sm:py-2.5">
-              创作中心
-            </Link>
+          <div className="flex items-center gap-3 self-end sm:self-auto">
             <div className="flex items-center gap-3">{headerSlot !== undefined ? headerSlot : <AccountEntry />}</div>
           </div>
         </div>
@@ -74,7 +71,7 @@ export function AppShell({ currentPath = "", children, headerSlot, footerSlot }:
         <div className="mx-auto max-w-[var(--layout-max)] lg:hidden">
           <div className="floating-nav no-scrollbar flex items-center gap-2 overflow-x-auto rounded-full p-1.5">
             {navItems.map((item) => {
-              const active = item.href === "/creator" ? currentPath.startsWith("/creator") : currentPath === item.href;
+              const active = item.href.startsWith("/creator") ? currentPath.startsWith("/creator") : currentPath === item.href;
               return (
                 <Link
                   key={item.href}
