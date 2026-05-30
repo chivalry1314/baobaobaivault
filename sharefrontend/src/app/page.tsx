@@ -224,7 +224,7 @@ export default function LandingPage() {
   const featuredCards = filteredCards.slice(0, 6);
 
   const footer = (
-    <footer className="relative z-10 px-6 pb-8 pt-8">
+    <footer className="relative z-10 px-5 pb-6 pt-6">
       <div className="mx-auto max-w-[var(--layout-max)] rounded-3xl border-[4px] border-[var(--outline)] bg-white px-5 py-4 text-center text-sm font-bold text-[var(--foreground)] sm:text-left">
         © 2026 Dreamy Card Gallery
       </div>
@@ -233,23 +233,23 @@ export default function LandingPage() {
 
   return (
     <AppShell currentPath="/" footerSlot={footer}>
-      <section className="relative z-10 mx-auto mt-4 w-full max-w-[var(--layout-max)] px-4 pb-8 md:px-8">
-        <main className="mt-6 w-full">
-          <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-8 xl:mx-0">
+      <section className="relative z-10 mx-auto mt-3 w-full max-w-[var(--layout-max)] px-4 pb-6 md:px-6">
+        <main className="mt-4 w-full">
+          <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-6 xl:mx-0">
             <div className="group relative">
               <input
                 type="text"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search..."
-                className="w-full rounded-full border-[4px] border-[var(--outline)] bg-white px-6 py-4 pr-20 text-xl font-bold text-[var(--foreground)] placeholder:text-[var(--text-subtle)] transition-all group-hover:bg-gray-50"
+                className="w-full rounded-full border-[4px] border-[var(--outline)] bg-white px-5 py-3 pr-16 text-lg font-bold text-[var(--foreground)] placeholder:text-[var(--text-subtle)] transition-all group-hover:bg-gray-50"
               />
-              <button className="absolute bottom-2 right-2 top-2 flex h-[3.25rem] w-[3.25rem] items-center justify-center rounded-full border-[4px] border-[var(--outline)] bg-[#cdb4f3] transition-all hover:opacity-90">
+              <button className="absolute bottom-1.5 right-1.5 top-1.5 flex h-12 w-12 items-center justify-center rounded-full border-[4px] border-[var(--outline)] bg-[#cdb4f3] transition-all hover:opacity-90">
                 <SearchIcon />
               </button>
             </div>
 
-            <div className="no-scrollbar flex items-end justify-between gap-4 overflow-x-auto px-2 py-2 lg:gap-6">
+            <div className="no-scrollbar flex items-end justify-between gap-3 overflow-x-auto px-1 py-1 lg:gap-5">
               {filterChips.map((chip) => {
                 const active = chip === activeChip;
                 return (
@@ -259,9 +259,9 @@ export default function LandingPage() {
                     onClick={() => setActiveChip(chip)}
                     className="group shrink-0 cursor-pointer"
                   >
-                    <span className="flex flex-col items-center gap-3">
+                    <span className="flex flex-col items-center gap-2">
                       <span
-                        className={`flex h-14 w-14 items-center justify-center rounded-[1.25rem] border-[4px] border-[var(--outline)] xl:h-16 xl:w-16 ${active ? "bg-[#cdb4f3]" : chipVisuals[chip].className} transition-all group-hover:opacity-90`}
+                        className={`flex h-12 w-12 items-center justify-center rounded-[1.1rem] border-[4px] border-[var(--outline)] xl:h-14 xl:w-14 ${active ? "bg-[#cdb4f3]" : chipVisuals[chip].className} transition-all group-hover:opacity-90`}
                       >
                         <ChipIcon chip={chip} />
                       </span>
@@ -273,19 +273,19 @@ export default function LandingPage() {
             </div>
 
             {error ? (
-              <div className="rounded-2xl border-[4px] border-[#c26b5b] bg-[#fff0eb] px-5 py-4 text-sm font-bold text-[#8e2b1b]">{error}</div>
+              <div className="rounded-2xl border-[4px] border-[#c26b5b] bg-[#fff0eb] px-4 py-3 text-sm font-bold text-[#8e2b1b]">{error}</div>
             ) : null}
 
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {featuredCards.length > 0 ? (
                 featuredCards.map((card, index) => (
                   <Link
                     key={card.id}
                     href={card.href}
-                    className={`${card.bgClass} dream-card card-hover-lift fade-slide-in flex flex-col p-4`}
+                    className={`${card.bgClass} dream-card card-hover-lift fade-slide-in flex flex-col p-3.5`}
                     style={{ animationDelay: `${index * 60}ms` }}
                   >
-                    <div className="relative mb-3">
+                    <div className="relative mb-2.5">
                       <div className="absolute left-2 top-2 z-10">
                         <span className="rounded-full border-[3px] border-[var(--outline)] bg-white px-3 py-0.5 text-xs font-black text-[var(--foreground)]">
                           #{card.tags[0] || "精选"}
@@ -296,16 +296,16 @@ export default function LandingPage() {
                       </div>
                     </div>
 
-                    <h4 className="px-1 text-2xl font-black text-[var(--foreground)]">{card.title}</h4>
-                    <p className="mt-2 line-clamp-2 text-sm font-bold text-[var(--on-surface-variant)]">{card.description}</p>
-                    <div className="mt-3 flex items-center justify-between px-1 text-xs font-bold text-[var(--foreground)]/68">
+                    <h4 className="px-1 text-[1.5rem] font-black text-[var(--foreground)]">{card.title}</h4>
+                    <p className="mt-1.5 line-clamp-2 text-sm font-bold text-[var(--on-surface-variant)]">{card.description}</p>
+                    <div className="mt-2.5 flex items-center justify-between px-1 text-xs font-bold text-[var(--foreground)]/68">
                       <span>{card.creatorName}</span>
                       <span>{card.metric}</span>
                     </div>
                   </Link>
                 ))
               ) : (
-                <div className="col-span-full rounded-3xl border-[4px] border-[var(--outline)] bg-white px-6 py-12 text-center text-[var(--foreground)]">
+                <div className="col-span-full rounded-3xl border-[4px] border-[var(--outline)] bg-white px-5 py-9 text-center text-[var(--foreground)]">
                   <p className="text-2xl font-black">没有找到匹配内容</p>
                   <p className="mt-3 font-bold">当前筛选无结果，请尝试切换分类或关键词。</p>
                   <button
@@ -314,7 +314,7 @@ export default function LandingPage() {
                       setQuery("");
                       setActiveChip("全部");
                     }}
-                    className="btn-primary mt-5 rounded-full px-6 py-2.5 font-black"
+                    className="btn-primary mt-4 rounded-full px-5 py-2.5 font-black"
                   >
                     重置筛选
                   </button>

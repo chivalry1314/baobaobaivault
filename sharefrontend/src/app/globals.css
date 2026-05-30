@@ -7,7 +7,22 @@
 }
 
 :root {
-  --layout-max: 1500px;
+  --layout-max: 1280px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --font-base-size: 14px;
+  --font-size-body: 1rem;
+  --font-size-secondary: 0.928571rem;
+  --font-size-button-min: 0.928571rem;
+  --font-size-h3: clamp(1.16rem, 1.06rem + 0.4vw, 1.3rem);
+  --font-size-h2: clamp(1.38rem, 1.2rem + 0.62vw, 1.69rem);
+  --font-size-h1: clamp(1.82rem, 1.46rem + 1.15vw, 2.2rem);
+  --font-size-hero: clamp(2.1rem, 1.6rem + 1.8vw, 2.86rem);
+
   --background: #a2d2fb;
   --foreground: #2e2856;
   --on-background: #2e2856;
@@ -68,6 +83,7 @@
 }
 
 html {
+  font-size: var(--font-base-size);
   scroll-behavior: smooth;
   overflow-x: clip;
   overflow-y: auto;
@@ -95,6 +111,14 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+button,
+[role="button"],
+.btn-primary,
+.btn-subtle,
+.btn-rose {
+  font-size: max(var(--font-size-button-min), 0.93em);
 }
 
 a {
@@ -327,7 +351,7 @@ summary:focus-visible,
 }
 
 .type-overline {
-  font-size: 0.8rem;
+  font-size: var(--font-size-secondary);
   font-weight: 800;
   line-height: 1;
   letter-spacing: 0.14em;
@@ -335,44 +359,54 @@ summary:focus-visible,
 }
 
 .type-hero {
-  font-size: clamp(2rem, 4.6vw, 3.4rem);
+  font-size: var(--font-size-hero);
   font-weight: 900;
   line-height: 1.1;
   letter-spacing: -0.02em;
 }
 
 .type-h1 {
-  font-size: clamp(1.75rem, 3vw, 2.4rem);
+  font-size: var(--font-size-h1);
   font-weight: 900;
   line-height: 1.16;
 }
 
 .type-h2 {
-  font-size: clamp(1.36rem, 2.2vw, 1.84rem);
+  font-size: var(--font-size-h2);
   font-weight: 900;
   line-height: 1.2;
 }
 
 .type-h3 {
-  font-size: clamp(1.12rem, 1.7vw, 1.35rem);
+  font-size: var(--font-size-h3);
   font-weight: 900;
   line-height: 1.25;
 }
 
 .type-body {
-  font-size: 1rem;
-  line-height: 1.68;
+  font-size: var(--font-size-body);
+  line-height: 1.56;
 }
 
 .type-body-sm {
-  font-size: 0.94rem;
-  line-height: 1.6;
+  font-size: var(--font-size-secondary);
+  line-height: 1.5;
 }
 
 .type-meta {
-  font-size: 0.82rem;
+  font-size: var(--font-size-secondary);
   line-height: 1.42;
   letter-spacing: 0.08em;
+}
+
+.text-xs {
+  font-size: var(--font-size-secondary) !important;
+  line-height: 1.45;
+}
+
+.text-sm {
+  font-size: var(--font-size-secondary) !important;
+  line-height: 1.6;
 }
 
 .lace-divider {
