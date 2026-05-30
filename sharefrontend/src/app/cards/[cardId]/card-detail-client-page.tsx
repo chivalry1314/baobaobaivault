@@ -356,13 +356,13 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-5 text-sm font-black text-[var(--foreground)]/78">
-            <Link href="/discover" className="transition hover:text-[var(--brand-strong)]">
+            <Link href="/" className="transition hover:text-[var(--brand-strong)]">
               About
             </Link>
-            <Link href="/discover" className="transition hover:text-[var(--brand-strong)]">
+            <Link href="/" className="transition hover:text-[var(--brand-strong)]">
               Privacy
             </Link>
-            <Link href="/discover" className="transition hover:text-[var(--brand-strong)]">
+            <Link href="/" className="transition hover:text-[var(--brand-strong)]">
               Terms
             </Link>
           </div>
@@ -485,7 +485,7 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
             <div className="fade-slide-in flex flex-col gap-8 lg:flex-row xl:gap-12">
               <section className="w-full shrink-0 lg:w-[55%] xl:w-[60%]">
                 <div className="group relative h-[600px] overflow-hidden rounded-[2rem] border-[4px] border-[var(--outline)] bg-[var(--secondary)] p-3 md:h-[700px]">
-                  <Link href="/discover" className="btn-subtle absolute left-6 top-6 z-20 rounded-full px-4 py-2 font-black">
+                  <Link href="/" className="btn-subtle absolute left-6 top-6 z-20 rounded-full px-4 py-2 font-black">
                     ← 返回
                   </Link>
 

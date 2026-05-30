@@ -214,8 +214,8 @@ export function AuthPage() {
           </form>
 
           <div className="mt-6 flex items-center justify-center gap-4 text-sm font-bold text-[var(--foreground)]/70">
-            <Link href="/discover" className="transition hover:underline hover:text-[var(--foreground)]">
-              去发现页
+            <Link href="/" className="transition hover:underline hover:text-[var(--foreground)]">
+              去首页
             </Link>
             <span className="opacity-40">|</span>
             <Link href="/" className="transition hover:underline hover:text-[var(--foreground)]">

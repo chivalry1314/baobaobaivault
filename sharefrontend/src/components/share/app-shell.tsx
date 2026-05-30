@@ -15,7 +15,6 @@ type AppShellProps = {
 
 const navItems = [
   { href: "/", label: "首页" },
-  { href: "/discover", label: "发现卡片" },
   { href: "/creator/new", label: "创作中心" },
 ];
 

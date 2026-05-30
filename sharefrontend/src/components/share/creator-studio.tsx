@@ -846,9 +846,9 @@ export function CreatorStudio() {
                   {activeTab === "collections" ? (
                     <EmptyState
                       title="收藏功能即将上线"
-                      description="你很快可以在这里管理收藏的卡片内容，先去发现页浏览更多作品吧。"
-                      actionLabel="前往发现页"
-                      actionHref="/discover"
+                      description="你很快可以在这里管理收藏的卡片内容，先去首页浏览更多作品吧。"
+                      actionLabel="前往首页"
+                      actionHref="/"
                     />
                   ) : null}
 

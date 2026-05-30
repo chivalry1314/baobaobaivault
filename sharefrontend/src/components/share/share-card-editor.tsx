@@ -230,16 +230,16 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
           <div className="text-3xl font-semibold italic tracking-tight text-[var(--brand-strong)]">CardShare</div>
           <div className="text-sm tracking-[0.14em] text-[color-mix(in_srgb,var(--brand)_28%,var(--foreground))]">© 2026 CARDSHARE. DREAMY STYLE.</div>
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm uppercase tracking-[0.12em] text-[var(--brand)]/48">
-            <Link href="/discover" className="transition hover:text-[var(--brand-strong)]">
+            <Link href="/" className="transition hover:text-[var(--brand-strong)]">
               About
             </Link>
-            <Link href="/discover" className="transition hover:text-[var(--brand-strong)]">
+            <Link href="/" className="transition hover:text-[var(--brand-strong)]">
               Privacy
             </Link>
-            <Link href="/discover" className="transition hover:text-[var(--brand-strong)]">
+            <Link href="/" className="transition hover:text-[var(--brand-strong)]">
               Terms
             </Link>
-            <Link href="/discover" className="transition hover:text-[var(--brand-strong)]">
+            <Link href="/" className="transition hover:text-[var(--brand-strong)]">
               Help
             </Link>
           </div>
@@ -610,7 +610,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                     <CheckIcon className="h-4 w-4" />
                   </span>
                   <span className="text-sm font-bold text-[var(--foreground)]">
-                    公开可见 <span className="text-[var(--foreground)]/60">（可在发现页展示）</span>
+                    公开可见 <span className="text-[var(--foreground)]/60">（可在首页展示）</span>
                   </span>
                   <input
                     type="checkbox"
