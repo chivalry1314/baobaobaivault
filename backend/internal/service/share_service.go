@@ -141,6 +141,7 @@ type ShareDashboardCard struct {
 	Card          ShareCardView  `json:"card"`
 	Stats         ShareCardStats `json:"stats"`
 	HasAccessCode bool           `json:"hasAccessCode"`
+	AccessCode    string         `json:"accessCode,omitempty"`
 }
 
 type ShareDashboard struct {
@@ -412,10 +413,12 @@ func (s *ShareService) ListDashboardByUser(ctx context.Context, userID string) (
 
 	items := make([]ShareDashboardCard, 0, len(cards))
 	for _, card := range cards {
+		accessCode := strings.TrimSpace(card.AccessCode)
 		items = append(items, ShareDashboardCard{
 			Card:          toShareCardView(&card),
 			Stats:         statsByCard[card.ID],
-			HasAccessCode: strings.TrimSpace(card.AccessCode) != "",
+			HasAccessCode: accessCode != "",
+			AccessCode:    accessCode,
 		})
 	}
 

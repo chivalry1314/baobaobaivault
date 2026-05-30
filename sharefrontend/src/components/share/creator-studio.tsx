@@ -326,14 +326,16 @@ function CreatorCard({
   const rank = getCardRank(item);
   const editHref = `/creator/cards/${encodeURIComponent(item.card.id)}/edit`;
   const accessCodeHref = `/creator/cards/${encodeURIComponent(item.card.id)}/access-code`;
+  const accessCode = item.accessCode?.trim() ?? "";
+  const hasInlineAccessCode = accessCode.length > 0;
 
   return (
-    <article className="dream-panel p-5">
+    <article className="dream-panel p-4">
       <Link href={editHref} className="relative block overflow-hidden rounded-[26px] bg-[linear-gradient(135deg,#20161a_0%,#3f2b32_100%)]">
         {isImageCard(item.card) ? (
-          <img src={item.card.previewUrl} alt={item.card.title} className="h-[248px] w-full object-cover" />
+          <img src={item.card.previewUrl} alt={item.card.title} className="h-[212px] w-full object-cover" />
         ) : (
-          <div className="flex h-[248px] items-center justify-center bg-[linear-gradient(135deg,#382129_0%,#71545c_100%)] text-lg font-black text-white/92">
+          <div className="flex h-[212px] items-center justify-center bg-[linear-gradient(135deg,#382129_0%,#71545c_100%)] text-lg font-black text-white/92">
             {item.card.title}
           </div>
         )}
@@ -344,7 +346,7 @@ function CreatorCard({
         </span>
       </Link>
 
-      <div className="mt-5">
+      <div className="mt-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <Link href={editHref} className="type-h2 block text-[var(--foreground)]">
@@ -353,21 +355,34 @@ function CreatorCard({
           </div>
           <span className="dream-chip px-3 py-1 text-xs text-[var(--foreground)]/62">{getVisibilityLabel(item.card.visibility)}</span>
         </div>
-        <p className="type-body-sm mt-3 min-h-[84px] text-[var(--foreground)]/72">{defaultCardDescription(item.card)}</p>
+        <p className="type-body-sm mt-2 line-clamp-2 min-h-[3rem] text-[var(--foreground)]/72">{defaultCardDescription(item.card)}</p>
       </div>
 
-      <div className="mt-4 border-t border-dashed border-[var(--outline-variant)] pt-4">
-        <div className="dream-panel-soft px-4 py-4">
-          <div className="text-[11px] uppercase tracking-[0.24em] text-[var(--text-subtle)]">提取码状态</div>
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <div>
-              <div className="type-body-sm tracking-[0.1em] text-[var(--primary)]">{item.hasAccessCode ? "已配置" : "未配置"}</div>
-              <div className="mt-1 text-xs text-[var(--text-subtle)]">点击右侧按钮进入提取码管理</div>
+      <div className="mt-3 border-t border-dashed border-[var(--outline-variant)] pt-3">
+        <div className="dream-panel-soft px-3.5 py-3">
+          {hasInlineAccessCode ? (
+            <div className="flex items-center justify-between gap-3">
+              <code className="max-w-[70%] truncate rounded-full border border-[var(--outline-variant)] bg-white/65 px-3 py-1 text-sm font-black tracking-[0.12em] text-[var(--primary)]">
+                {accessCode}
+              </code>
+              <Link href={accessCodeHref} className="btn-subtle shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-black text-[var(--primary)]">
+                去管理
+              </Link>
             </div>
-            <Link href={accessCodeHref} className="btn-subtle shrink-0 whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-black text-[var(--primary)]">
-              去管理
-            </Link>
-          </div>
+          ) : (
+            <>
+              <div className="text-[11px] uppercase tracking-[0.24em] text-[var(--text-subtle)]">提取码状态</div>
+              <div className="mt-2.5 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="type-body-sm tracking-[0.06em] text-[var(--primary)]">未配置</div>
+                  <div className="mt-1 text-xs text-[var(--text-subtle)]">点击右侧按钮进入提取码管理</div>
+                </div>
+                <Link href={accessCodeHref} className="btn-subtle shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-black text-[var(--primary)]">
+                  去管理
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </article>
@@ -511,9 +526,37 @@ export function CreatorStudio() {
   }, [currentUser]);
 
   const loadDashboard = useCallback(async () => {
-    const payload = await shareApi.myCards();
-    setCurrentUser(payload.user);
-    setDashboard(payload);
+    const [cardsPayload, accessCodesPayload] = await Promise.all([
+      shareApi.myCards(),
+      shareApi.myAccessCodes().catch(() => null),
+    ]);
+
+    const activeAccessCodeByCardId = new Map<string, string>();
+    const hasConfiguredAccessCodeCardIds = new Set<string>();
+    if (accessCodesPayload) {
+      for (const item of accessCodesPayload.items) {
+        const code = item.config.code.trim();
+        if (code) {
+          hasConfiguredAccessCodeCardIds.add(item.card.id);
+          if (item.config.isActive && item.isPubliclyVisible) {
+            activeAccessCodeByCardId.set(item.card.id, code);
+          }
+        }
+      }
+    }
+
+    const cards = cardsPayload.cards.map((cardItem) => {
+      const mergedCode = activeAccessCodeByCardId.get(cardItem.card.id) ?? "";
+      const hasConfiguredCode = hasConfiguredAccessCodeCardIds.has(cardItem.card.id) || cardItem.hasAccessCode;
+      return {
+        ...cardItem,
+        hasAccessCode: hasConfiguredCode,
+        accessCode: mergedCode || undefined,
+      };
+    });
+
+    setCurrentUser(cardsPayload.user);
+    setDashboard({ ...cardsPayload, cards });
     setLoadError("");
   }, []);
 

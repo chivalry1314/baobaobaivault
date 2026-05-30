@@ -59,6 +59,7 @@ export type DashboardCard = {
   card: PlatformCard;
   stats: CardStats;
   hasAccessCode: boolean;
+  accessCode?: string;
 };
 
 export type DashboardStats = {
