@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import { AuthRedirect } from "@/components/share/auth-redirect";
+import { PaginationControls } from "@/components/share/pagination-controls";
 import { ShareProfileSettings } from "@/components/share/share-profile-settings";
 import { UnifiedFooter } from "@/components/share/unified-footer";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
@@ -18,6 +19,9 @@ import type { DashboardCard, DashboardResponse, ExternalSessionUser, PlatformCar
 
 type ActiveTab = "cards" | "collections" | "history";
 type ActiveSection = "dashboard" | "settings";
+
+const CARDS_PAGE_SIZE = 9;
+const HISTORY_PAGE_SIZE = 8;
 
 function formatDate(value: string | null | undefined) {
   if (!value) {
@@ -413,6 +417,8 @@ export function CreatorStudio() {
 
   const [activeSection, setActiveSection] = useState<ActiveSection>("dashboard");
   const [activeTab, setActiveTab] = useState<ActiveTab>("cards");
+  const [cardsPage, setCardsPage] = useState(1);
+  const [historyPage, setHistoryPage] = useState(1);
 
   const cards = useMemo(() => dashboard?.cards ?? [], [dashboard?.cards]);
 
@@ -442,6 +448,34 @@ export function CreatorStudio() {
       return rightTime - leftTime;
     });
   }, [cards]);
+
+  const cardsTotalPages = useMemo(() => Math.max(1, Math.ceil(cards.length / CARDS_PAGE_SIZE)), [cards.length]);
+  const historyTotalPages = useMemo(() => Math.max(1, Math.ceil(historyItems.length / HISTORY_PAGE_SIZE)), [historyItems.length]);
+
+  const pagedCards = useMemo(() => {
+    const safePage = Math.min(Math.max(cardsPage, 1), cardsTotalPages);
+    const start = (safePage - 1) * CARDS_PAGE_SIZE;
+    return cards.slice(start, start + CARDS_PAGE_SIZE);
+  }, [cards, cardsPage, cardsTotalPages]);
+
+  const pagedHistoryItems = useMemo(() => {
+    const safePage = Math.min(Math.max(historyPage, 1), historyTotalPages);
+    const start = (safePage - 1) * HISTORY_PAGE_SIZE;
+    return historyItems.slice(start, start + HISTORY_PAGE_SIZE);
+  }, [historyItems, historyPage, historyTotalPages]);
+
+  useEffect(() => {
+    setCardsPage(1);
+    setHistoryPage(1);
+  }, [dashboard]);
+
+  useEffect(() => {
+    setCardsPage((current) => Math.min(Math.max(current, 1), cardsTotalPages));
+  }, [cardsTotalPages]);
+
+  useEffect(() => {
+    setHistoryPage((current) => Math.min(Math.max(current, 1), historyTotalPages));
+  }, [historyTotalPages]);
 
   const heroSurfaceStyle = useMemo(() => {
     if (!currentUser?.coverImage.trim()) {
@@ -675,13 +709,25 @@ export function CreatorStudio() {
               <section className="dream-panel px-6 py-6 sm:px-8 sm:py-8">
                 <div className="flex flex-col gap-4 border-b border-[rgba(220,173,187,0.35)] pb-4 sm:flex-row sm:items-end sm:justify-between">
                   <div className="flex flex-wrap gap-6">
-                    <TabButton active={activeTab === "cards"} onClick={() => setActiveTab("cards")}>
+                    <TabButton
+                      active={activeTab === "cards"}
+                      onClick={() => {
+                        setActiveTab("cards");
+                        setCardsPage(1);
+                      }}
+                    >
                       我的卡片
                     </TabButton>
                     <TabButton active={activeTab === "collections"} onClick={() => setActiveTab("collections")}>
                       收藏夹
                     </TabButton>
-                    <TabButton active={activeTab === "history"} onClick={() => setActiveTab("history")}>
+                    <TabButton
+                      active={activeTab === "history"}
+                      onClick={() => {
+                        setActiveTab("history");
+                        setHistoryPage(1);
+                      }}
+                    >
                       最近更新
                     </TabButton>
                   </div>
@@ -695,10 +741,21 @@ export function CreatorStudio() {
                 <div className="pt-6">
                   {activeTab === "cards" ? (
                     cards.length > 0 ? (
-                      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                        {cards.map((item) => (
-                          <CreatorCard key={item.card.id} item={item} />
-                        ))}
+                      <div className="space-y-5">
+                        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                          {pagedCards.map((item) => (
+                            <CreatorCard key={item.card.id} item={item} />
+                          ))}
+                        </div>
+                        <PaginationControls
+                          page={cardsPage}
+                          totalPages={cardsTotalPages}
+                          onPageChange={(nextPage) =>
+                            setCardsPage(
+                              Math.min(Math.max(nextPage, 1), cardsTotalPages),
+                            )
+                          }
+                        />
                       </div>
                     ) : (
                       <EmptyState
@@ -721,10 +778,21 @@ export function CreatorStudio() {
 
                   {activeTab === "history" ? (
                     historyItems.length > 0 ? (
-                      <div className="space-y-4">
-                        {historyItems.map((item) => (
-                          <HistoryItem key={item.card.id} item={item} />
-                        ))}
+                      <div className="space-y-5">
+                        <div className="space-y-4">
+                          {pagedHistoryItems.map((item) => (
+                            <HistoryItem key={item.card.id} item={item} />
+                          ))}
+                        </div>
+                        <PaginationControls
+                          page={historyPage}
+                          totalPages={historyTotalPages}
+                          onPageChange={(nextPage) =>
+                            setHistoryPage(
+                              Math.min(Math.max(nextPage, 1), historyTotalPages),
+                            )
+                          }
+                        />
                       </div>
                     ) : (
                       <EmptyState

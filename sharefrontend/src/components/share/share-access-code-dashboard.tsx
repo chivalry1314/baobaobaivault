@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AppShell } from "@/components/share/app-shell";
 import { AuthRedirect } from "@/components/share/auth-redirect";
+import { PaginationControls } from "@/components/share/pagination-controls";
 import { UnifiedFooter } from "@/components/share/unified-footer";
 import { ShareApiError, getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type {
@@ -18,6 +19,9 @@ type FeedbackState = {
   type: "success" | "error";
   message: string;
 } | null;
+
+const ACCESS_CODES_PAGE_SIZE = 9;
+const CARDS_WITHOUT_CODE_PAGE_SIZE = 9;
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -127,6 +131,8 @@ export function ShareAccessCodeDashboard() {
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [searchValue, setSearchValue] = useState("");
   const [pendingAction, setPendingAction] = useState("");
+  const [itemsPage, setItemsPage] = useState(1);
+  const [cardsWithoutCodePage, setCardsWithoutCodePage] = useState(1);
 
   async function loadDashboard() {
     setLoading(true);
@@ -201,7 +207,51 @@ export function ShareAccessCodeDashboard() {
     );
     return availableCards.filter((card) => !configuredIds.has(card.id));
   }, [availableCards, dashboard?.items]);
+  const cardsWithoutCodeTotalPages = useMemo(
+    () =>
+      Math.max(
+        1,
+        Math.ceil(cardsWithoutCode.length / CARDS_WITHOUT_CODE_PAGE_SIZE),
+      ),
+    [cardsWithoutCode.length],
+  );
+  const pagedCardsWithoutCode = useMemo(() => {
+    const safePage = Math.min(
+      Math.max(cardsWithoutCodePage, 1),
+      cardsWithoutCodeTotalPages,
+    );
+    const start = (safePage - 1) * CARDS_WITHOUT_CODE_PAGE_SIZE;
+    return cardsWithoutCode.slice(start, start + CARDS_WITHOUT_CODE_PAGE_SIZE);
+  }, [cardsWithoutCode, cardsWithoutCodePage, cardsWithoutCodeTotalPages]);
   const totalItems = dashboard?.items.length ?? 0;
+  const itemsTotalPages = useMemo(
+    () => Math.max(1, Math.ceil(items.length / ACCESS_CODES_PAGE_SIZE)),
+    [items.length],
+  );
+
+  const pagedItems = useMemo(() => {
+    const safePage = Math.min(Math.max(itemsPage, 1), itemsTotalPages);
+    const start = (safePage - 1) * ACCESS_CODES_PAGE_SIZE;
+    return items.slice(start, start + ACCESS_CODES_PAGE_SIZE);
+  }, [items, itemsPage, itemsTotalPages]);
+
+  useEffect(() => {
+    setItemsPage(1);
+  }, [searchValue, dashboard]);
+
+  useEffect(() => {
+    setCardsWithoutCodePage(1);
+  }, [dashboard]);
+
+  useEffect(() => {
+    setItemsPage((current) => Math.min(Math.max(current, 1), itemsTotalPages));
+  }, [itemsTotalPages]);
+
+  useEffect(() => {
+    setCardsWithoutCodePage((current) =>
+      Math.min(Math.max(current, 1), cardsWithoutCodeTotalPages),
+    );
+  }, [cardsWithoutCodeTotalPages]);
 
   async function handleCopyLink(item: AccessCodeDashboardItem) {
     const actionKey = `copy:${item.card.id}`;
@@ -423,7 +473,7 @@ export function ShareAccessCodeDashboard() {
                   </label>
 
                   <div className="rounded-full border-[3px] border-[var(--line-strong)] bg-[#fcf1a7] px-4 py-2 text-sm font-black text-[var(--foreground)]">
-                    共 {totalItems} 条，当前显示 {items.length} 条
+                    共 {totalItems} 条，当前第 {Math.min(itemsPage, itemsTotalPages)} / {itemsTotalPages} 页，显示 {pagedItems.length} 条
                   </div>
                 </div>
               ) : null}
@@ -443,34 +493,55 @@ export function ShareAccessCodeDashboard() {
 
               {cardsWithoutCode.length > 0 ? (
                 <div className="mb-6 rounded-[24px] border-[3px] border-[var(--line-strong)] bg-[#f8fcff] p-5">
-                  <div className="mb-4 flex items-center gap-2 text-base font-black text-[var(--foreground)]">
-                    <PlusIcon className="h-5 w-5 text-[var(--primary)]" />
-                    未配置提取码的卡片
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-base font-black text-[var(--foreground)]">
+                      <PlusIcon className="h-5 w-5 text-[var(--primary)]" />
+                      未配置提取码的卡片
+                    </div>
+                    <div className="rounded-full border-[2px] border-[var(--line-strong)] bg-white px-3 py-1 text-xs font-black text-[var(--foreground)]/76">
+                      共 {cardsWithoutCode.length} 条，当前第{" "}
+                      {Math.min(cardsWithoutCodePage, cardsWithoutCodeTotalPages)} /{" "}
+                      {cardsWithoutCodeTotalPages} 页
+                    </div>
                   </div>
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {cardsWithoutCode.map((card) => (
-                      <div
-                        key={card.id}
-                        className="rounded-[18px] border-[2px] border-[var(--line-strong)] bg-white px-4 py-3"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-base font-black text-[var(--foreground)]">
-                              {card.title}
-                            </p>
-                            <p className="mt-1 text-xs text-[var(--foreground)]/56">
-                              {card.originalFileName || "未命名文件"}
-                            </p>
+                  <div className="space-y-4">
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      {pagedCardsWithoutCode.map((card) => (
+                        <div
+                          key={card.id}
+                          className="rounded-[18px] border-[2px] border-[var(--line-strong)] bg-white px-4 py-3"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-base font-black text-[var(--foreground)]">
+                                {card.title}
+                              </p>
+                              <p className="mt-1 text-xs text-[var(--foreground)]/56">
+                                {card.originalFileName || "未命名文件"}
+                              </p>
+                            </div>
+                            <ActionButton
+                              onClick={() => handleConfigureAccessCode(card.id)}
+                            >
+                              <EditIcon className="h-4 w-4" />
+                              配置提取码
+                            </ActionButton>
                           </div>
-                          <ActionButton
-                            onClick={() => handleConfigureAccessCode(card.id)}
-                          >
-                            <EditIcon className="h-4 w-4" />
-                            配置提取码
-                          </ActionButton>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                    <PaginationControls
+                      page={cardsWithoutCodePage}
+                      totalPages={cardsWithoutCodeTotalPages}
+                      onPageChange={(nextPage) =>
+                        setCardsWithoutCodePage(
+                          Math.min(
+                            Math.max(nextPage, 1),
+                            cardsWithoutCodeTotalPages,
+                          ),
+                        )
+                      }
+                    />
                   </div>
                 </div>
               ) : null}
@@ -495,19 +566,30 @@ export function ShareAccessCodeDashboard() {
               ) : null}
 
               {items.length > 0 ? (
-                <div className="grid w-full items-stretch gap-4 md:grid-cols-2 2xl:grid-cols-3">
-                  {items.map((item) => (
-                    <AccessCodeCard
-                      key={item.card.id}
-                      item={item}
-                      pendingAction={pendingAction}
-                      onEdit={() => handleConfigureAccessCode(item.card.id)}
-                      onCopy={() => void handleCopyLink(item)}
-                      onHide={() => void handleHide(item)}
-                      onReactivate={() => void handleReactivate(item)}
-                      onDelete={() => void handleDelete(item)}
-                    />
-                  ))}
+                <div className="space-y-5">
+                  <div className="grid w-full items-stretch gap-4 md:grid-cols-2 2xl:grid-cols-3">
+                    {pagedItems.map((item) => (
+                      <AccessCodeCard
+                        key={item.card.id}
+                        item={item}
+                        pendingAction={pendingAction}
+                        onEdit={() => handleConfigureAccessCode(item.card.id)}
+                        onCopy={() => void handleCopyLink(item)}
+                        onHide={() => void handleHide(item)}
+                        onReactivate={() => void handleReactivate(item)}
+                        onDelete={() => void handleDelete(item)}
+                      />
+                    ))}
+                  </div>
+                  <PaginationControls
+                    page={itemsPage}
+                    totalPages={itemsTotalPages}
+                    onPageChange={(nextPage) =>
+                      setItemsPage(
+                        Math.min(Math.max(nextPage, 1), itemsTotalPages),
+                      )
+                    }
+                  />
                 </div>
               ) : null}
             </div>
