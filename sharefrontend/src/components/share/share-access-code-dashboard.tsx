@@ -447,7 +447,7 @@ export function ShareAccessCodeDashboard() {
                     <PlusIcon className="h-5 w-5 text-[var(--primary)]" />
                     未配置提取码的卡片
                   </div>
-                  <div className="grid gap-3 lg:grid-cols-2">
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                     {cardsWithoutCode.map((card) => (
                       <div
                         key={card.id}
@@ -495,7 +495,7 @@ export function ShareAccessCodeDashboard() {
               ) : null}
 
               {items.length > 0 ? (
-                <div className="flex flex-col items-start gap-4">
+                <div className="grid w-full items-stretch gap-4 md:grid-cols-2 2xl:grid-cols-3">
                   {items.map((item) => (
                     <AccessCodeCard
                       key={item.card.id}
@@ -608,8 +608,8 @@ function AccessCodeCard({
     : getInactiveReason(item);
 
   return (
-    <article className="w-full max-w-[500px] rounded-[24px] border-[3px] border-[var(--line-strong)] bg-white p-3 shadow-[3px_3px_0px_var(--line-strong)] sm:p-4">
-      <div className="flex flex-col gap-3 lg:flex-row">
+    <article className="h-full w-full rounded-[24px] border-[3px] border-[var(--line-strong)] bg-white p-3 shadow-[3px_3px_0px_var(--line-strong)] sm:p-4">
+      <div className="flex h-full flex-col gap-3 lg:flex-row">
         <div className="flex flex-col gap-3">
           <Link
             href={`/cards/${encodeURIComponent(item.card.id)}`}
@@ -650,7 +650,7 @@ function AccessCodeCard({
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="grid gap-2">
+          <div className="flex h-full flex-col gap-2">
             <div className="min-w-0">
               <h2 className="truncate text-[1.35rem] font-black leading-none text-[var(--foreground)]">
                 {item.card.title}
@@ -710,7 +710,7 @@ function AccessCodeCard({
                 {statusTip}
               </p>
             </div>
-            <div className="mt-0.5 flex w-full flex-wrap items-center gap-1.5">
+            <div className="mt-auto flex w-full flex-wrap items-center gap-1.5">
               {active ? (
                 <>
                   <ActionButton
