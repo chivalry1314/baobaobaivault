@@ -7,8 +7,6 @@ import {
   useEffect,
   useMemo,
   useState,
-  type ChangeEvent,
-  type FormEvent,
   type ReactNode,
 } from "react";
 
@@ -20,27 +18,6 @@ import type { DashboardCard, DashboardResponse, ExternalSessionUser, PlatformCar
 
 type ActiveTab = "cards" | "collections" | "history";
 type ActiveSection = "dashboard" | "settings";
-type PanelMode = "create" | "edit" | null;
-
-type ComposerDraft = {
-  title: string;
-  description: string;
-  visibility: "private" | "public";
-  status: "draft" | "published" | "archived";
-  file: File | null;
-  previewUrl: string;
-};
-
-function createEmptyDraft(): ComposerDraft {
-  return {
-    title: "",
-    description: "",
-    visibility: "public",
-    status: "published",
-    file: null,
-    previewUrl: "",
-  };
-}
 
 function formatDate(value: string | null | undefined) {
   if (!value) {
@@ -163,12 +140,6 @@ function defaultCardDescription(card: PlatformCard) {
   }
 
   return "这张卡片还没有填写描述，点击管理可补充详情。";
-}
-
-function revokePreview(url: string) {
-  if (url.startsWith("blob:")) {
-    URL.revokeObjectURL(url);
-  }
 }
 
 function Avatar({
@@ -433,41 +404,6 @@ function HistoryItem({
   );
 }
 
-function PanelField({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-sm font-black text-[var(--foreground)]/72">{label}</span>
-      {children}
-    </label>
-  );
-}
-
-function PanelSection({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="space-y-5">
-      <div>
-        <h2 className="type-h2 text-[var(--foreground)]">{title}</h2>
-        <p className="type-body-sm mt-2 text-[var(--foreground)]/62">{description}</p>
-      </div>
-      {children}
-    </section>
-  );
-}
-
 export function CreatorStudio() {
   const router = useRouter();
   const [sessionChecking, setSessionChecking] = useState(true);
@@ -477,12 +413,6 @@ export function CreatorStudio() {
 
   const [activeSection, setActiveSection] = useState<ActiveSection>("dashboard");
   const [activeTab, setActiveTab] = useState<ActiveTab>("cards");
-
-  const [panelMode, setPanelMode] = useState<PanelMode>(null);
-  const [selectedCard, setSelectedCard] = useState<DashboardCard | null>(null);
-  const [draft, setDraft] = useState<ComposerDraft>(createEmptyDraft);
-  const [panelPending, setPanelPending] = useState(false);
-  const [panelError, setPanelError] = useState("");
 
   const cards = useMemo(() => dashboard?.cards ?? [], [dashboard?.cards]);
 
@@ -608,43 +538,13 @@ export function CreatorStudio() {
     };
   }, [loadDashboard]);
 
-  useEffect(() => {
-    return () => {
-      revokePreview(draft.previewUrl);
-    };
-  }, [draft.previewUrl]);
-
   function handleProfileSaved(user: ExternalSessionUser) {
     setCurrentUser(user);
     setDashboard((current) => (current ? { ...current, user } : current));
   }
 
-  function closePanel() {
-    revokePreview(draft.previewUrl);
-    setPanelMode(null);
-    setSelectedCard(null);
-    setDraft(createEmptyDraft());
-    setPanelPending(false);
-    setPanelError("");
-  }
-
   function openCreatePanel() {
     router.push("/creator/new");
-  }
-
-  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0] ?? null;
-    if (!file) {
-      return;
-    }
-
-    revokePreview(draft.previewUrl);
-    const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : "";
-    setDraft((current) => ({
-      ...current,
-      file,
-      previewUrl,
-    }));
   }
 
   async function handleReload() {
@@ -655,84 +555,8 @@ export function CreatorStudio() {
     }
   }
 
-  async function handleCreate(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!draft.file) {
-      setPanelError("请先上传卡片文件后再创建");
-      return;
-    }
-
-    setPanelPending(true);
-    setPanelError("");
-
-    try {
-      await shareApi.createCard({
-        title: draft.title,
-        description: draft.description,
-        visibility: draft.visibility,
-        status: draft.status,
-        file: draft.file,
-      });
-      await loadDashboard();
-      closePanel();
-    } catch (error) {
-      setPanelError(getShareErrorMessage(error, "创建卡片失败，请稍后重试"));
-      setPanelPending(false);
-    }
-  }
-
-  async function handleUpdate(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!selectedCard) {
-      return;
-    }
-
-    setPanelPending(true);
-    setPanelError("");
-
-    try {
-      await shareApi.updateCard(selectedCard.card.id, {
-        title: draft.title,
-        description: draft.description,
-        visibility: draft.visibility,
-        status: draft.status,
-      });
-      await loadDashboard();
-      closePanel();
-    } catch (error) {
-      setPanelError(getShareErrorMessage(error, "保存修改失败，请稍后重试"));
-      setPanelPending(false);
-    }
-  }
-
-  async function handleDelete() {
-    if (!selectedCard) {
-      return;
-    }
-
-    const confirmed = window.confirm(`确认删除卡片「${selectedCard.card.title}」吗？`);
-    if (!confirmed) {
-      return;
-    }
-
-    setPanelPending(true);
-    setPanelError("");
-
-    try {
-      await shareApi.deleteCard(selectedCard.card.id);
-      await loadDashboard();
-      closePanel();
-    } catch (error) {
-      setPanelError(getShareErrorMessage(error, "删除卡片失败，请稍后重试"));
-      setPanelPending(false);
-    }
-  }
-
   async function handleLogout() {
     await shareApi.logout().catch(() => null);
-    closePanel();
     setCurrentUser(null);
     setDashboard(null);
   }
@@ -919,197 +743,6 @@ export function CreatorStudio() {
           )}
         </main>
       </div>
-
-      {panelMode ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-end bg-[rgba(38,24,27,0.18)] p-4 backdrop-blur-sm sm:p-6">
-          <button type="button" className="absolute inset-0 cursor-pointer" aria-label="关闭卡片编辑抽屉" onClick={closePanel} />
-
-          <aside className="dream-panel relative z-10 h-full w-full max-w-[520px] overflow-y-auto p-6 sm:p-7">
-            {panelMode === "create" ? (
-              <PanelSection title="新建卡片" description="上传文件并填写基础信息后，即可发布或保存为草稿。">
-                {panelError ? (
-                  <p className="dream-panel-soft border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-sm text-[#9a3412]">{panelError}</p>
-                ) : null}
-
-                <form className="space-y-4" onSubmit={handleCreate}>
-                  <PanelField label="卡片标题">
-                    <input
-                      type="text"
-                      value={draft.title}
-                      onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
-                      className="dream-input w-full px-4 py-3"
-                      placeholder="请输入卡片标题"
-                      required
-                    />
-                  </PanelField>
-
-                  <PanelField label="卡片描述">
-                    <textarea
-                      value={draft.description}
-                      onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))}
-                      rows={5}
-                      className="dream-textarea w-full px-4 py-3"
-                      placeholder="补充这张卡片的故事、亮点或使用说明"
-                    />
-                  </PanelField>
-
-                  <PanelField label="可见范围">
-                    <div className="flex flex-wrap gap-3">
-                      <ToggleChip active={draft.visibility === "public"} onClick={() => setDraft((current) => ({ ...current, visibility: "public" }))}>
-                        公开
-                      </ToggleChip>
-                      <ToggleChip active={draft.visibility === "private"} onClick={() => setDraft((current) => ({ ...current, visibility: "private" }))}>
-                        私密
-                      </ToggleChip>
-                    </div>
-                  </PanelField>
-
-                  <PanelField label="发布状态">
-                    <div className="flex flex-wrap gap-3">
-                      <ToggleChip active={draft.status === "published"} onClick={() => setDraft((current) => ({ ...current, status: "published" }))}>
-                        已发布
-                      </ToggleChip>
-                      <ToggleChip active={draft.status === "draft"} onClick={() => setDraft((current) => ({ ...current, status: "draft" }))}>
-                        草稿
-                      </ToggleChip>
-                      <ToggleChip active={draft.status === "archived"} onClick={() => setDraft((current) => ({ ...current, status: "archived" }))}>
-                        已归档
-                      </ToggleChip>
-                    </div>
-                  </PanelField>
-
-                  <PanelField label="上传卡片文件">
-                    <label className="dream-panel-soft flex min-h-[220px] cursor-pointer flex-col items-center justify-center border-dashed px-4 py-6 text-center">
-                      {draft.previewUrl ? (
-                        <img src={draft.previewUrl} alt="上传预览" className="max-h-[220px] rounded-[18px] object-cover" />
-                      ) : (
-                        <>
-                          <div className="dream-chip flex h-12 w-12 items-center justify-center text-[var(--primary)]">
-                            <PlusIcon className="h-5 w-5" />
-                          </div>
-                          <p className="mt-4 text-base font-black text-[var(--foreground)]">点击上传文件</p>
-                          <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">支持常见图片格式，也可上传其他可分享文件</p>
-                        </>
-                      )}
-                      <input type="file" className="hidden" onChange={handleFileChange} />
-                    </label>
-                    <div className="mt-3 text-sm text-[var(--text-muted)]">{draft.file ? draft.file.name : "尚未选择文件"}</div>
-                  </PanelField>
-
-                  <div className="flex items-center justify-between gap-3 pt-2">
-                    <button type="button" onClick={closePanel} className="btn-subtle rounded-full px-5 py-3 text-sm font-black">
-                      取消
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={panelPending}
-                      className="btn-primary rounded-full px-6 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {panelPending ? "创建中..." : "创建卡片"}
-                    </button>
-                  </div>
-                </form>
-              </PanelSection>
-            ) : null}
-
-            {panelMode === "edit" && selectedCard ? (
-              <PanelSection title="编辑卡片" description="你可以更新标题、描述、可见范围和状态信息。">
-                {panelError ? (
-                  <p className="dream-panel-soft border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-sm text-[#9a3412]">{panelError}</p>
-                ) : null}
-
-                <div className="dream-panel-soft overflow-hidden">
-                  {draft.previewUrl ? (
-                    <img src={draft.previewUrl} alt={selectedCard.card.title} className="h-[220px] w-full object-cover" />
-                  ) : (
-                    <div className="flex h-[220px] items-center justify-center bg-[linear-gradient(135deg,#382129_0%,#71545c_100%)] px-6 text-center text-lg font-black text-white">
-                      {selectedCard.card.title}
-                    </div>
-                  )}
-                </div>
-
-                <form className="space-y-4" onSubmit={handleUpdate}>
-                  <PanelField label="卡片标题">
-                    <input
-                      type="text"
-                      value={draft.title}
-                      onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
-                      className="dream-input w-full px-4 py-3"
-                      required
-                    />
-                  </PanelField>
-
-                  <PanelField label="卡片描述">
-                    <textarea
-                      value={draft.description}
-                      onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))}
-                      rows={5}
-                      className="dream-textarea w-full px-4 py-3"
-                    />
-                  </PanelField>
-
-                  <PanelField label="可见范围">
-                    <div className="flex flex-wrap gap-3">
-                      <ToggleChip active={draft.visibility === "public"} onClick={() => setDraft((current) => ({ ...current, visibility: "public" }))}>
-                        公开
-                      </ToggleChip>
-                      <ToggleChip active={draft.visibility === "private"} onClick={() => setDraft((current) => ({ ...current, visibility: "private" }))}>
-                        私密
-                      </ToggleChip>
-                    </div>
-                  </PanelField>
-
-                  <PanelField label="发布状态">
-                    <div className="flex flex-wrap gap-3">
-                      <ToggleChip active={draft.status === "published"} onClick={() => setDraft((current) => ({ ...current, status: "published" }))}>
-                        已发布
-                      </ToggleChip>
-                      <ToggleChip active={draft.status === "draft"} onClick={() => setDraft((current) => ({ ...current, status: "draft" }))}>
-                        草稿
-                      </ToggleChip>
-                      <ToggleChip active={draft.status === "archived"} onClick={() => setDraft((current) => ({ ...current, status: "archived" }))}>
-                        已归档
-                      </ToggleChip>
-                    </div>
-                  </PanelField>
-
-                  <div className="dream-panel-soft px-4 py-4 text-sm leading-7 text-[var(--foreground)]/62">
-                    卡片编号：{formatCardCode(selectedCard.card.id)}
-                    <br />
-                    更新时间：{formatDate(selectedCard.card.updatedAt)}
-                    <br />
-                    当前状态：{getStatusLabel(selectedCard.card.status)}
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={handleDelete}
-                      disabled={panelPending}
-                      className="btn-subtle rounded-full border-[#efb8c8] px-5 py-3 text-sm font-black text-[#9d3656] disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      删除卡片
-                    </button>
-
-                    <div className="flex items-center gap-3">
-                      <button type="button" onClick={closePanel} className="btn-subtle rounded-full px-5 py-3 text-sm font-black">
-                        取消
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={panelPending}
-                        className="btn-primary rounded-full px-6 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {panelPending ? "保存中..." : "保存修改"}
-                      </button>
-                    </div>
-                  </div>
-                </form>
-              </PanelSection>
-            ) : null}
-          </aside>
-        </div>
-      ) : null}
 
       <UnifiedFooter />
     </div>
