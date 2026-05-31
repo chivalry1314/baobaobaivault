@@ -20,7 +20,7 @@ type FeedbackState = {
   message: string;
 } | null;
 
-const ACCESS_CODES_PAGE_SIZE = 9;
+const ACCESS_CODES_PAGE_SIZE = 12;
 const CARDS_WITHOUT_CODE_PAGE_SIZE = 9;
 
 function formatDate(value: string) {
