@@ -187,12 +187,51 @@ func (h *Handler) shareSession(c *gin.Context) {
 }
 
 func (h *Handler) shareDiscoverCards(c *gin.Context) {
-	cards, err := h.shareService.ListDiscoverCards(c.Request.Context())
+	page := 1
+	if value := strings.TrimSpace(c.Query("page")); value != "" {
+		parsed, parseErr := strconv.Atoi(value)
+		if parseErr != nil || parsed <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+			return
+		}
+		page = parsed
+	}
+
+	size := 24
+	if value := strings.TrimSpace(c.Query("size")); value != "" {
+		parsed, parseErr := strconv.Atoi(value)
+		if parseErr != nil || parsed <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+			return
+		}
+		size = parsed
+	}
+
+	cards, total, err := h.shareService.ListDiscoverCards(c.Request.Context(), page, size)
 	if err != nil {
 		jsonError(c, http.StatusInternalServerError, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"cards": cards})
+
+	pageSize := size
+	if pageSize <= 0 {
+		pageSize = 24
+	}
+	totalPages := int((total + int64(pageSize) - 1) / int64(pageSize))
+	hasMore := int64(page*pageSize) < total
+	if len(cards) == 0 {
+		hasMore = false
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"cards": cards,
+		"pagination": gin.H{
+			"page":       page,
+			"size":       pageSize,
+			"total":      total,
+			"totalPages": totalPages,
+			"hasMore":    hasMore,
+		},
+	})
 }
 
 func (h *Handler) shareUserAsset(c *gin.Context) {

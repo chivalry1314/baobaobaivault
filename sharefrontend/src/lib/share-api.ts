@@ -8,6 +8,7 @@ import type {
   ContinueAuthResponse,
   DashboardResponse,
   DiscoverCardItem,
+  DiscoverCardsPagination,
   ExternalSessionUser,
   PlatformCard,
   SessionResponse,
@@ -136,8 +137,17 @@ export const shareApi = {
     });
   },
 
-  discoverCards() {
-    return request<{ cards: DiscoverCardItem[] }>(`${API_ROOT}/discover/cards`);
+  discoverCards(input?: { page?: number; size?: number }) {
+    const params = new URLSearchParams();
+    if (input?.page && input.page > 0) {
+      params.set("page", String(input.page));
+    }
+    if (input?.size && input.size > 0) {
+      params.set("size", String(input.size));
+    }
+    const query = params.toString();
+    const path = query ? `${API_ROOT}/discover/cards?${query}` : `${API_ROOT}/discover/cards`;
+    return request<{ cards: DiscoverCardItem[]; pagination: DiscoverCardsPagination }>(path);
   },
 
   cardDetail(cardId: string) {

@@ -1,7 +1,9 @@
 "use client";
 
+import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import Link from "next/link";
-import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useInView } from "react-intersection-observer";
 
 import { AppShell } from "@/components/share/app-shell";
 import { shareApi } from "@/lib/share-api";
@@ -20,7 +22,8 @@ type HomeFeedCard = {
   bgClass: string;
 };
 
-const filterChips = ["all", "system_theme", "wechat_theme", "app", "character_persona", "world_book"] as const;
+const CATEGORY_SLOTS = ["system_theme", "wechat_theme", "app", "character_persona", "world_book"] as const;
+const filterChips = ["all", ...CATEGORY_SLOTS] as const;
 type FilterChip = (typeof filterChips)[number];
 
 const chipLabels: Record<FilterChip, string> = {
@@ -41,6 +44,18 @@ const chipVisuals: Record<FilterChip, { className: string }> = {
   world_book: { className: "bg-[#ffcda8]" },
 };
 
+const DISCOVER_PAGE_SIZE = 12;
+
+function resolveColumnCount(viewportWidth: number) {
+  if (viewportWidth >= 1280) {
+    return 3;
+  }
+  if (viewportWidth >= 640) {
+    return 2;
+  }
+  return 1;
+}
+
 function formatMetric(count: number) {
   if (!Number.isFinite(count) || count <= 0) {
     return "0";
@@ -58,31 +73,70 @@ function matchesChip(card: HomeFeedCard, chip: FilterChip) {
   return card.tags.includes(chip);
 }
 
+function toRows(cards: HomeFeedCard[], columnCount: number) {
+  if (cards.length === 0) {
+    return [] as HomeFeedCard[][];
+  }
+  const rows: HomeFeedCard[][] = [];
+  for (let i = 0; i < cards.length; i += columnCount) {
+    rows.push(cards.slice(i, i + columnCount));
+  }
+  return rows;
+}
+
 export default function LandingPage() {
   const [cards, setCards] = useState<DiscoverCardItem[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [activeChip, setActiveChip] = useState<FilterChip>("all");
+  const [columnCount, setColumnCount] = useState(1);
+  const [scrollMargin, setScrollMargin] = useState(0);
+
+  const virtualListRef = useRef<HTMLDivElement | null>(null);
+  const loadedCardIdsRef = useRef<Set<string>>(new Set());
+  const { ref: loadMoreRef, inView } = useInView({
+    root: null,
+    rootMargin: "640px 0px",
+    threshold: 0,
+  });
 
   const deferredQuery = useDeferredValue(query);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const updateColumns = () => {
+      setColumnCount(resolveColumnCount(window.innerWidth));
+    };
+    updateColumns();
+    window.addEventListener("resize", updateColumns);
+    return () => {
+      window.removeEventListener("resize", updateColumns);
+    };
+  }, []);
+
+  useEffect(() => {
     let active = true;
 
-    async function loadCards() {
+    async function loadFirstPage() {
       setLoading(true);
       setError("");
 
       try {
-        const payload = await shareApi.discoverCards();
+        const payload = await shareApi.discoverCards({ page: 1, size: DISCOVER_PAGE_SIZE });
         if (!active) {
           return;
         }
 
-        startTransition(() => {
-          setCards(payload.cards);
-        });
+        loadedCardIdsRef.current = new Set(payload.cards.map((item) => item.card.id));
+        setCards(payload.cards);
+        setPage(payload.pagination.page);
+        setHasMore(payload.pagination.hasMore);
       } catch (loadError) {
         if (!active) {
           return;
@@ -95,20 +149,54 @@ export default function LandingPage() {
       }
     }
 
-    void loadCards();
+    void loadFirstPage();
     return () => {
       active = false;
     };
   }, []);
 
+  useEffect(() => {
+    if (!inView || !hasMore || loading || loadingMore) {
+      return;
+    }
+
+    setLoadingMore(true);
+    const nextPage = page + 1;
+
+    void shareApi
+      .discoverCards({ page: nextPage, size: DISCOVER_PAGE_SIZE })
+      .then((payload) => {
+        const existingCardIds = loadedCardIdsRef.current;
+        const nextCards = payload.cards.filter((item) => !existingCardIds.has(item.card.id));
+        if (nextCards.length > 0) {
+          nextCards.forEach((item) => {
+            existingCardIds.add(item.card.id);
+          });
+          setCards((current) => [...current, ...nextCards]);
+        }
+        setPage(payload.pagination.page);
+        if (payload.cards.length === 0 || nextCards.length === 0) {
+          setHasMore(false);
+          return;
+        }
+        setHasMore(payload.pagination.hasMore);
+      })
+      .catch((loadError) => {
+        setError(loadError instanceof Error ? loadError.message : "加载失败，请稍后重试。");
+      })
+      .finally(() => {
+        setLoadingMore(false);
+      });
+  }, [hasMore, inView, loading, loadingMore, page]);
+
   const sourceCards = useMemo<HomeFeedCard[]>(() => {
     return cards.map((item) => {
-      const titleText = item.card.title ?? "未命名作品";
-      const descriptionText = item.card.description || "创作者暂未填写描述";
+      const titleText = item.card.title ?? "未命名卡片";
+      const descriptionText = item.card.description || "创作者暂未填写描述。";
       const creatorName = item.creator.nickname || item.creator.username || "Creator";
 
       const tags = (item.card.categories ?? []).filter((slot): slot is CardContentSlot =>
-        ["system_theme", "wechat_theme", "app", "character_persona", "world_book"].includes(slot),
+        CATEGORY_SLOTS.includes(slot as (typeof CATEGORY_SLOTS)[number]),
       );
 
       return {
@@ -149,7 +237,43 @@ export default function LandingPage() {
     });
   }, [activeChip, deferredQuery, sourceCards]);
 
-  const featuredCards = filteredCards.slice(0, 12);
+  const cardRows = useMemo(() => {
+    return toRows(filteredCards, columnCount);
+  }, [filteredCards, columnCount]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const updateScrollMargin = () => {
+      if (!virtualListRef.current) {
+        return;
+      }
+      const nextMargin = virtualListRef.current.getBoundingClientRect().top + window.scrollY;
+      setScrollMargin((current) => (Math.abs(current - nextMargin) > 1 ? nextMargin : current));
+    };
+
+    updateScrollMargin();
+    const rafId = window.requestAnimationFrame(updateScrollMargin);
+    window.addEventListener("resize", updateScrollMargin);
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", updateScrollMargin);
+    };
+  }, [cardRows.length, columnCount, loading, error]);
+
+  const rowVirtualizer = useWindowVirtualizer({
+    count: cardRows.length,
+    estimateSize: () => 420,
+    overscan: 4,
+    scrollMargin,
+  });
+
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const totalHeight = rowVirtualizer.getTotalSize();
+  const showInitialSkeleton = loading && sourceCards.length === 0;
+  const showNoResult = !showInitialSkeleton && filteredCards.length === 0;
+  const skeletonCount = columnCount * 2;
 
   const footer = (
     <footer className="relative z-10 px-5 pb-6 pt-6">
@@ -199,38 +323,17 @@ export default function LandingPage() {
               <div className="rounded-2xl border-[4px] border-[#c26b5b] bg-[#fff0eb] px-4 py-3 text-sm font-bold text-[#8e2b1b]">{error}</div>
             ) : null}
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {featuredCards.length > 0 ? (
-                featuredCards.map((card, index) => (
-                  <Link
-                    key={card.id}
-                    href={card.href}
-                    className={`${card.bgClass} dream-card card-hover-lift fade-slide-in flex flex-col p-3.5`}
-                    style={{ animationDelay: `${index * 60}ms` }}
-                  >
-                    <div className="relative mb-2.5">
-                      <div className="absolute left-2 top-2 z-10">
-                        <span className="rounded-full border-[3px] border-[var(--outline)] bg-white px-3 py-0.5 text-xs font-black text-[var(--foreground)]">
-                          #{chipLabels[card.tags[0] ?? "all"]}
-                        </span>
-                      </div>
-                      <div className="aspect-[4/3] overflow-hidden rounded-2xl border-[3px] border-[var(--outline)] bg-white">
-                        <img src={card.imageUrl} className="h-full w-full object-cover object-center" alt={card.title} />
-                      </div>
-                    </div>
-
-                    <h4 className="px-1 text-[1.5rem] font-black text-[var(--foreground)]">{card.title}</h4>
-                    <p className="mt-1.5 line-clamp-2 text-sm font-bold text-[var(--on-surface-variant)]">{card.description}</p>
-                    <div className="mt-2.5 flex items-center justify-between px-1 text-xs font-bold text-[var(--foreground)]/68">
-                      <span>{card.creatorName}</span>
-                      <span>{card.metric}</span>
-                    </div>
-                  </Link>
-                ))
-              ) : (
-                <div className="col-span-full rounded-3xl border-[4px] border-[var(--outline)] bg-white px-5 py-9 text-center text-[var(--foreground)]">
+            <div ref={virtualListRef}>
+              {showInitialSkeleton ? (
+                <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }}>
+                  {Array.from({ length: skeletonCount }).map((_, index) => (
+                    <CardSkeleton key={index} />
+                  ))}
+                </div>
+              ) : showNoResult ? (
+                <div className="rounded-3xl border-[4px] border-[var(--outline)] bg-white px-5 py-9 text-center text-[var(--foreground)]">
                   <p className="text-2xl font-black">没有找到匹配内容</p>
-                  <p className="mt-3 font-bold">当前筛选无结果，请尝试切换分类或关键字。</p>
+                  <p className="mt-3 font-bold">当前筛选无结果，请尝试切换分类或关键词。</p>
                   <button
                     type="button"
                     onClick={() => {
@@ -242,17 +345,105 @@ export default function LandingPage() {
                     重置筛选
                   </button>
                 </div>
+              ) : (
+                <div className="relative w-full" style={{ height: `${Math.max(totalHeight, 1)}px` }}>
+                  {virtualRows.map((virtualRow) => {
+                    const rowCards = cardRows[virtualRow.index] ?? [];
+                    const rowStart = virtualRow.start - rowVirtualizer.options.scrollMargin;
+
+                    return (
+                      <div
+                        key={virtualRow.key}
+                        data-index={virtualRow.index}
+                        ref={rowVirtualizer.measureElement}
+                        className="absolute left-0 top-0 w-full"
+                        style={{
+                          transform: `translateY(${rowStart}px)`,
+                        }}
+                      >
+                        <div className="grid gap-4 pb-4" style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }}>
+                          {rowCards.map((card, offset) => (
+                            <CardItem key={card.id} card={card} index={virtualRow.index * columnCount + offset} />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
 
+            {loadingMore ? (
+              <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }}>
+                {Array.from({ length: columnCount }).map((_, index) => (
+                  <CardSkeleton key={`loading-more-${index}`} />
+                ))}
+              </div>
+            ) : null}
+
             <div className="flex flex-wrap gap-2 text-sm">
-              <span className="metric-pill rounded-full px-3 py-1.5 font-black">{loading ? "加载中..." : `共 ${sourceCards.length} 条`}</span>
-              <span className="metric-pill rounded-full px-3 py-1.5 font-black">筛选后 {filteredCards.length} 条</span>
+              <span className="metric-pill rounded-full px-3 py-1.5 font-black">
+                {loading ? "加载中..." : `已展示 ${filteredCards.length} 条`}
+              </span>
+              {!loading && filteredCards.length !== sourceCards.length ? (
+                <span className="metric-pill rounded-full px-3 py-1.5 font-black">共加载 {sourceCards.length} 条</span>
+              ) : null}
+              {loadingMore ? <span className="metric-pill rounded-full px-3 py-1.5 font-black">正在加载更多...</span> : null}
+              {!loading && !hasMore ? <span className="metric-pill rounded-full px-3 py-1.5 font-black">已全部加载</span> : null}
             </div>
+
+            <div ref={loadMoreRef} className="h-1 w-full" aria-hidden="true" />
           </div>
         </main>
       </section>
     </AppShell>
+  );
+}
+
+function CardItem({ card, index }: { card: HomeFeedCard; index: number }) {
+  return (
+    <Link
+      href={card.href}
+      className={`${card.bgClass} dream-card card-hover-lift fade-slide-in flex h-full flex-col p-3.5`}
+      style={{ animationDelay: `${(index % 12) * 45}ms` }}
+    >
+      <div className="relative mb-2.5">
+        <div className="absolute left-2 top-2 z-10">
+          <span className="rounded-full border-[3px] border-[var(--outline)] bg-white px-3 py-0.5 text-xs font-black text-[var(--foreground)]">
+            #{chipLabels[card.tags[0] ?? "all"]}
+          </span>
+        </div>
+        <div className="aspect-[4/3] overflow-hidden rounded-2xl border-[3px] border-[var(--outline)] bg-white">
+          {card.imageUrl ? (
+            <img src={card.imageUrl} className="h-full w-full object-cover object-center" alt={card.title} />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-[#ecefff] text-sm font-bold text-[var(--text-subtle)]">暂无封面</div>
+          )}
+        </div>
+      </div>
+
+      <h4 className="px-1 text-[1.5rem] font-black text-[var(--foreground)]">{card.title}</h4>
+      <p className="mt-1.5 line-clamp-2 text-sm font-bold text-[var(--on-surface-variant)]">{card.description}</p>
+      <div className="mt-2.5 flex items-center justify-between px-1 text-xs font-bold text-[var(--foreground)]/68">
+        <span>{card.creatorName}</span>
+        <span>{card.metric}</span>
+      </div>
+    </Link>
+  );
+}
+
+function CardSkeleton() {
+  return (
+    <div className="dream-card animate-pulse bg-white p-3.5">
+      <div className="aspect-[4/3] rounded-2xl border-[3px] border-[var(--outline)] bg-[#ecefff]" />
+      <div className="mt-3 h-5 rounded-full bg-[#d9d3ee]" />
+      <div className="mt-2 h-4 rounded-full bg-[#ecefff]" />
+      <div className="mt-1.5 h-4 w-4/5 rounded-full bg-[#ecefff]" />
+      <div className="mt-3 flex items-center justify-between">
+        <div className="h-3.5 w-24 rounded-full bg-[#d9d3ee]" />
+        <div className="h-3.5 w-12 rounded-full bg-[#d9d3ee]" />
+      </div>
+    </div>
   );
 }
 
@@ -305,7 +496,7 @@ function SparkleIcon() {
 
 function HeartIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-7 w-7 text-[var(--foreground)] fill-[#ff9c9c]" stroke="currentColor" strokeWidth="1.5">
+    <svg viewBox="0 0 24 24" className="h-7 w-7 fill-[#ff9c9c] text-[var(--foreground)]" stroke="currentColor" strokeWidth="1.5">
       <path d="M12 20.2 4.94 13.5a4.65 4.65 0 0 1 6.58-6.58L12 7.4l.48-.48a4.65 4.65 0 0 1 6.58 6.58L12 20.2Z" />
     </svg>
   );

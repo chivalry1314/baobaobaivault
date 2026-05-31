@@ -462,24 +462,52 @@ func (s *ShareService) GetSessionUser(ctx context.Context, userID string) (*Shar
 	return &sessionUser, nil
 }
 
-func (s *ShareService) ListDiscoverCards(ctx context.Context) ([]ShareDiscoverCardItem, error) {
-	cards := make([]model.SharePlatformCard, 0, 24)
-	if err := s.db.WithContext(ctx).
-		Where("visibility = ? AND status = ?", model.SharePlatformCardVisibilityPublic, model.SharePlatformCardStatusPublished).
+func (s *ShareService) ListDiscoverCards(ctx context.Context, page, size int) ([]ShareDiscoverCardItem, int64, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if size <= 0 {
+		size = 24
+	}
+	if size > 60 {
+		size = 60
+	}
+
+	query := s.db.WithContext(ctx).
+		Model(&model.SharePlatformCard{}).
+		Where("visibility = ? AND status = ?", model.SharePlatformCardVisibilityPublic, model.SharePlatformCardStatusPublished)
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	if total == 0 {
+		return []ShareDiscoverCardItem{}, 0, nil
+	}
+
+	offset := (page - 1) * size
+	cards := make([]model.SharePlatformCard, 0, size)
+	if err := query.
 		Order("updated_at DESC").
+		Offset(offset).
+		Limit(size).
 		Find(&cards).Error; err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if len(cards) == 0 {
-		return []ShareDiscoverCardItem{}, nil
+		return []ShareDiscoverCardItem{}, total, nil
 	}
 
 	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, collectShareCardIDs(cards))
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return s.mapDiscoverCards(ctx, cards, assetsByCardID)
+	items, err := s.mapDiscoverCards(ctx, cards, assetsByCardID)
+	if err != nil {
+		return nil, 0, err
+	}
+	return items, total, nil
 }
 
 func (s *ShareService) ListDashboardByUser(ctx context.Context, userID string) (*ShareDashboard, error) {

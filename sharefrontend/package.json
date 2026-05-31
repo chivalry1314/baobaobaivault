@@ -6,12 +6,16 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:cards": "node ./scripts/seed-share-cards.mjs",
+    "cleanup:cards": "node ./scripts/cleanup-share-cards.mjs"
   },
   "dependencies": {
+    "@tanstack/react-virtual": "^3.13.26",
     "next": "16.2.4",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "react-intersection-observer": "^10.0.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

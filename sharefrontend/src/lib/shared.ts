@@ -67,6 +67,14 @@ export type DiscoverCardItem = {
   stats: CardStats;
 };
 
+export type DiscoverCardsPagination = {
+  page: number;
+  size: number;
+  total: number;
+  totalPages: number;
+  hasMore: boolean;
+};
+
 export type SessionResponse = {
   authenticated: boolean;
   user: ExternalSessionUser | null;
