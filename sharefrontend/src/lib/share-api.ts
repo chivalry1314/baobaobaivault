@@ -2,6 +2,8 @@ import type {
   AccessCodeDashboardResponse,
   ApiError,
   CardAccessCodeConfig,
+  CardAssetUpdateResponse,
+  CardContentSlot,
   CardDetailResponse,
   ContinueAuthResponse,
   DashboardResponse,
@@ -9,6 +11,7 @@ import type {
   ExternalSessionUser,
   PlatformCard,
   SessionResponse,
+  ShareUserRoleManageItem,
 } from "@/lib/shared";
 
 const API_ROOT = "/api/share";
@@ -18,9 +21,9 @@ const shareApiErrorMessages: Record<string, string> = {
   "password must be at least 6 characters": "密码至少需要 6 位",
   "invalid email or password": "邮箱或密码不正确",
   "invalid request body": "请求参数不正确",
-  "email already registered": "该邮箱已经注册",
-  "nickname must be between 2 and 40 characters": "昵称需要 2 到 40 个字符",
-  "bio must be at most 100 characters": "个人简介不能超过 100 个字",
+  "email already registered": "该邮箱已注册",
+  "nickname must be between 2 and 40 characters": "昵称长度需要在 2 到 40 个字符之间",
+  "bio must be at most 100 characters": "个人简介不能超过 100 个字符",
   "phone format is invalid": "手机号格式不正确",
   "current password is incorrect": "当前密码不正确",
   "invalid image data": "图片数据不正确，请重新上传",
@@ -29,7 +32,11 @@ const shareApiErrorMessages: Record<string, string> = {
   "invalid access code rules": "提取码规则不正确",
   "access code required": "请输入提取码",
   "access code expired": "当前提取码已过期",
-  "access code exhausted": "当前提取码已达使用上限",
+  "access code exhausted": "当前提取码已达到使用上限",
+  "manager role required": "需要管理员权限",
+  "invalid user role": "用户角色不正确",
+  "invalid card content slot": "分类槽位不正确",
+  "card must keep at least one category file": "卡片至少保留一个分类文件",
 };
 
 function toErrorMessage(payload: unknown, fallback: string) {
@@ -164,6 +171,43 @@ export const shareApi = {
     });
   },
 
+  createCardBundle(input: {
+    title: string;
+    description: string;
+    visibility: "private" | "public";
+    status: "draft" | "published" | "archived";
+    cover?: File;
+    items: Array<{
+      slot: CardContentSlot;
+      file: File;
+    }>;
+  }) {
+    const formData = new FormData();
+    const payload = {
+      title: input.title,
+      description: input.description,
+      visibility: input.visibility,
+      status: input.status,
+      items: input.items.map((item, index) => ({
+        slot: item.slot,
+        fileField: `file_${index}`,
+      })),
+    };
+
+    formData.append("payload", JSON.stringify(payload));
+    if (input.cover) {
+      formData.append("cover", input.cover);
+    }
+    input.items.forEach((item, index) => {
+      formData.append(`file_${index}`, item.file);
+    });
+
+    return request<{ card: PlatformCard }>(`${API_ROOT}/me/admin/cards`, {
+      method: "POST",
+      body: formData,
+    });
+  },
+
   updateCard(
     cardId: string,
     input: {
@@ -179,6 +223,56 @@ export const shareApi = {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(input),
+    });
+  },
+
+  replaceCardAsset(cardId: string, slot: CardContentSlot, file: File) {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request<CardAssetUpdateResponse>(
+      `${API_ROOT}/me/cards/${encodeURIComponent(cardId)}/assets/${encodeURIComponent(slot)}`,
+      {
+        method: "PUT",
+        body: formData,
+      },
+    );
+  },
+
+  replaceCardCover(cardId: string, file: File) {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request<CardAssetUpdateResponse>(`${API_ROOT}/me/cards/${encodeURIComponent(cardId)}/cover`, {
+      method: "PUT",
+      body: formData,
+    });
+  },
+
+  deleteCardAsset(cardId: string, slot: CardContentSlot) {
+    return request<CardAssetUpdateResponse>(
+      `${API_ROOT}/me/cards/${encodeURIComponent(cardId)}/assets/${encodeURIComponent(slot)}`,
+      {
+        method: "DELETE",
+      },
+    );
+  },
+
+  deleteCardCover(cardId: string) {
+    return request<CardAssetUpdateResponse>(`${API_ROOT}/me/cards/${encodeURIComponent(cardId)}/cover`, {
+      method: "DELETE",
+    });
+  },
+
+  adminUsers() {
+    return request<{ users: ShareUserRoleManageItem[] }>(`${API_ROOT}/me/admin/users`);
+  },
+
+  updateUserRole(userId: string, role: "viewer" | "manager") {
+    return request<{ user: ExternalSessionUser }>(`${API_ROOT}/me/admin/users/${encodeURIComponent(userId)}/role`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ role }),
     });
   },
 

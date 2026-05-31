@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"mime"
 	"net/mail"
 	"os"
 	"path/filepath"
@@ -23,6 +24,14 @@ import (
 var (
 	shareExternalUsernameCleanPattern = regexp.MustCompile(`[^a-z0-9_]+`)
 	shareAccessCodePattern            = regexp.MustCompile(`^[A-Z0-9-]{4,32}$`)
+
+	shareCardContentSlots = []string{
+		"system_theme",
+		"wechat_theme",
+		"app",
+		"character_persona",
+		"world_book",
+	}
 
 	ErrShareInvalidEmail        = errors.New("invalid email")
 	ErrShareEmailExists         = errors.New("email already registered")
@@ -48,22 +57,36 @@ var (
 	ErrShareAccessCodeRequired  = errors.New("access code required")
 	ErrShareAccessCodeExpired   = errors.New("access code expired")
 	ErrShareAccessCodeExhausted = errors.New("access code exhausted")
+	ErrShareForbiddenRole       = errors.New("manager role required")
+	ErrShareInvalidCardSlot     = errors.New("invalid card content slot")
+	ErrShareInvalidUserRole     = errors.New("invalid user role")
+	ErrShareCardAssetRequired   = errors.New("card must keep at least one category file")
 )
 
 type ShareService struct {
-	db       *gorm.DB
-	logger   *zap.Logger
-	fileRoot string
+	db                *gorm.DB
+	logger            *zap.Logger
+	fileRoot          string
+	managerEmailAllow map[string]struct{}
 }
 
-func NewShareService(db *gorm.DB, logger *zap.Logger, fileRoot string) *ShareService {
+func NewShareService(db *gorm.DB, logger *zap.Logger, fileRoot string, managerEmails ...string) *ShareService {
 	if strings.TrimSpace(fileRoot) == "" {
 		fileRoot = filepath.Join("storage", "share", "files")
 	}
+	allow := make(map[string]struct{}, len(managerEmails))
+	for _, raw := range managerEmails {
+		normalized, err := normalizeShareExternalEmail(raw)
+		if err != nil {
+			continue
+		}
+		allow[normalized] = struct{}{}
+	}
 	return &ShareService{
-		db:       db,
-		logger:   logger,
-		fileRoot: fileRoot,
+		db:                db,
+		logger:            logger,
+		fileRoot:          fileRoot,
+		managerEmailAllow: allow,
 	}
 }
 
@@ -76,7 +99,17 @@ type ShareSessionUser struct {
 	Bio        string    `json:"bio"`
 	CoverImage string    `json:"coverImage"`
 	Phone      string    `json:"phone"`
+	Role       string    `json:"role"`
 	CreatedAt  time.Time `json:"createdAt"`
+}
+
+type ShareCardAssetView struct {
+	Slot             string `json:"slot"`
+	OriginalFileName string `json:"originalFileName"`
+	MimeType         string `json:"mimeType"`
+	Size             int64  `json:"size"`
+	PreviewUrl       string `json:"previewUrl"`
+	DownloadUrl      string `json:"downloadUrl"`
 }
 
 type ShareCardView struct {
@@ -91,6 +124,7 @@ type ShareCardView struct {
 	Size             int64     `json:"size"`
 	PreviewUrl       string    `json:"previewUrl"`
 	DownloadUrl      string    `json:"downloadUrl"`
+	Categories       []string  `json:"categories"`
 	CreatedAt        time.Time `json:"createdAt"`
 	UpdatedAt        time.Time `json:"updatedAt"`
 }
@@ -117,6 +151,7 @@ type ShareCardDetail struct {
 	Card             ShareCardView         `json:"card"`
 	Creator          SharePublicUser       `json:"creator"`
 	Stats            ShareCardStats        `json:"stats"`
+	Assets           []ShareCardAssetView  `json:"assets"`
 	CanEdit          bool                  `json:"canEdit"`
 	CanDownload      bool                  `json:"canDownload"`
 	AccessCodeStatus ShareCardAccessStatus `json:"accessCodeStatus"`
@@ -172,6 +207,29 @@ type ShareCreateCardInput struct {
 	FileName    string
 	MimeType    string
 	FileReader  io.Reader
+	CoverFileName string
+	CoverMimeType string
+	CoverReader   io.Reader
+	MaxFileSize int64
+}
+
+type ShareCreateCardAssetInput struct {
+	Slot       string
+	FileName   string
+	MimeType   string
+	FileReader io.Reader
+}
+
+type ShareCreateCardBundleInput struct {
+	CreatorID   string
+	Title       string
+	Description string
+	Visibility  string
+	Status      string
+	Assets      []ShareCreateCardAssetInput
+	CoverFileName string
+	CoverMimeType string
+	CoverReader   io.Reader
 	MaxFileSize int64
 }
 
@@ -182,6 +240,32 @@ type ShareUpdateCardInput struct {
 	Description string
 	Visibility  string
 	Status      string
+}
+
+type ShareUpdateCardAssetInput struct {
+	OwnerID     string
+	CardID      string
+	Slot        string
+	FileName    string
+	MimeType    string
+	FileReader  io.Reader
+	MaxFileSize int64
+}
+
+type ShareUserRoleManageItem struct {
+	ID        string    `json:"id"`
+	Email     string    `json:"email"`
+	Username  string    `json:"username"`
+	Nickname  string    `json:"nickname"`
+	Role      string    `json:"role"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type ShareUpdateUserRoleInput struct {
+	OperatorID string
+	UserID     string
+	Role       string
 }
 
 type ShareCardAccessCodeConfig struct {
@@ -308,6 +392,10 @@ func (s *ShareService) ContinueExternalUser(ctx context.Context, emailRaw, passw
 		return nil, false, ErrShareAuthFailed
 	}
 
+	if err := s.ensureManagerRoleByEmailIfNeeded(ctx, &user); err != nil {
+		return nil, false, err
+	}
+
 	now := time.Now().UTC()
 	user.LastLoginAt = &now
 	_ = s.db.WithContext(ctx).Model(&model.ShareExternalUser{}).
@@ -333,6 +421,10 @@ func (s *ShareService) AuthenticateExternalUser(ctx context.Context, emailRaw, p
 	}
 	if user.Status != model.ShareExternalUserStatusActive || !user.CheckPassword(password) {
 		return nil, ErrShareAuthFailed
+	}
+
+	if err := s.ensureManagerRoleByEmailIfNeeded(ctx, &user); err != nil {
+		return nil, err
 	}
 
 	now := time.Now().UTC()
@@ -361,6 +453,10 @@ func (s *ShareService) GetSessionUser(ctx context.Context, userID string) (*Shar
 		return nil, nil
 	}
 
+	if err := s.ensureManagerRoleByEmailIfNeeded(ctx, &user); err != nil {
+		return nil, err
+	}
+
 	sessionUser := toShareSessionUser(&user)
 	return &sessionUser, nil
 }
@@ -377,7 +473,12 @@ func (s *ShareService) ListDiscoverCards(ctx context.Context) ([]ShareDiscoverCa
 		return []ShareDiscoverCardItem{}, nil
 	}
 
-	return s.mapDiscoverCards(ctx, cards)
+	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, collectShareCardIDs(cards))
+	if err != nil {
+		return nil, err
+	}
+
+	return s.mapDiscoverCards(ctx, cards, assetsByCardID)
 }
 
 func (s *ShareService) ListDashboardByUser(ctx context.Context, userID string) (*ShareDashboard, error) {
@@ -410,12 +511,16 @@ func (s *ShareService) ListDashboardByUser(ctx context.Context, userID string) (
 	if err != nil {
 		return nil, err
 	}
+	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, cardIDs)
+	if err != nil {
+		return nil, err
+	}
 
 	items := make([]ShareDashboardCard, 0, len(cards))
 	for _, card := range cards {
 		accessCode := strings.TrimSpace(card.AccessCode)
 		items = append(items, ShareDashboardCard{
-			Card:          toShareCardView(&card),
+			Card:          toShareCardView(&card, assetsByCardID[card.ID]),
 			Stats:         statsByCard[card.ID],
 			HasAccessCode: accessCode != "",
 			AccessCode:    accessCode,
@@ -459,11 +564,15 @@ func (s *ShareService) ListAccessCodeDashboardByUser(ctx context.Context, userID
 	if err != nil {
 		return nil, err
 	}
+	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, cardIDs)
+	if err != nil {
+		return nil, err
+	}
 
 	items := make([]ShareAccessCodeDashboardItem, 0, len(cards))
 	availableCards := make([]ShareCardView, 0, len(cards))
 	for _, card := range cards {
-		cardView := toShareCardView(&card)
+		cardView := toShareCardView(&card, assetsByCardID[card.ID])
 		config := buildShareCardAccessCodeConfig(&card)
 		hasAccessCode := strings.TrimSpace(config.Code) != ""
 		isPubliclyVisible := card.Visibility == model.SharePlatformCardVisibilityPublic && card.Status == model.SharePlatformCardStatusPublished
@@ -491,6 +600,75 @@ func (s *ShareService) ListAccessCodeDashboardByUser(ctx context.Context, userID
 		Items:          items,
 		AvailableCards: availableCards,
 	}, nil
+}
+
+func (s *ShareService) ListUsersForRoleManage(ctx context.Context, operatorID string) ([]ShareUserRoleManageItem, error) {
+	if err := s.ensureShareManagerRole(ctx, operatorID); err != nil {
+		return nil, err
+	}
+
+	rows := make([]model.ShareExternalUser, 0, 128)
+	if err := s.db.WithContext(ctx).
+		Where("status = ?", model.ShareExternalUserStatusActive).
+		Order("created_at DESC").
+		Find(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	items := make([]ShareUserRoleManageItem, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, ShareUserRoleManageItem{
+			ID:        row.ID,
+			Email:     row.Email,
+			Username:  row.Username,
+			Nickname:  row.NormalizedDisplayName(),
+			Role:      normalizeShareExternalUserRole(row.Role),
+			Status:    strings.TrimSpace(row.Status),
+			CreatedAt: row.CreatedAt,
+		})
+	}
+	return items, nil
+}
+
+func (s *ShareService) UpdateUserRole(ctx context.Context, input ShareUpdateUserRoleInput) (*ShareSessionUser, error) {
+	operatorID := strings.TrimSpace(input.OperatorID)
+	targetUserID := strings.TrimSpace(input.UserID)
+	rawRole := strings.ToLower(strings.TrimSpace(input.Role))
+	if !isValidShareExternalUserRole(rawRole) {
+		return nil, ErrShareInvalidUserRole
+	}
+	nextRole := normalizeShareExternalUserRole(rawRole)
+	if targetUserID == "" {
+		return nil, ErrShareUserNotFound
+	}
+
+	var updated model.ShareExternalUser
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := s.ensureShareManagerRoleTx(tx, operatorID); err != nil {
+			return err
+		}
+
+		var user model.ShareExternalUser
+		if err := tx.First(&user, "id = ?", targetUserID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrShareUserNotFound
+			}
+			return err
+		}
+
+		user.Role = nextRole
+		user.UpdatedAt = time.Now().UTC()
+		if err := tx.Save(&user).Error; err != nil {
+			return err
+		}
+		updated = user
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	view := toShareSessionUser(&updated)
+	return &view, nil
 }
 
 func (s *ShareService) UpdateExternalUserProfile(ctx context.Context, input ShareUpdateProfileInput) (*ShareSessionUser, error) {
@@ -616,16 +794,29 @@ func (s *ShareService) CreateCard(ctx context.Context, input ShareCreateCardInpu
 	if userCount == 0 {
 		return nil, ErrShareUserNotFound
 	}
+	if err := s.ensureShareManagerRole(ctx, input.CreatorID); err != nil {
+		return nil, err
+	}
 
 	storedFileName, fileSize, err := s.saveUploadFile(input.CreatorID, input.FileName, input.FileReader, input.MaxFileSize)
 	if err != nil {
 		return nil, err
 	}
-
-	mimeType := strings.TrimSpace(input.MimeType)
-	if mimeType == "" {
-		mimeType = "application/octet-stream"
+	coverStoredFileName := ""
+	coverFileSize := int64(0)
+	coverFileName := ""
+	coverMimeType := ""
+	if strings.TrimSpace(input.CoverFileName) != "" && input.CoverReader != nil {
+		coverStoredFileName, coverFileSize, err = s.saveUploadFile(input.CreatorID, input.CoverFileName, input.CoverReader, input.MaxFileSize)
+		if err != nil {
+			_ = s.removeStoredFile(input.CreatorID, storedFileName)
+			return nil, err
+		}
+		coverFileName = filepath.Base(input.CoverFileName)
+		coverMimeType = detectUploadMimeType(input.CoverFileName, input.CoverMimeType)
 	}
+
+	mimeType := detectUploadMimeType(input.FileName, input.MimeType)
 
 	card := model.SharePlatformCard{
 		CreatorExternalUserID: strings.TrimSpace(input.CreatorID),
@@ -633,17 +824,173 @@ func (s *ShareService) CreateCard(ctx context.Context, input ShareCreateCardInpu
 		Description:           strings.TrimSpace(input.Description),
 		Visibility:            normalizeShareVisibility(input.Visibility),
 		Status:                status,
-		StoredFileName:        storedFileName,
-		OriginalFileName:      filepath.Base(input.FileName),
-		MimeType:              mimeType,
-		Size:                  fileSize,
+		StoredFileName:        coverStoredFileName,
+		OriginalFileName:      coverFileName,
+		MimeType:              coverMimeType,
+		Size:                  coverFileSize,
 	}
-	if err := s.db.WithContext(ctx).Create(&card).Error; err != nil {
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&card).Error; err != nil {
+			return err
+		}
+
+		asset := model.SharePlatformCardAsset{
+			CardID:           card.ID,
+			Slot:             "system_theme",
+			StoredFileName:   storedFileName,
+			OriginalFileName: filepath.Base(input.FileName),
+			MimeType:         mimeType,
+			Size:             fileSize,
+			SortOrder:        0,
+		}
+		if err := tx.Create(&asset).Error; err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
 		_ = s.removeStoredFile(input.CreatorID, storedFileName)
+		if coverStoredFileName != "" {
+			_ = s.removeStoredFile(input.CreatorID, coverStoredFileName)
+		}
 		return nil, err
 	}
 
-	view := toShareCardView(&card)
+	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, []string{card.ID})
+	if err != nil {
+		return nil, err
+	}
+	view := toShareCardView(&card, assetsByCardID[card.ID])
+	return &view, nil
+}
+
+func (s *ShareService) CreateCardBundle(ctx context.Context, input ShareCreateCardBundleInput) (*ShareCardView, error) {
+	if strings.TrimSpace(input.Title) == "" {
+		return nil, ErrShareCardTitleRequired
+	}
+	if !isValidShareVisibility(input.Visibility) {
+		return nil, ErrShareInvalidVisibility
+	}
+	if len(input.Assets) == 0 {
+		return nil, ErrShareFileRequired
+	}
+	if err := validateShareCardSlotItems(input.Assets); err != nil {
+		return nil, err
+	}
+
+	status := strings.TrimSpace(input.Status)
+	if status == "" {
+		status = model.SharePlatformCardStatusPublished
+	}
+	status = strings.ToLower(status)
+	if !isValidShareStatus(status) {
+		return nil, ErrShareInvalidCardStatus
+	}
+
+	creatorID := strings.TrimSpace(input.CreatorID)
+	var creator model.ShareExternalUser
+	if err := s.db.WithContext(ctx).First(&creator, "id = ?", creatorID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrShareUserNotFound
+		}
+		return nil, err
+	}
+	if creator.Status != model.ShareExternalUserStatusActive {
+		return nil, ErrShareUserNotFound
+	}
+	if !isShareManagerRole(creator.Role) {
+		return nil, ErrShareForbiddenRole
+	}
+
+	type savedAsset struct {
+		slot           string
+		storedFileName string
+		fileName       string
+		mimeType       string
+		size           int64
+	}
+
+	savedAssets := make([]savedAsset, 0, len(input.Assets))
+	coverStoredFileName := ""
+	coverFileSize := int64(0)
+	coverFileName := ""
+	coverMimeType := ""
+	var err error
+	if strings.TrimSpace(input.CoverFileName) != "" && input.CoverReader != nil {
+		coverStoredFileName, coverFileSize, err = s.saveUploadFile(creatorID, input.CoverFileName, input.CoverReader, input.MaxFileSize)
+		if err != nil {
+			return nil, err
+		}
+		coverFileName = filepath.Base(input.CoverFileName)
+		coverMimeType = detectUploadMimeType(input.CoverFileName, input.CoverMimeType)
+	}
+	for _, item := range input.Assets {
+		storedFileName, fileSize, err := s.saveUploadFile(creatorID, item.FileName, item.FileReader, input.MaxFileSize)
+		if err != nil {
+			if coverStoredFileName != "" {
+				_ = s.removeStoredFile(creatorID, coverStoredFileName)
+			}
+			for _, saved := range savedAssets {
+				_ = s.removeStoredFile(creatorID, saved.storedFileName)
+			}
+			return nil, err
+		}
+
+		mimeType := detectUploadMimeType(item.FileName, item.MimeType)
+		savedAssets = append(savedAssets, savedAsset{
+			slot:           normalizeShareCardSlot(item.Slot),
+			storedFileName: storedFileName,
+			fileName:       filepath.Base(item.FileName),
+			mimeType:       mimeType,
+			size:           fileSize,
+		})
+	}
+
+	card := model.SharePlatformCard{
+		CreatorExternalUserID: creatorID,
+		Title:                 strings.TrimSpace(input.Title),
+		Description:           strings.TrimSpace(input.Description),
+		Visibility:            normalizeShareVisibility(input.Visibility),
+		Status:                status,
+		StoredFileName:        coverStoredFileName,
+		OriginalFileName:      coverFileName,
+		MimeType:              coverMimeType,
+		Size:                  coverFileSize,
+	}
+
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&card).Error; err != nil {
+			return err
+		}
+		for index, asset := range savedAssets {
+			row := model.SharePlatformCardAsset{
+				CardID:           card.ID,
+				Slot:             asset.slot,
+				StoredFileName:   asset.storedFileName,
+				OriginalFileName: asset.fileName,
+				MimeType:         asset.mimeType,
+				Size:             asset.size,
+				SortOrder:        index,
+			}
+			if err := tx.Create(&row).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		if coverStoredFileName != "" {
+			_ = s.removeStoredFile(creatorID, coverStoredFileName)
+		}
+		for _, saved := range savedAssets {
+			_ = s.removeStoredFile(creatorID, saved.storedFileName)
+		}
+		return nil, err
+	}
+
+	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, []string{card.ID})
+	if err != nil {
+		return nil, err
+	}
+	view := toShareCardView(&card, assetsByCardID[card.ID])
 	return &view, nil
 }
 
@@ -672,6 +1019,9 @@ func (s *ShareService) UpdateCardByOwner(ctx context.Context, input ShareUpdateC
 		if card.CreatorExternalUserID != strings.TrimSpace(input.OwnerID) {
 			return ErrShareCardForbidden
 		}
+		if err := s.ensureShareManagerRoleTx(tx, card.CreatorExternalUserID); err != nil {
+			return err
+		}
 
 		card.Title = strings.TrimSpace(input.Title)
 		card.Description = strings.TrimSpace(input.Description)
@@ -689,13 +1039,266 @@ func (s *ShareService) UpdateCardByOwner(ctx context.Context, input ShareUpdateC
 		return nil, err
 	}
 
-	view := toShareCardView(&updated)
+	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, []string{updated.ID})
+	if err != nil {
+		return nil, err
+	}
+	view := toShareCardView(&updated, assetsByCardID[updated.ID])
 	return &view, nil
+}
+
+func (s *ShareService) ReplaceCardAssetByOwner(ctx context.Context, input ShareUpdateCardAssetInput) (*ShareCardDetail, error) {
+	ownerID := strings.TrimSpace(input.OwnerID)
+	cardID := strings.TrimSpace(input.CardID)
+	slot := normalizeShareCardSlot(input.Slot)
+	if ownerID == "" || cardID == "" {
+		return nil, ErrShareCardNotFound
+	}
+	if !isValidShareCardSlot(slot) {
+		return nil, ErrShareInvalidCardSlot
+	}
+	if strings.TrimSpace(input.FileName) == "" || input.FileReader == nil {
+		return nil, ErrShareFileRequired
+	}
+
+	mimeType := detectUploadMimeType(input.FileName, input.MimeType)
+
+	storedFileName, fileSize, err := s.saveUploadFile(ownerID, input.FileName, input.FileReader, input.MaxFileSize)
+	if err != nil {
+		return nil, err
+	}
+
+	var oldStoredFileName string
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var card model.SharePlatformCard
+		if err := tx.First(&card, "id = ?", cardID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrShareCardNotFound
+			}
+			return err
+		}
+		if card.CreatorExternalUserID != ownerID {
+			return ErrShareCardForbidden
+		}
+		if err := s.ensureShareManagerRoleTx(tx, card.CreatorExternalUserID); err != nil {
+			return err
+		}
+
+		var asset model.SharePlatformCardAsset
+		if err := tx.First(&asset, "card_id = ? AND slot = ?", card.ID, slot).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				asset = model.SharePlatformCardAsset{
+					CardID:           card.ID,
+					Slot:             slot,
+					StoredFileName:   storedFileName,
+					OriginalFileName: filepath.Base(input.FileName),
+					MimeType:         mimeType,
+					Size:             fileSize,
+					SortOrder:        shareCardSlotSortOrder(slot),
+				}
+				if err := tx.Create(&asset).Error; err != nil {
+					return err
+				}
+				card.UpdatedAt = time.Now().UTC()
+				return tx.Model(&model.SharePlatformCard{}).Where("id = ?", card.ID).Update("updated_at", card.UpdatedAt).Error
+			}
+			return err
+		}
+
+		oldStoredFileName = strings.TrimSpace(asset.StoredFileName)
+		asset.StoredFileName = storedFileName
+		asset.OriginalFileName = filepath.Base(input.FileName)
+		asset.MimeType = mimeType
+		asset.Size = fileSize
+		asset.SortOrder = shareCardSlotSortOrder(slot)
+		asset.UpdatedAt = time.Now().UTC()
+		if err := tx.Save(&asset).Error; err != nil {
+			return err
+		}
+
+		card.UpdatedAt = time.Now().UTC()
+		return tx.Model(&model.SharePlatformCard{}).Where("id = ?", card.ID).Update("updated_at", card.UpdatedAt).Error
+	})
+	if err != nil {
+		_ = s.removeStoredFile(ownerID, storedFileName)
+		return nil, err
+	}
+	if oldStoredFileName != "" && oldStoredFileName != storedFileName {
+		_ = s.removeStoredFile(ownerID, oldStoredFileName)
+	}
+	return s.GetCardDetail(ctx, cardID, ownerID)
+}
+
+func (s *ShareService) ReplaceCardCoverByOwner(
+	ctx context.Context,
+	ownerID,
+	cardID,
+	fileName,
+	mimeType string,
+	fileReader io.Reader,
+	maxFileSize int64,
+) (*ShareCardDetail, error) {
+	ownerID = strings.TrimSpace(ownerID)
+	cardID = strings.TrimSpace(cardID)
+	fileName = strings.TrimSpace(fileName)
+	if ownerID == "" || cardID == "" {
+		return nil, ErrShareCardNotFound
+	}
+	if fileName == "" || fileReader == nil {
+		return nil, ErrShareFileRequired
+	}
+
+	normalizedMimeType := detectUploadMimeType(fileName, mimeType)
+	if !strings.HasPrefix(strings.ToLower(normalizedMimeType), "image/") {
+		return nil, ErrShareInvalidImageData
+	}
+
+	storedFileName, fileSize, err := s.saveUploadFile(ownerID, fileName, fileReader, maxFileSize)
+	if err != nil {
+		return nil, err
+	}
+
+	oldStoredFileName := ""
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var card model.SharePlatformCard
+		if err := tx.First(&card, "id = ?", cardID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrShareCardNotFound
+			}
+			return err
+		}
+		if card.CreatorExternalUserID != ownerID {
+			return ErrShareCardForbidden
+		}
+		if err := s.ensureShareManagerRoleTx(tx, card.CreatorExternalUserID); err != nil {
+			return err
+		}
+
+		oldStoredFileName = strings.TrimSpace(card.StoredFileName)
+		card.StoredFileName = storedFileName
+		card.OriginalFileName = filepath.Base(fileName)
+		card.MimeType = normalizedMimeType
+		card.Size = fileSize
+		card.UpdatedAt = time.Now().UTC()
+		return tx.Save(&card).Error
+	})
+	if err != nil {
+		_ = s.removeStoredFile(ownerID, storedFileName)
+		return nil, err
+	}
+
+	if oldStoredFileName != "" && oldStoredFileName != storedFileName {
+		_ = s.removeStoredFile(ownerID, oldStoredFileName)
+	}
+	return s.GetCardDetail(ctx, cardID, ownerID)
+}
+
+func (s *ShareService) DeleteCardCoverByOwner(ctx context.Context, ownerID, cardID string) (*ShareCardDetail, error) {
+	ownerID = strings.TrimSpace(ownerID)
+	cardID = strings.TrimSpace(cardID)
+	if ownerID == "" || cardID == "" {
+		return nil, ErrShareCardNotFound
+	}
+
+	storedFileName := ""
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var card model.SharePlatformCard
+		if err := tx.First(&card, "id = ?", cardID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrShareCardNotFound
+			}
+			return err
+		}
+		if card.CreatorExternalUserID != ownerID {
+			return ErrShareCardForbidden
+		}
+		if err := s.ensureShareManagerRoleTx(tx, card.CreatorExternalUserID); err != nil {
+			return err
+		}
+
+		storedFileName = strings.TrimSpace(card.StoredFileName)
+		card.StoredFileName = ""
+		card.OriginalFileName = ""
+		card.MimeType = ""
+		card.Size = 0
+		card.UpdatedAt = time.Now().UTC()
+		return tx.Save(&card).Error
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if storedFileName != "" {
+		_ = s.removeStoredFile(ownerID, storedFileName)
+	}
+	return s.GetCardDetail(ctx, cardID, ownerID)
+}
+
+func (s *ShareService) DeleteCardAssetByOwner(ctx context.Context, ownerID, cardID, slot string) (*ShareCardDetail, error) {
+	ownerID = strings.TrimSpace(ownerID)
+	cardID = strings.TrimSpace(cardID)
+	slot = normalizeShareCardSlot(slot)
+	if ownerID == "" || cardID == "" {
+		return nil, ErrShareCardNotFound
+	}
+	if !isValidShareCardSlot(slot) {
+		return nil, ErrShareInvalidCardSlot
+	}
+
+	storedFileName := ""
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var card model.SharePlatformCard
+		if err := tx.First(&card, "id = ?", cardID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrShareCardNotFound
+			}
+			return err
+		}
+		if card.CreatorExternalUserID != ownerID {
+			return ErrShareCardForbidden
+		}
+		if err := s.ensureShareManagerRoleTx(tx, card.CreatorExternalUserID); err != nil {
+			return err
+		}
+
+		var asset model.SharePlatformCardAsset
+		if err := tx.First(&asset, "card_id = ? AND slot = ?", card.ID, slot).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil
+			}
+			return err
+		}
+		storedFileName = strings.TrimSpace(asset.StoredFileName)
+
+		var count int64
+		if err := tx.Model(&model.SharePlatformCardAsset{}).Where("card_id = ?", card.ID).Count(&count).Error; err != nil {
+			return err
+		}
+		if count <= 1 {
+			return ErrShareCardAssetRequired
+		}
+
+		if err := tx.Delete(&asset).Error; err != nil {
+			return err
+		}
+		card.UpdatedAt = time.Now().UTC()
+		return tx.Model(&model.SharePlatformCard{}).Where("id = ?", card.ID).Update("updated_at", card.UpdatedAt).Error
+	})
+	if err != nil {
+		return nil, err
+	}
+	if storedFileName != "" {
+		_ = s.removeStoredFile(ownerID, storedFileName)
+	}
+	return s.GetCardDetail(ctx, cardID, ownerID)
 }
 
 func (s *ShareService) GetCardAccessCodeByOwner(ctx context.Context, ownerID, cardID string) (*ShareCardAccessCodeConfig, error) {
 	card, err := s.getCardByOwner(ctx, ownerID, cardID)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.ensureShareManagerRole(ctx, ownerID); err != nil {
 		return nil, err
 	}
 
@@ -706,6 +1309,9 @@ func (s *ShareService) GetCardAccessCodeByOwner(ctx context.Context, ownerID, ca
 func (s *ShareService) UpdateCardAccessCodeByOwner(ctx context.Context, input ShareUpdateCardAccessCodeInput) (*ShareCardAccessCodeConfig, error) {
 	card, err := s.getCardByOwner(ctx, input.OwnerID, input.CardID)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.ensureShareManagerRole(ctx, input.OwnerID); err != nil {
 		return nil, err
 	}
 
@@ -749,6 +1355,9 @@ func (s *ShareService) DeleteCardAccessCodeByOwner(ctx context.Context, ownerID,
 	if err != nil {
 		return err
 	}
+	if err := s.ensureShareManagerRole(ctx, ownerID); err != nil {
+		return err
+	}
 
 	card.AccessCode = ""
 	card.AccessCodeExpiresAt = nil
@@ -764,7 +1373,7 @@ func (s *ShareService) DeleteCardByOwner(ctx context.Context, ownerID, cardID st
 	cardID = strings.TrimSpace(cardID)
 
 	var creatorID string
-	var storedFileName string
+	storedFileNames := make([]string, 0, 8)
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var card model.SharePlatformCard
 		if err := tx.First(&card, "id = ?", cardID).Error; err != nil {
@@ -776,10 +1385,27 @@ func (s *ShareService) DeleteCardByOwner(ctx context.Context, ownerID, cardID st
 		if card.CreatorExternalUserID != ownerID {
 			return ErrShareCardForbidden
 		}
+		if err := s.ensureShareManagerRoleTx(tx, card.CreatorExternalUserID); err != nil {
+			return err
+		}
 
 		creatorID = card.CreatorExternalUserID
-		storedFileName = card.StoredFileName
+		var assets []model.SharePlatformCardAsset
+		if err := tx.Where("card_id = ?", card.ID).Order("sort_order ASC, created_at ASC").Find(&assets).Error; err != nil {
+			return err
+		}
+		for _, asset := range assets {
+			if name := strings.TrimSpace(asset.StoredFileName); name != "" {
+				storedFileNames = append(storedFileNames, name)
+			}
+		}
+		if coverName := strings.TrimSpace(card.StoredFileName); coverName != "" {
+			storedFileNames = append(storedFileNames, coverName)
+		}
 		if err := tx.Where("card_id = ?", card.ID).Delete(&model.SharePlatformDownloadLog{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("card_id = ?", card.ID).Delete(&model.SharePlatformCardAsset{}).Error; err != nil {
 			return err
 		}
 		return tx.Delete(&card).Error
@@ -788,9 +1414,14 @@ func (s *ShareService) DeleteCardByOwner(ctx context.Context, ownerID, cardID st
 		return err
 	}
 
-	if storedFileName != "" {
+	for _, storedFileName := range storedFileNames {
 		if removeErr := s.removeStoredFile(creatorID, storedFileName); removeErr != nil {
-			s.logger.Warn("share remove stored file failed", zap.Error(removeErr), zap.String("card_id", cardID))
+			s.logger.Warn(
+				"share remove stored file failed",
+				zap.Error(removeErr),
+				zap.String("card_id", cardID),
+				zap.String("stored_file_name", storedFileName),
+			)
 		}
 	}
 	return nil
@@ -814,6 +1445,12 @@ func (s *ShareService) GetCardDetail(ctx context.Context, cardID, viewerUserID s
 	accessCodeStatus := deriveShareCardAccessStatus(&card, canEdit)
 	canDownload := canEdit || accessCodeStatus == ShareCardAccessStatusNone || accessCodeStatus == ShareCardAccessStatusRequired
 
+	assets, err := s.listCardAssetsByCardID(ctx, card.ID)
+	if err != nil {
+		return nil, err
+	}
+	assetsView := buildShareCardAssetViews(card.ID, assets)
+
 	var creator model.ShareExternalUser
 	if err := s.db.WithContext(ctx).First(&creator, "id = ?", card.CreatorExternalUserID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -828,16 +1465,42 @@ func (s *ShareService) GetCardDetail(ctx context.Context, cardID, viewerUserID s
 	}
 
 	return &ShareCardDetail{
-		Card:             toShareCardView(&card),
+		Card:             toShareCardView(&card, assets),
 		Creator:          toSharePublicUser(&creator),
 		Stats:            statsByCard[card.ID],
+		Assets:           assetsView,
 		CanEdit:          canEdit,
 		CanDownload:      canDownload,
 		AccessCodeStatus: accessCodeStatus,
 	}, nil
 }
 
-func (s *ShareService) CanAccessCardFile(ctx context.Context, cardID, viewerUserID string) (*model.SharePlatformCard, error) {
+func (s *ShareService) CanAccessCardFile(ctx context.Context, cardID, viewerUserID string) (*model.SharePlatformCard, *model.SharePlatformCardAsset, error) {
+	var card model.SharePlatformCard
+	if err := s.db.WithContext(ctx).First(&card, "id = ?", strings.TrimSpace(cardID)).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil, ErrShareCardNotFound
+		}
+		return nil, nil, err
+	}
+
+	viewerUserID = strings.TrimSpace(viewerUserID)
+	canAccess := viewerUserID == card.CreatorExternalUserID || (card.Visibility == model.SharePlatformCardVisibilityPublic && card.Status == model.SharePlatformCardStatusPublished)
+	if !canAccess {
+		return nil, nil, ErrShareCardForbidden
+	}
+
+	asset, err := s.pickPreviewAssetByCardID(ctx, card.ID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil, ErrShareCardNotFound
+		}
+		return nil, nil, err
+	}
+	return &card, asset, nil
+}
+
+func (s *ShareService) CanAccessCardCover(ctx context.Context, cardID, viewerUserID string) (*model.SharePlatformCard, error) {
 	var card model.SharePlatformCard
 	if err := s.db.WithContext(ctx).First(&card, "id = ?", strings.TrimSpace(cardID)).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -847,50 +1510,63 @@ func (s *ShareService) CanAccessCardFile(ctx context.Context, cardID, viewerUser
 	}
 
 	viewerUserID = strings.TrimSpace(viewerUserID)
-	if viewerUserID == card.CreatorExternalUserID {
-		return &card, nil
+	canAccess := viewerUserID == card.CreatorExternalUserID || (card.Visibility == model.SharePlatformCardVisibilityPublic && card.Status == model.SharePlatformCardStatusPublished)
+	if !canAccess {
+		return nil, ErrShareCardForbidden
 	}
-	if card.Visibility == model.SharePlatformCardVisibilityPublic && card.Status == model.SharePlatformCardStatusPublished {
-		return &card, nil
+	if strings.TrimSpace(card.StoredFileName) == "" {
+		return nil, ErrShareCardNotFound
 	}
-	return nil, ErrShareCardForbidden
+	return &card, nil
 }
 
-func (s *ShareService) CanDownloadCardFile(ctx context.Context, cardID, viewerUserID, accessCode string) (*model.SharePlatformCard, bool, error) {
+func (s *ShareService) GetCardAssetForPreview(ctx context.Context, cardID, slot string) (*model.SharePlatformCardAsset, error) {
+	return s.getCardAssetBySlot(ctx, cardID, slot)
+}
+
+func (s *ShareService) CanDownloadCardAsset(ctx context.Context, cardID, viewerUserID, accessCode, slot string) (*model.SharePlatformCard, *model.SharePlatformCardAsset, bool, error) {
 	var card model.SharePlatformCard
 	if err := s.db.WithContext(ctx).First(&card, "id = ?", strings.TrimSpace(cardID)).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, false, ErrShareCardNotFound
+			return nil, nil, false, ErrShareCardNotFound
 		}
-		return nil, false, err
+		return nil, nil, false, err
+	}
+
+	asset, err := s.getCardAssetBySlot(ctx, card.ID, slot)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil, false, ErrShareCardNotFound
+		}
+		return nil, nil, false, err
 	}
 
 	viewerUserID = strings.TrimSpace(viewerUserID)
 	if viewerUserID != "" && viewerUserID == card.CreatorExternalUserID {
-		return &card, false, nil
+		return &card, asset, false, nil
 	}
 	if card.Visibility != model.SharePlatformCardVisibilityPublic || card.Status != model.SharePlatformCardStatusPublished {
-		return nil, false, ErrShareCardForbidden
+		return nil, nil, false, ErrShareCardForbidden
 	}
 
 	switch deriveShareCardAccessStatus(&card, false) {
 	case ShareCardAccessStatusNone:
-		return &card, false, nil
+		return &card, asset, false, nil
 	case ShareCardAccessStatusExpired:
-		return nil, false, ErrShareAccessCodeExpired
+		return nil, nil, false, ErrShareAccessCodeExpired
 	case ShareCardAccessStatusExhausted:
-		return nil, false, ErrShareAccessCodeExhausted
+		return nil, nil, false, ErrShareAccessCodeExhausted
 	case ShareCardAccessStatusRequired:
 		normalizedCode := normalizeShareAccessCode(accessCode)
 		if normalizedCode == "" {
-			return nil, false, ErrShareAccessCodeRequired
+			return nil, nil, false, ErrShareAccessCodeRequired
 		}
 		if normalizedCode != strings.TrimSpace(card.AccessCode) {
-			return nil, false, ErrShareInvalidAccessCode
+			return nil, nil, false, ErrShareInvalidAccessCode
 		}
-		return &card, true, nil
+		return &card, asset, true, nil
 	default:
-		return nil, false, ErrShareCardForbidden
+		return nil, nil, false, ErrShareCardForbidden
 	}
 }
 
@@ -936,7 +1612,21 @@ func (s *ShareService) RecordDownload(ctx context.Context, cardID string, downlo
 	})
 }
 
-func (s *ShareService) OpenCardFile(card *model.SharePlatformCard) (*os.File, os.FileInfo, error) {
+func (s *ShareService) OpenCardFile(card *model.SharePlatformCard, asset *model.SharePlatformCardAsset) (*os.File, os.FileInfo, error) {
+	path := s.getStoredFilePath(card.CreatorExternalUserID, asset.StoredFileName)
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	stat, err := file.Stat()
+	if err != nil {
+		_ = file.Close()
+		return nil, nil, err
+	}
+	return file, stat, nil
+}
+
+func (s *ShareService) OpenCardCoverFile(card *model.SharePlatformCard) (*os.File, os.FileInfo, error) {
 	path := s.getStoredFilePath(card.CreatorExternalUserID, card.StoredFileName)
 	file, err := os.Open(path)
 	if err != nil {
@@ -1006,7 +1696,11 @@ func (s *ShareService) aggregateStatsByCard(ctx context.Context, cardIDs []strin
 	return stats, totalDownloads, nil
 }
 
-func (s *ShareService) mapDiscoverCards(ctx context.Context, cards []model.SharePlatformCard) ([]ShareDiscoverCardItem, error) {
+func (s *ShareService) mapDiscoverCards(
+	ctx context.Context,
+	cards []model.SharePlatformCard,
+	assetsByCardID map[string][]model.SharePlatformCardAsset,
+) ([]ShareDiscoverCardItem, error) {
 	cardIDs := make([]string, 0, len(cards))
 	creatorIDs := make([]string, 0, len(cards))
 	creatorSet := make(map[string]struct{}, len(cards))
@@ -1045,13 +1739,107 @@ func (s *ShareService) mapDiscoverCards(ctx context.Context, cards []model.Share
 			creatorView = toSharePublicUser(&creator)
 		}
 		items = append(items, ShareDiscoverCardItem{
-			Card:    toShareCardView(&card),
+			Card:    toShareCardView(&card, assetsByCardID[card.ID]),
 			Creator: creatorView,
 			Stats:   statsByCard[card.ID],
 		})
 	}
 
 	return items, nil
+}
+
+func collectShareCardIDs(cards []model.SharePlatformCard) []string {
+	if len(cards) == 0 {
+		return nil
+	}
+	ids := make([]string, 0, len(cards))
+	for _, card := range cards {
+		ids = append(ids, card.ID)
+	}
+	return ids
+}
+
+func (s *ShareService) listCardAssetsByCardIDs(ctx context.Context, cardIDs []string) (map[string][]model.SharePlatformCardAsset, error) {
+	result := make(map[string][]model.SharePlatformCardAsset, len(cardIDs))
+	if len(cardIDs) == 0 {
+		return result, nil
+	}
+
+	rows := make([]model.SharePlatformCardAsset, 0, len(cardIDs))
+	if err := s.db.WithContext(ctx).
+		Where("card_id IN ?", cardIDs).
+		Order("sort_order ASC, created_at ASC").
+		Find(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	for _, row := range rows {
+		result[row.CardID] = append(result[row.CardID], row)
+	}
+	return result, nil
+}
+
+func (s *ShareService) listCardAssetsByCardID(ctx context.Context, cardID string) ([]model.SharePlatformCardAsset, error) {
+	items := make([]model.SharePlatformCardAsset, 0, 6)
+	if err := s.db.WithContext(ctx).
+		Where("card_id = ?", strings.TrimSpace(cardID)).
+		Order("sort_order ASC, created_at ASC").
+		Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (s *ShareService) pickPreviewAssetByCardID(ctx context.Context, cardID string) (*model.SharePlatformCardAsset, error) {
+	assets, err := s.listCardAssetsByCardID(ctx, cardID)
+	if err != nil {
+		return nil, err
+	}
+	if len(assets) == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+
+	for _, asset := range assets {
+		if strings.HasPrefix(strings.ToLower(strings.TrimSpace(asset.MimeType)), "image/") {
+			copy := asset
+			return &copy, nil
+		}
+	}
+	copy := assets[0]
+	return &copy, nil
+}
+
+func (s *ShareService) getCardAssetBySlot(ctx context.Context, cardID, slot string) (*model.SharePlatformCardAsset, error) {
+	normalizedSlot := normalizeShareCardSlot(slot)
+	if !isValidShareCardSlot(normalizedSlot) {
+		return nil, ErrShareInvalidCardSlot
+	}
+
+	var asset model.SharePlatformCardAsset
+	if err := s.db.WithContext(ctx).
+		First(&asset, "card_id = ? AND slot = ?", strings.TrimSpace(cardID), normalizedSlot).Error; err != nil {
+		return nil, err
+	}
+	return &asset, nil
+}
+
+func buildShareCardAssetViews(cardID string, assets []model.SharePlatformCardAsset) []ShareCardAssetView {
+	if len(assets) == 0 {
+		return []ShareCardAssetView{}
+	}
+	items := make([]ShareCardAssetView, 0, len(assets))
+	for _, asset := range assets {
+		slot := strings.TrimSpace(asset.Slot)
+		items = append(items, ShareCardAssetView{
+			Slot:             slot,
+			OriginalFileName: asset.OriginalFileName,
+			MimeType:         asset.MimeType,
+			Size:             asset.Size,
+			PreviewUrl:       fmt.Sprintf("/api/share/cards/%s/assets/%s/preview", cardID, slot),
+			DownloadUrl:      fmt.Sprintf("/api/share/cards/%s/assets/%s/download", cardID, slot),
+		})
+	}
+	return items
 }
 
 func (s *ShareService) saveUploadFile(userID, originalName string, reader io.Reader, maxFileSize int64) (string, int64, error) {
@@ -1095,6 +1883,34 @@ func (s *ShareService) saveUploadFile(userID, originalName string, reader io.Rea
 	return storedName, n, nil
 }
 
+func (s *ShareService) ensureShareManagerRole(ctx context.Context, userID string) error {
+	var user model.ShareExternalUser
+	if err := s.db.WithContext(ctx).First(&user, "id = ?", strings.TrimSpace(userID)).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrShareUserNotFound
+		}
+		return err
+	}
+	if !isShareManagerRole(user.Role) {
+		return ErrShareForbiddenRole
+	}
+	return nil
+}
+
+func (s *ShareService) ensureShareManagerRoleTx(tx *gorm.DB, userID string) error {
+	var user model.ShareExternalUser
+	if err := tx.First(&user, "id = ?", strings.TrimSpace(userID)).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrShareUserNotFound
+		}
+		return err
+	}
+	if !isShareManagerRole(user.Role) {
+		return ErrShareForbiddenRole
+	}
+	return nil
+}
+
 func (s *ShareService) removeStoredFile(userID, storedName string) error {
 	path := s.getStoredFilePath(userID, storedName)
 	if path == "" {
@@ -1133,6 +1949,7 @@ func (s *ShareService) createExternalUserTx(tx *gorm.DB, email, nickname, passwo
 		Email:    email,
 		Nickname: nickname,
 		Status:   model.ShareExternalUserStatusActive,
+		Role:     s.defaultRoleByEmail(email),
 	}
 	if err := user.SetPassword(password); err != nil {
 		return model.ShareExternalUser{}, err
@@ -1149,6 +1966,36 @@ func (s *ShareService) createExternalUserTx(tx *gorm.DB, email, nickname, passwo
 	}
 
 	return user, nil
+}
+
+func (s *ShareService) defaultRoleByEmail(email string) string {
+	if _, ok := s.managerEmailAllow[strings.ToLower(strings.TrimSpace(email))]; ok {
+		return model.ShareExternalUserRoleManager
+	}
+	return model.ShareExternalUserRoleViewer
+}
+
+func (s *ShareService) ensureManagerRoleByEmailIfNeeded(ctx context.Context, user *model.ShareExternalUser) error {
+	if user == nil {
+		return nil
+	}
+	email := strings.ToLower(strings.TrimSpace(user.Email))
+	if _, ok := s.managerEmailAllow[email]; !ok {
+		return nil
+	}
+
+	if normalizeShareExternalUserRole(user.Role) == model.ShareExternalUserRoleManager {
+		return nil
+	}
+
+	if err := s.db.WithContext(ctx).
+		Model(&model.ShareExternalUser{}).
+		Where("id = ?", user.ID).
+		Update("role", model.ShareExternalUserRoleManager).Error; err != nil {
+		return err
+	}
+	user.Role = model.ShareExternalUserRoleManager
+	return nil
 }
 
 func (s *ShareService) generateUniqueUsernameTx(tx *gorm.DB, email string) (string, error) {
@@ -1334,6 +2181,80 @@ func normalizeShareVisibility(value string) string {
 	return model.SharePlatformCardVisibilityPrivate
 }
 
+func normalizeShareExternalUserRole(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	if value == model.ShareExternalUserRoleManager {
+		return model.ShareExternalUserRoleManager
+	}
+	return model.ShareExternalUserRoleViewer
+}
+
+func isValidShareExternalUserRole(value string) bool {
+	switch normalizeShareExternalUserRole(value) {
+	case model.ShareExternalUserRoleViewer, model.ShareExternalUserRoleManager:
+		return true
+	default:
+		return false
+	}
+}
+
+func normalizeShareCardSlot(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
+}
+
+func isValidShareCardSlot(value string) bool {
+	value = normalizeShareCardSlot(value)
+	for _, slot := range shareCardContentSlots {
+		if value == slot {
+			return true
+		}
+	}
+	return false
+}
+
+func shareCardSlotSortOrder(slot string) int {
+	switch normalizeShareCardSlot(slot) {
+	case "system_theme":
+		return 0
+	case "wechat_theme":
+		return 1
+	case "app":
+		return 2
+	case "character_persona":
+		return 3
+	case "world_book":
+		return 4
+	default:
+		return 999
+	}
+}
+
+func validateShareCardSlotItems(items []ShareCreateCardAssetInput) error {
+	if len(items) == 0 {
+		return ErrShareFileRequired
+	}
+	seen := make(map[string]struct{}, len(items))
+	for _, item := range items {
+		slot := normalizeShareCardSlot(item.Slot)
+		if !isValidShareCardSlot(slot) {
+			return ErrShareInvalidCardSlot
+		}
+		if _, exists := seen[slot]; exists {
+			return ErrShareInvalidCardSlot
+		}
+		seen[slot] = struct{}{}
+
+		if strings.TrimSpace(item.FileName) == "" || item.FileReader == nil {
+			return ErrShareFileRequired
+		}
+	}
+	return nil
+}
+
+func isShareManagerRole(role string) bool {
+	return strings.EqualFold(strings.TrimSpace(role), model.ShareExternalUserRoleManager)
+}
+
 func isValidShareStatus(value string) bool {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case model.SharePlatformCardStatusDraft, model.SharePlatformCardStatusPublished, model.SharePlatformCardStatusArchived:
@@ -1439,6 +2360,7 @@ func toShareSessionUser(user *model.ShareExternalUser) ShareSessionUser {
 		Bio:        strings.TrimSpace(user.Bio),
 		CoverImage: strings.TrimSpace(user.CoverImage),
 		Phone:      strings.TrimSpace(user.Phone),
+		Role:       normalizeShareExternalUserRole(user.Role),
 		CreatedAt:  user.CreatedAt,
 	}
 }
@@ -1452,8 +2374,53 @@ func toSharePublicUser(user *model.ShareExternalUser) SharePublicUser {
 	}
 }
 
-func toShareCardView(card *model.SharePlatformCard) ShareCardView {
+func toShareCardView(card *model.SharePlatformCard, assets []model.SharePlatformCardAsset) ShareCardView {
 	cardID := card.ID
+	hasCover := strings.TrimSpace(card.StoredFileName) != ""
+	primaryFileName := strings.TrimSpace(card.OriginalFileName)
+	primaryMimeType := strings.TrimSpace(card.MimeType)
+	if hasCover {
+		primaryMimeType = detectUploadMimeType(primaryFileName, primaryMimeType)
+	}
+	primarySize := card.Size
+	categories := make([]string, 0, len(assets))
+	for _, asset := range assets {
+		slot := strings.TrimSpace(asset.Slot)
+		if slot != "" {
+			categories = append(categories, slot)
+		}
+	}
+
+	if !hasCover && len(assets) > 0 {
+		primaryFileName = assets[0].OriginalFileName
+		primaryMimeType = assets[0].MimeType
+		primarySize = assets[0].Size
+		for _, asset := range assets {
+			if strings.HasPrefix(strings.ToLower(strings.TrimSpace(asset.MimeType)), "image/") {
+				primaryFileName = asset.OriginalFileName
+				primaryMimeType = asset.MimeType
+				primarySize = asset.Size
+				break
+			}
+		}
+	}
+
+	defaultSlot := ""
+	if len(assets) > 0 {
+		defaultSlot = strings.TrimSpace(assets[0].Slot)
+	}
+	if defaultSlot == "" {
+		defaultSlot = "system_theme"
+	}
+	previewURL := ""
+	downloadURL := ""
+	if hasCover {
+		previewURL = fmt.Sprintf("/api/share/cards/%s/cover/preview", cardID)
+		downloadURL = fmt.Sprintf("/api/share/cards/%s/cover/download", cardID)
+	} else {
+		previewURL = fmt.Sprintf("/api/share/cards/%s/assets/%s/preview", cardID, defaultSlot)
+		downloadURL = fmt.Sprintf("/api/share/cards/%s/assets/%s/download", cardID, defaultSlot)
+	}
 	return ShareCardView{
 		ID:               card.ID,
 		CreatorID:        card.CreatorExternalUserID,
@@ -1461,14 +2428,35 @@ func toShareCardView(card *model.SharePlatformCard) ShareCardView {
 		Description:      card.Description,
 		Visibility:       card.Visibility,
 		Status:           card.Status,
-		OriginalFileName: card.OriginalFileName,
-		MimeType:         card.MimeType,
-		Size:             card.Size,
-		PreviewUrl:       "/api/share/cards/" + cardID + "/preview",
-		DownloadUrl:      "/api/share/cards/" + cardID + "/download",
+		OriginalFileName: primaryFileName,
+		MimeType:         primaryMimeType,
+		Size:             primarySize,
+		PreviewUrl:       previewURL,
+		DownloadUrl:      downloadURL,
+		Categories:       categories,
 		CreatedAt:        card.CreatedAt,
 		UpdatedAt:        card.UpdatedAt,
 	}
+}
+
+func detectUploadMimeType(fileName, providedMimeType string) string {
+	value := strings.TrimSpace(strings.ToLower(providedMimeType))
+	if value != "" && value != "application/octet-stream" {
+		return value
+	}
+
+	ext := strings.ToLower(strings.TrimSpace(filepath.Ext(fileName)))
+	if ext != "" {
+		if guessed := strings.TrimSpace(strings.ToLower(mime.TypeByExtension(ext))); guessed != "" {
+			return guessed
+		}
+	}
+
+	if value != "" {
+		return value
+	}
+
+	return "application/octet-stream"
 }
 
 func normalizeOptionalID(id *string) *string {

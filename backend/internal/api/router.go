@@ -69,7 +69,7 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, logger *zap
 		storageService:   service.NewStorageService(db, logger, registry),
 		baiduService:     service.NewBaiduConnectorService(db, logger, cfg.Baidu, cfg.JWT.Secret),
 		registry:         registry,
-		shareService:     service.NewShareService(db, logger, filepath.Join("storage", "share", "files")),
+		shareService:     service.NewShareService(db, logger, filepath.Join("storage", "share", "files"), cfg.Server.AdminEmail),
 	}
 
 	if _, err := h.roleService.EnsureDefaultAdminRole(context.Background()); err != nil {

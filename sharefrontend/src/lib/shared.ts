@@ -7,7 +7,29 @@ export type ExternalSessionUser = {
   bio: string;
   coverImage: string;
   phone: string;
+  role: "viewer" | "manager";
   createdAt: string;
+};
+
+export type ShareUserRoleManageItem = {
+  id: string;
+  email: string;
+  username: string;
+  nickname: string;
+  role: "viewer" | "manager";
+  status: string;
+  createdAt: string;
+};
+
+export type CardContentSlot = "system_theme" | "wechat_theme" | "app" | "character_persona" | "world_book";
+
+export type CardAsset = {
+  slot: CardContentSlot;
+  originalFileName: string;
+  mimeType: string;
+  size: number;
+  previewUrl: string;
+  downloadUrl: string;
 };
 
 export type PlatformCard = {
@@ -22,6 +44,7 @@ export type PlatformCard = {
   size: number;
   previewUrl: string;
   downloadUrl: string;
+  categories: CardContentSlot[];
   createdAt: string;
   updatedAt: string;
 };
@@ -91,9 +114,15 @@ export type CardDetailResponse = {
   card: PlatformCard;
   creator: PublicCreator;
   stats: CardStats;
+  assets: CardAsset[];
   canEdit: boolean;
   canDownload: boolean;
   accessCodeStatus?: "none" | "required" | "expired" | "exhausted";
+};
+
+export type CardAssetUpdateResponse = {
+  card: PlatformCard;
+  assets: CardAsset[];
 };
 
 export type CardAccessCodeConfig = {

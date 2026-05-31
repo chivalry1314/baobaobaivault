@@ -1,6 +1,7 @@
-"use client";
+﻿"use client";
 
 import {
+  useCallback,
   useEffect,
   useId,
   useMemo,
@@ -11,7 +12,7 @@ import {
 } from "react";
 
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
-import type { ExternalSessionUser } from "@/lib/shared";
+import type { ExternalSessionUser, ShareUserRoleManageItem } from "@/lib/shared";
 
 type SettingsDraft = {
   nickname: string;
@@ -139,6 +140,31 @@ function SecurityRow({
   );
 }
 
+function RoleChip({
+  active,
+  disabled,
+  children,
+  onClick,
+}: {
+  active: boolean;
+  disabled?: boolean;
+  children: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`rounded-full px-4 py-1.5 text-xs font-black transition ${
+        active ? "btn-primary text-[var(--foreground)]" : "btn-subtle text-[var(--foreground)]/72"
+      } disabled:cursor-not-allowed disabled:opacity-60`}
+    >
+      {children}
+    </button>
+  );
+}
+
 function ModalCard({
   title,
   description,
@@ -202,6 +228,10 @@ export function ShareProfileSettings({
   const [savePending, setSavePending] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState("");
+  const [roleUsers, setRoleUsers] = useState<ShareUserRoleManageItem[]>([]);
+  const [roleLoadPending, setRoleLoadPending] = useState(false);
+  const [roleLoadError, setRoleLoadError] = useState("");
+  const [roleUpdatePendingByUser, setRoleUpdatePendingByUser] = useState<Record<string, boolean>>({});
 
   const [securityModal, setSecurityModal] = useState<SecurityModal>(null);
   const [modalPending, setModalPending] = useState(false);
@@ -222,6 +252,31 @@ export function ShareProfileSettings({
     }, 0);
     return () => window.clearTimeout(timer);
   }, [userKey, user]);
+
+  const loadRoleUsers = useCallback(async () => {
+    if (user.role !== "manager") {
+      setRoleUsers([]);
+      setRoleLoadPending(false);
+      setRoleLoadError("");
+      return;
+    }
+
+    setRoleLoadPending(true);
+    setRoleLoadError("");
+
+    try {
+      const payload = await shareApi.adminUsers();
+      setRoleUsers(payload.users);
+    } catch (error) {
+      setRoleLoadError(getShareErrorMessage(error, "加载用户列表失败，请稍后重试"));
+    } finally {
+      setRoleLoadPending(false);
+    }
+  }, [user.role]);
+
+  useEffect(() => {
+    void loadRoleUsers();
+  }, [loadRoleUsers]);
 
   async function handleImageChange(event: ChangeEvent<HTMLInputElement>, target: "avatar" | "coverImage") {
     const file = event.target.files?.[0];
@@ -342,6 +397,41 @@ export function ShareProfileSettings({
     } catch (error) {
       setModalError(getShareErrorMessage(error, "保存手机号失败，请稍后重试"));
       setModalPending(false);
+    }
+  }
+
+  async function handleUpdateRole(targetUser: ShareUserRoleManageItem, nextRole: "viewer" | "manager") {
+    if (targetUser.role === nextRole || roleUpdatePendingByUser[targetUser.id]) {
+      return;
+    }
+
+    setRoleUpdatePendingByUser((current) => ({ ...current, [targetUser.id]: true }));
+    setRoleLoadError("");
+
+    try {
+      const payload = await shareApi.updateUserRole(targetUser.id, nextRole);
+      setRoleUsers((current) =>
+        current.map((item) =>
+          item.id === targetUser.id
+            ? {
+                ...item,
+                role: payload.user.role,
+              }
+            : item,
+        ),
+      );
+      setSaveSuccess("用户角色已更新");
+      if (targetUser.id === user.id) {
+        onSaved(payload.user);
+      }
+    } catch (error) {
+      setRoleLoadError(getShareErrorMessage(error, "更新用户角色失败，请稍后重试"));
+    } finally {
+      setRoleUpdatePendingByUser((current) => {
+        const next = { ...current };
+        delete next[targetUser.id];
+        return next;
+      });
     }
   }
 
@@ -511,6 +601,59 @@ export function ShareProfileSettings({
           />
         </div>
 
+        {user.role === "manager" ? (
+          <>
+            <div className="mt-8">
+              <SectionTitle icon={<ShieldIcon className="h-5 w-5" />}>用户角色管理</SectionTitle>
+            </div>
+
+            <div className="dream-panel-soft mt-5 overflow-hidden">
+              {roleLoadError ? (
+                <p className="border-b border-dashed border-[#f3c8ad] bg-[#fff4ec] px-5 py-3 text-sm text-[#9a3412]">{roleLoadError}</p>
+              ) : null}
+
+              {roleLoadPending ? (
+                <p className="px-5 py-5 text-sm font-bold text-[var(--text-muted)]">正在加载用户列表...</p>
+              ) : null}
+
+              {!roleLoadPending && roleUsers.length === 0 ? (
+                <p className="px-5 py-5 text-sm font-bold text-[var(--text-muted)]">暂无可管理用户</p>
+              ) : null}
+
+              {!roleLoadPending && roleUsers.length > 0 ? (
+                <div className="divide-y divide-dashed divide-[var(--outline-variant)]/65">
+                  {roleUsers.map((item) => {
+                    const displayName = item.nickname.trim() || item.username.trim() || item.email;
+                    const pending = Boolean(roleUpdatePendingByUser[item.id]);
+                    const isSelf = item.id === user.id;
+
+                    return (
+                      <div key={item.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                          <p className="truncate text-[1.05rem] font-black text-[var(--foreground)]">
+                            {displayName}
+                            {isSelf ? "（我）" : ""}
+                          </p>
+                          <p className="mt-1 truncate text-xs text-[var(--text-muted)]">{item.email}</p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <RoleChip active={item.role === "viewer"} disabled={pending} onClick={() => void handleUpdateRole(item, "viewer")}>
+                            浏览者
+                          </RoleChip>
+                          <RoleChip active={item.role === "manager"} disabled={pending} onClick={() => void handleUpdateRole(item, "manager")}>
+                            管理员
+                          </RoleChip>
+                          {pending ? <span className="text-xs font-bold text-[var(--text-muted)]">更新中...</span> : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+          </>
+        ) : null}
+
         <div className="mt-10 flex flex-col gap-3 border-t border-[rgba(220,173,187,0.35)] pt-8 sm:flex-row sm:items-center sm:justify-end">
           <button
             type="button"
@@ -671,6 +814,15 @@ function PhoneIcon({ className = "h-6 w-6" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
       <path d="M8.25 2.25h7.5A2.25 2.25 0 0 1 18 4.5v15a2.25 2.25 0 0 1-2.25 2.25h-7.5A2.25 2.25 0 0 1 6 19.5v-15a2.25 2.25 0 0 1 2.25-2.25Zm0 1.5a.75.75 0 0 0-.75.75v15c0 .41.34.75.75.75h7.5a.75.75 0 0 0 .75-.75v-15a.75.75 0 0 0-.75-.75h-7.5Zm2.25 13.5h3v1.5h-3v-1.5Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function ShieldIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <path d="M12 2.25 4.5 5.4v5.4c0 4.8 2.97 9.2 7.5 10.95 4.53-1.75 7.5-6.15 7.5-10.95V5.4L12 2.25Zm0 1.62 6 2.52v4.41c0 4.07-2.42 7.8-6 9.38-3.58-1.58-6-5.31-6-9.38V6.39l6-2.52Z" fill="currentColor" />
+      <path d="M10.94 14.86 8.6 12.52l-1.06 1.06 3.4 3.4 5.4-5.4-1.06-1.06-4.34 4.34Z" fill="currentColor" />
     </svg>
   );
 }

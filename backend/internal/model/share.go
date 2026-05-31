@@ -13,6 +13,9 @@ const (
 	ShareExternalUserStatusInactive = "inactive"
 	ShareExternalUserStatusLocked   = "locked"
 
+	ShareExternalUserRoleViewer  = "viewer"
+	ShareExternalUserRoleManager = "manager"
+
 	SharePlatformCardVisibilityPrivate = "private"
 	SharePlatformCardVisibilityPublic  = "public"
 
@@ -32,6 +35,7 @@ type ShareExternalUser struct {
 	Bio         string         `gorm:"type:text;default:''" json:"bio"`
 	CoverImage  string         `gorm:"type:text;default:''" json:"cover_image"`
 	Phone       string         `gorm:"type:varchar(30);default:''" json:"phone"`
+	Role        string         `gorm:"type:varchar(20);not null;default:'viewer';index" json:"role"`
 	Status      string         `gorm:"type:varchar(20);not null;default:'active'" json:"status"`
 	LastLoginAt *time.Time     `json:"last_login_at,omitempty"`
 	CreatedAt   time.Time      `json:"created_at"`
@@ -89,6 +93,25 @@ type SharePlatformCard struct {
 
 func (SharePlatformCard) TableName() string {
 	return "share_platform_cards"
+}
+
+// SharePlatformCardAsset stores card files grouped by fixed content slots.
+type SharePlatformCardAsset struct {
+	ID               string         `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	CardID           string         `gorm:"type:uuid;not null;uniqueIndex:idx_share_platform_card_assets_card_slot,priority:1;index" json:"card_id"`
+	Slot             string         `gorm:"type:varchar(40);not null;uniqueIndex:idx_share_platform_card_assets_card_slot,priority:2;index" json:"slot"`
+	StoredFileName   string         `gorm:"type:varchar(255);not null" json:"stored_file_name"`
+	OriginalFileName string         `gorm:"type:varchar(255);not null" json:"original_file_name"`
+	MimeType         string         `gorm:"type:varchar(200);not null" json:"mime_type"`
+	Size             int64          `gorm:"not null" json:"size"`
+	SortOrder        int            `gorm:"not null;default:0" json:"sort_order"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
+	DeletedAt        gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+func (SharePlatformCardAsset) TableName() string {
+	return "share_platform_card_assets"
 }
 
 // SharePlatformDownloadLog records downloads for discover metrics.

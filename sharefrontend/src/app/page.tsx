@@ -5,7 +5,7 @@ import { startTransition, useDeferredValue, useEffect, useMemo, useState } from 
 
 import { AppShell } from "@/components/share/app-shell";
 import { shareApi } from "@/lib/share-api";
-import type { DiscoverCardItem } from "@/lib/shared";
+import type { CardContentSlot, DiscoverCardItem } from "@/lib/shared";
 
 type HomeFeedCard = {
   id: string;
@@ -16,96 +16,30 @@ type HomeFeedCard = {
   href: string;
   imageUrl: string;
   searchableText: string;
-  tags: string[];
+  tags: CardContentSlot[];
   bgClass: string;
 };
 
-const filterChips = ["全部", "二次元", "恋爱", "插画", "动态", "风景", "水彩"] as const;
+const filterChips = ["all", "system_theme", "wechat_theme", "app", "character_persona", "world_book"] as const;
+type FilterChip = (typeof filterChips)[number];
 
-const chipVisuals: Record<(typeof filterChips)[number], { className: string }> = {
-  全部: { className: "bg-[#aee7d9]" },
-  二次元: { className: "bg-[#facdf4]" },
-  恋爱: { className: "bg-[#ff9c9c]" },
-  插画: { className: "bg-[#fcf1a7]" },
-  动态: { className: "bg-[#cdb4f3]" },
-  风景: { className: "bg-[#aee7d9]" },
-  水彩: { className: "bg-[#ffcda8]" },
+const chipLabels: Record<FilterChip, string> = {
+  all: "全部",
+  system_theme: "系统主题",
+  wechat_theme: "微信主题",
+  app: "App",
+  character_persona: "角色人设",
+  world_book: "世界书",
 };
 
-const demoCards: HomeFeedCard[] = [
-  {
-    id: "demo-sakura",
-    title: "Sakura",
-    description: "轻柔春日与粉色光影，适合恋爱与梦幻氛围主题。",
-    creatorName: "Luna_Art",
-    metric: "1.2k",
-    href: "/cards/demo-sakura",
-    imageUrl: "/api/demo-media?id=demo-sakura&w=900&h=1300&kind=card",
-    searchableText: "sakura anime luna art",
-    tags: ["二次元", "恋爱"],
-    bgClass: "bg-[#cdb4f3]",
-  },
-  {
-    id: "demo-sunset",
-    title: "Sunset",
-    description: "暮色海岸和暖金色调，适合作为风景类主页封面。",
-    creatorName: "Mikan_Studio",
-    metric: "856",
-    href: "/cards/demo-sunset",
-    imageUrl: "/api/demo-media?id=demo-sunset&w=900&h=1200&kind=card",
-    searchableText: "sunset sea landscape",
-    tags: ["风景", "插画"],
-    bgClass: "bg-[#aee7d9]",
-  },
-  {
-    id: "demo-rose",
-    title: "Rose",
-    description: "玫瑰与奶油高光质感，适合恋爱主题与头像卡面。",
-    creatorName: "Shiro_Draws",
-    metric: "2.1k",
-    href: "/cards/demo-rose",
-    imageUrl: "/api/demo-media?id=demo-rose&w=900&h=1400&kind=card",
-    searchableText: "rose romance flower",
-    tags: ["恋爱", "插画"],
-    bgClass: "bg-[#fcf1a7]",
-  },
-  {
-    id: "demo-crystal",
-    title: "Crystal",
-    description: "通透晶体风格和舞台灯效，适合高亮展示位。",
-    creatorName: "Yuka_Art",
-    metric: "542",
-    href: "/cards/demo-crystal",
-    imageUrl: "/api/demo-media?id=demo-crystal&w=900&h=1100&kind=card",
-    searchableText: "crystal fantasy",
-    tags: ["插画", "动态"],
-    bgClass: "bg-[#facdf4]",
-  },
-  {
-    id: "demo-moon",
-    title: "Moon",
-    description: "夜色与月光层次明确，适合暗调插图与故事封面。",
-    creatorName: "NightSky",
-    metric: "980",
-    href: "/cards/demo-moon",
-    imageUrl: "/api/demo-media?id=demo-moon&w=900&h=1300&kind=card",
-    searchableText: "moon star night",
-    tags: ["二次元", "风景"],
-    bgClass: "bg-[#cdb4f3]",
-  },
-  {
-    id: "demo-watercolor",
-    title: "Watercolor",
-    description: "松弛笔触与淡色叠染，适合水彩与手作风格内容。",
-    creatorName: "Flora_Fan",
-    metric: "731",
-    href: "/cards/demo-watercolor",
-    imageUrl: "/api/demo-media?id=demo-flower&w=900&h=1200&kind=card",
-    searchableText: "watercolor brush",
-    tags: ["水彩", "插画"],
-    bgClass: "bg-white",
-  },
-];
+const chipVisuals: Record<FilterChip, { className: string }> = {
+  all: { className: "bg-[#aee7d9]" },
+  system_theme: { className: "bg-[#facdf4]" },
+  wechat_theme: { className: "bg-[#ff9c9c]" },
+  app: { className: "bg-[#fcf1a7]" },
+  character_persona: { className: "bg-[#cdb4f3]" },
+  world_book: { className: "bg-[#ffcda8]" },
+};
 
 function formatMetric(count: number) {
   if (!Number.isFinite(count) || count <= 0) {
@@ -117,8 +51,8 @@ function formatMetric(count: number) {
   return String(count);
 }
 
-function matchesChip(card: HomeFeedCard, chip: (typeof filterChips)[number]) {
-  if (chip === "全部") {
+function matchesChip(card: HomeFeedCard, chip: FilterChip) {
+  if (chip === "all") {
     return true;
   }
   return card.tags.includes(chip);
@@ -129,7 +63,7 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
-  const [activeChip, setActiveChip] = useState<(typeof filterChips)[number]>("全部");
+  const [activeChip, setActiveChip] = useState<FilterChip>("all");
 
   const deferredQuery = useDeferredValue(query);
 
@@ -167,20 +101,15 @@ export default function LandingPage() {
     };
   }, []);
 
-  const liveCards = useMemo<HomeFeedCard[]>(() => {
+  const sourceCards = useMemo<HomeFeedCard[]>(() => {
     return cards.map((item) => {
       const titleText = item.card.title ?? "未命名作品";
-      const descriptionText = item.card.description || "创作者暂未补充描述。";
+      const descriptionText = item.card.description || "创作者暂未填写描述";
       const creatorName = item.creator.nickname || item.creator.username || "Creator";
-      const sourceText = `${titleText} ${descriptionText}`.toLowerCase();
 
-      const tags = [
-        /anime|二次元|插画|角色/.test(sourceText) ? "二次元" : "",
-        /love|恋爱|rose|甜/.test(sourceText) ? "恋爱" : "",
-        item.card.mimeType.startsWith("image/") ? "插画" : "动态",
-        /sunset|sky|landscape|moon|mountain|风景/.test(sourceText) ? "风景" : "",
-        /watercolor|水彩|wash/.test(sourceText) ? "水彩" : "",
-      ].filter(Boolean);
+      const tags = (item.card.categories ?? []).filter((slot): slot is CardContentSlot =>
+        ["system_theme", "wechat_theme", "app", "character_persona", "world_book"].includes(slot),
+      );
 
       return {
         id: item.card.id,
@@ -196,6 +125,7 @@ export default function LandingPage() {
           item.creator.nickname,
           item.creator.username,
           item.card.originalFileName,
+          tags.join(" "),
         ]
           .filter(Boolean)
           .join(" ")
@@ -205,8 +135,6 @@ export default function LandingPage() {
       };
     });
   }, [cards]);
-
-  const sourceCards = useMemo(() => (liveCards.length > 0 ? liveCards : demoCards), [liveCards]);
 
   const filteredCards = useMemo(() => {
     const keyword = deferredQuery.trim().toLowerCase();
@@ -221,12 +149,12 @@ export default function LandingPage() {
     });
   }, [activeChip, deferredQuery, sourceCards]);
 
-  const featuredCards = filteredCards.slice(0, 6);
+  const featuredCards = filteredCards.slice(0, 12);
 
   const footer = (
     <footer className="relative z-10 px-5 pb-6 pt-6">
       <div className="mx-auto max-w-[var(--layout-max)] rounded-3xl border-[4px] border-[var(--outline)] bg-white px-5 py-4 text-center text-sm font-bold text-[var(--foreground)] sm:text-left">
-        © 2026 Dreamy Card Gallery
+        © 2026 Card Share
       </div>
     </footer>
   );
@@ -241,7 +169,7 @@ export default function LandingPage() {
                 type="text"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search..."
+                placeholder="搜索卡片..."
                 className="w-full rounded-full border-[4px] border-[var(--outline)] bg-white px-5 py-3 pr-16 text-lg font-bold text-[var(--foreground)] placeholder:text-[var(--text-subtle)] transition-all group-hover:bg-gray-50"
               />
               <button className="absolute bottom-1.5 right-1.5 top-1.5 flex h-12 w-12 items-center justify-center rounded-full border-[4px] border-[var(--outline)] bg-[#cdb4f3] transition-all hover:opacity-90">
@@ -253,19 +181,14 @@ export default function LandingPage() {
               {filterChips.map((chip) => {
                 const active = chip === activeChip;
                 return (
-                  <button
-                    key={chip}
-                    type="button"
-                    onClick={() => setActiveChip(chip)}
-                    className="group shrink-0 cursor-pointer"
-                  >
+                  <button key={chip} type="button" onClick={() => setActiveChip(chip)} className="group shrink-0 cursor-pointer">
                     <span className="flex flex-col items-center gap-2">
                       <span
                         className={`flex h-12 w-12 items-center justify-center rounded-[1.1rem] border-[4px] border-[var(--outline)] xl:h-14 xl:w-14 ${active ? "bg-[#cdb4f3]" : chipVisuals[chip].className} transition-all group-hover:opacity-90`}
                       >
                         <ChipIcon chip={chip} />
                       </span>
-                      <span className="text-sm font-extrabold text-[var(--foreground)] xl:text-base">{chip}</span>
+                      <span className="text-sm font-extrabold text-[var(--foreground)] xl:text-base">{chipLabels[chip]}</span>
                     </span>
                   </button>
                 );
@@ -288,7 +211,7 @@ export default function LandingPage() {
                     <div className="relative mb-2.5">
                       <div className="absolute left-2 top-2 z-10">
                         <span className="rounded-full border-[3px] border-[var(--outline)] bg-white px-3 py-0.5 text-xs font-black text-[var(--foreground)]">
-                          #{card.tags[0] || "精选"}
+                          #{chipLabels[card.tags[0] ?? "all"]}
                         </span>
                       </div>
                       <div className="aspect-[4/3] overflow-hidden rounded-2xl border-[3px] border-[var(--outline)] bg-white">
@@ -307,12 +230,12 @@ export default function LandingPage() {
               ) : (
                 <div className="col-span-full rounded-3xl border-[4px] border-[var(--outline)] bg-white px-5 py-9 text-center text-[var(--foreground)]">
                   <p className="text-2xl font-black">没有找到匹配内容</p>
-                  <p className="mt-3 font-bold">当前筛选无结果，请尝试切换分类或关键词。</p>
+                  <p className="mt-3 font-bold">当前筛选无结果，请尝试切换分类或关键字。</p>
                   <button
                     type="button"
                     onClick={() => {
                       setQuery("");
-                      setActiveChip("全部");
+                      setActiveChip("all");
                     }}
                     className="btn-primary mt-4 rounded-full px-5 py-2.5 font-black"
                   >
@@ -323,8 +246,8 @@ export default function LandingPage() {
             </div>
 
             <div className="flex flex-wrap gap-2 text-sm">
-              <span className="metric-pill rounded-full px-3 py-1.5 font-black">{loading ? "加载中..." : `共 ${sourceCards.length} 张`}</span>
-              <span className="metric-pill rounded-full px-3 py-1.5 font-black">筛选后 {filteredCards.length} 张</span>
+              <span className="metric-pill rounded-full px-3 py-1.5 font-black">{loading ? "加载中..." : `共 ${sourceCards.length} 条`}</span>
+              <span className="metric-pill rounded-full px-3 py-1.5 font-black">筛选后 {filteredCards.length} 条</span>
             </div>
           </div>
         </main>
@@ -333,22 +256,20 @@ export default function LandingPage() {
   );
 }
 
-function ChipIcon({ chip }: { chip: (typeof filterChips)[number] }) {
+function ChipIcon({ chip }: { chip: FilterChip }) {
   switch (chip) {
-    case "全部":
+    case "all":
       return <GridIcon />;
-    case "二次元":
+    case "system_theme":
       return <SparkleIcon />;
-    case "恋爱":
+    case "wechat_theme":
       return <HeartIcon />;
-    case "插画":
+    case "app":
       return <PencilIcon />;
-    case "动态":
+    case "character_persona":
       return <PlayIcon />;
-    case "风景":
+    case "world_book":
       return <MountainIcon />;
-    case "水彩":
-      return <BrushIcon />;
     default:
       return <GridIcon />;
   }
@@ -412,14 +333,6 @@ function MountainIcon() {
     <svg viewBox="0 0 24 24" className="h-7 w-7 text-[var(--foreground)]" fill="none" stroke="currentColor" strokeWidth="2.5">
       <path d="M3.5 18h17L15 10.5l-3.4 4.1-2.5-2.8L3.5 18Z" />
       <circle cx="18" cy="7" r="1.6" />
-    </svg>
-  );
-}
-
-function BrushIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-7 w-7 text-[var(--foreground)]" fill="none" stroke="currentColor" strokeWidth="2.5">
-      <path d="m18.6 4.1-9.9 9.9a3.2 3.2 0 0 1-4.5 0L3 15.2a3.2 3.2 0 0 0 0 4.5l1.2 1.2a3.2 3.2 0 0 0 4.5 0l9.9-9.9" />
     </svg>
   );
 }

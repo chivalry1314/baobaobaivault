@@ -65,6 +65,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&model.WebPushEvent{},
 		&model.ShareExternalUser{},
 		&model.SharePlatformCard{},
+		&model.SharePlatformCardAsset{},
 		&model.SharePlatformDownloadLog{},
 	)
 }

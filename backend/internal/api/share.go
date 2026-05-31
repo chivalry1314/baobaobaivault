@@ -4,8 +4,11 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"mime"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -39,8 +42,10 @@ func (h *Handler) registerShareRoutes(r *gin.Engine) {
 		group.GET("/discover/cards", h.shareDiscoverCards)
 		group.GET("/users/:userId/assets/:fileName", h.shareUserAsset)
 		group.GET("/cards/:cardId", h.shareCardDetail)
-		group.GET("/cards/:cardId/preview", h.shareCardPreview)
-		group.GET("/cards/:cardId/download", h.shareCardDownload)
+		group.GET("/cards/:cardId/cover/preview", h.shareCardCoverPreview)
+		group.GET("/cards/:cardId/cover/download", h.shareCardCoverDownload)
+		group.GET("/cards/:cardId/assets/:slot/preview", h.shareCardAssetPreview)
+		group.GET("/cards/:cardId/assets/:slot/download", h.shareCardAssetDownload)
 
 		me := group.Group("/me")
 		me.Use(h.shareRequireAuth())
@@ -50,7 +55,14 @@ func (h *Handler) registerShareRoutes(r *gin.Engine) {
 			me.GET("/cards", h.shareMyCards)
 			me.GET("/access-codes", h.shareMyAccessCodes)
 			me.POST("/cards", h.shareCreateCard)
+			me.POST("/admin/cards", h.shareCreateCardBundle)
+			me.GET("/admin/users", h.shareAdminUsers)
+			me.PATCH("/admin/users/:userId/role", h.shareAdminUpdateUserRole)
 			me.PATCH("/cards/:cardId", h.shareUpdateCard)
+			me.PUT("/cards/:cardId/cover", h.shareReplaceCardCover)
+			me.DELETE("/cards/:cardId/cover", h.shareDeleteCardCover)
+			me.PUT("/cards/:cardId/assets/:slot", h.shareReplaceCardAsset)
+			me.DELETE("/cards/:cardId/assets/:slot", h.shareDeleteCardAsset)
 			me.GET("/cards/:cardId/access-code", h.shareGetCardAccessCode)
 			me.PUT("/cards/:cardId/access-code", h.shareUpdateCardAccessCode)
 			me.DELETE("/cards/:cardId/access-code", h.shareDeleteCardAccessCode)
@@ -222,9 +234,9 @@ func (h *Handler) shareCardDetail(c *gin.Context) {
 	c.JSON(http.StatusOK, detail)
 }
 
-func (h *Handler) shareCardPreview(c *gin.Context) {
+func (h *Handler) shareCardAssetPreview(c *gin.Context) {
 	viewerUserID := h.currentShareUserID(c)
-	card, err := h.shareService.CanAccessCardFile(c.Request.Context(), c.Param("cardId"), viewerUserID)
+	card, asset, err := h.shareService.CanAccessCardFile(c.Request.Context(), c.Param("cardId"), viewerUserID)
 	if err != nil {
 		status := http.StatusInternalServerError
 		switch {
@@ -236,28 +248,116 @@ func (h *Handler) shareCardPreview(c *gin.Context) {
 		c.JSON(status, gin.H{"error": err.Error()})
 		return
 	}
-	if !strings.HasPrefix(strings.ToLower(strings.TrimSpace(card.MimeType)), "image/") {
+	slot := strings.TrimSpace(c.Param("slot"))
+	if slot != "" {
+		asset, err = h.shareService.GetCardAssetForPreview(c.Request.Context(), card.ID, slot)
+		if err != nil {
+			status := http.StatusInternalServerError
+			switch {
+			case errors.Is(err, service.ErrShareCardNotFound):
+				status = http.StatusNotFound
+			case errors.Is(err, service.ErrShareInvalidCardSlot):
+				status = http.StatusBadRequest
+			}
+			c.JSON(status, gin.H{"error": err.Error()})
+			return
+		}
+	}
+	assetMimeType := resolveStoredMimeType(asset.MimeType, asset.OriginalFileName)
+	if !strings.HasPrefix(assetMimeType, "image/") {
 		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": "preview only supports image cards"})
 		return
 	}
 
-	file, stat, err := h.shareService.OpenCardFile(card)
+	file, stat, err := h.shareService.OpenCardFile(card, asset)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "file not found"})
 		return
 	}
 	defer file.Close()
 
-	c.Header("Content-Type", card.MimeType)
+	c.Header("Content-Type", assetMimeType)
+	c.Header("Content-Length", strconv.FormatInt(stat.Size(), 10))
+	c.Header("Content-Disposition", inlineDisposition(asset.OriginalFileName))
+	c.Header("Cache-Control", "no-store")
+	http.ServeContent(c.Writer, c.Request, asset.OriginalFileName, stat.ModTime(), file)
+}
+
+func (h *Handler) shareCardCoverPreview(c *gin.Context) {
+	viewerUserID := h.currentShareUserID(c)
+	card, err := h.shareService.CanAccessCardCover(c.Request.Context(), c.Param("cardId"), viewerUserID)
+	if err != nil {
+		status := http.StatusInternalServerError
+		switch {
+		case errors.Is(err, service.ErrShareCardNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareCardForbidden):
+			status = http.StatusForbidden
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	mimeType := resolveStoredMimeType(card.MimeType, card.OriginalFileName)
+	if !strings.HasPrefix(mimeType, "image/") {
+		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": "preview only supports image covers"})
+		return
+	}
+
+	file, stat, err := h.shareService.OpenCardCoverFile(card)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "file not found"})
+		return
+	}
+	defer file.Close()
+
+	c.Header("Content-Type", mimeType)
 	c.Header("Content-Length", strconv.FormatInt(stat.Size(), 10))
 	c.Header("Content-Disposition", inlineDisposition(card.OriginalFileName))
 	c.Header("Cache-Control", "no-store")
 	http.ServeContent(c.Writer, c.Request, card.OriginalFileName, stat.ModTime(), file)
 }
 
-func (h *Handler) shareCardDownload(c *gin.Context) {
+func (h *Handler) shareCardCoverDownload(c *gin.Context) {
 	viewerUserID := h.currentShareUserID(c)
-	card, consumeAccessCode, err := h.shareService.CanDownloadCardFile(c.Request.Context(), c.Param("cardId"), viewerUserID, c.Query("code"))
+	card, err := h.shareService.CanAccessCardCover(c.Request.Context(), c.Param("cardId"), viewerUserID)
+	if err != nil {
+		status := http.StatusInternalServerError
+		switch {
+		case errors.Is(err, service.ErrShareCardNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareCardForbidden):
+			status = http.StatusForbidden
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	mimeType := resolveStoredMimeType(card.MimeType, card.OriginalFileName)
+
+	file, stat, err := h.shareService.OpenCardCoverFile(card)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "file not found"})
+		return
+	}
+	defer file.Close()
+
+	c.Header("Content-Type", mimeType)
+	c.Header("Content-Length", strconv.FormatInt(stat.Size(), 10))
+	c.Header("Content-Disposition", toAttachmentDisposition(card.OriginalFileName))
+	c.Header("Cache-Control", "no-store")
+	http.ServeContent(c.Writer, c.Request, card.OriginalFileName, stat.ModTime(), file)
+}
+
+func (h *Handler) shareCardAssetDownload(c *gin.Context) {
+	viewerUserID := h.currentShareUserID(c)
+	card, asset, consumeAccessCode, err := h.shareService.CanDownloadCardAsset(
+		c.Request.Context(),
+		c.Param("cardId"),
+		viewerUserID,
+		c.Query("code"),
+		c.Param("slot"),
+	)
 	if err != nil {
 		status := http.StatusInternalServerError
 		switch {
@@ -274,7 +374,7 @@ func (h *Handler) shareCardDownload(c *gin.Context) {
 		return
 	}
 
-	file, stat, err := h.shareService.OpenCardFile(card)
+	file, stat, err := h.shareService.OpenCardFile(card, asset)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "file not found"})
 		return
@@ -290,11 +390,11 @@ func (h *Handler) shareCardDownload(c *gin.Context) {
 		return
 	}
 
-	c.Header("Content-Type", card.MimeType)
+	c.Header("Content-Type", asset.MimeType)
 	c.Header("Content-Length", strconv.FormatInt(stat.Size(), 10))
-	c.Header("Content-Disposition", toAttachmentDisposition(card.OriginalFileName))
+	c.Header("Content-Disposition", toAttachmentDisposition(asset.OriginalFileName))
 	c.Header("Cache-Control", "no-store")
-	http.ServeContent(c.Writer, c.Request, card.OriginalFileName, stat.ModTime(), file)
+	http.ServeContent(c.Writer, c.Request, asset.OriginalFileName, stat.ModTime(), file)
 }
 
 func (h *Handler) shareMyCards(c *gin.Context) {
@@ -425,16 +525,41 @@ func (h *Handler) shareCreateCard(c *gin.Context) {
 	}
 	defer file.Close()
 
+	var coverFile io.ReadCloser
+	coverFileName := ""
+	coverMimeType := ""
+	coverReader := io.Reader(nil)
+	if optionalCoverFile, optionalCoverHeader, optionalCoverErr := c.Request.FormFile("cover"); optionalCoverErr == nil {
+		coverFile = optionalCoverFile
+		coverFileName = optionalCoverHeader.Filename
+		coverMimeType = optionalCoverHeader.Header.Get("Content-Type")
+		coverReader = optionalCoverFile
+	} else if !errors.Is(optionalCoverErr, http.ErrMissingFile) {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(optionalCoverErr, &maxBytesErr) || strings.Contains(strings.ToLower(optionalCoverErr.Error()), "request body too large") {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": service.ErrShareFileTooLarge.Error()})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+	if coverFile != nil {
+		defer coverFile.Close()
+	}
+
 	card, err := h.shareService.CreateCard(c.Request.Context(), service.ShareCreateCardInput{
-		CreatorID:   user.ID,
-		Title:       c.PostForm("title"),
-		Description: c.PostForm("description"),
-		Visibility:  c.PostForm("visibility"),
-		Status:      c.PostForm("status"),
-		FileName:    header.Filename,
-		MimeType:    header.Header.Get("Content-Type"),
-		FileReader:  file,
-		MaxFileSize: maxUploadSize,
+		CreatorID:     user.ID,
+		Title:         c.PostForm("title"),
+		Description:   c.PostForm("description"),
+		Visibility:    c.PostForm("visibility"),
+		Status:        c.PostForm("status"),
+		FileName:      header.Filename,
+		MimeType:      header.Header.Get("Content-Type"),
+		FileReader:    file,
+		CoverFileName: coverFileName,
+		CoverMimeType: coverMimeType,
+		CoverReader:   coverReader,
+		MaxFileSize:   maxUploadSize,
 	})
 	if err != nil {
 		status := http.StatusBadRequest
@@ -443,6 +568,122 @@ func (h *Handler) shareCreateCard(c *gin.Context) {
 			status = http.StatusRequestEntityTooLarge
 		case errors.Is(err, service.ErrShareSaveFileFailed):
 			status = http.StatusInternalServerError
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"card": card})
+}
+
+func (h *Handler) shareCreateCardBundle(c *gin.Context) {
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		jsonError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	maxUploadSize := h.cfg.Storage.MaxFileSize
+	if maxUploadSize <= 0 {
+		maxUploadSize = shareFallbackMaxUploadSize
+	}
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxUploadSize+(1<<20))
+
+	payloadRaw := strings.TrimSpace(c.PostForm("payload"))
+	if payloadRaw == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	var payload struct {
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		Visibility  string `json:"visibility"`
+		Status      string `json:"status"`
+		Items       []struct {
+			Slot      string `json:"slot"`
+			FileField string `json:"fileField"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal([]byte(payloadRaw), &payload); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	assetInputs := make([]service.ShareCreateCardAssetInput, 0, len(payload.Items))
+	closers := make([]io.Closer, 0, len(payload.Items))
+	coverFileName := ""
+	coverMimeType := ""
+	coverReader := io.Reader(nil)
+	defer func() {
+		for _, closer := range closers {
+			_ = closer.Close()
+		}
+	}()
+
+	if optionalCoverFile, optionalCoverHeader, optionalCoverErr := c.Request.FormFile("cover"); optionalCoverErr == nil {
+		coverFileName = optionalCoverHeader.Filename
+		coverMimeType = optionalCoverHeader.Header.Get("Content-Type")
+		coverReader = optionalCoverFile
+		closers = append(closers, optionalCoverFile)
+	} else if !errors.Is(optionalCoverErr, http.ErrMissingFile) {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(optionalCoverErr, &maxBytesErr) || strings.Contains(strings.ToLower(optionalCoverErr.Error()), "request body too large") {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": service.ErrShareFileTooLarge.Error()})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	for _, item := range payload.Items {
+		field := strings.TrimSpace(item.FileField)
+		if field == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": service.ErrShareFileRequired.Error()})
+			return
+		}
+
+		file, header, err := c.Request.FormFile(field)
+		if err != nil {
+			var maxBytesErr *http.MaxBytesError
+			if errors.As(err, &maxBytesErr) || strings.Contains(strings.ToLower(err.Error()), "request body too large") {
+				c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": service.ErrShareFileTooLarge.Error()})
+				return
+			}
+			c.JSON(http.StatusBadRequest, gin.H{"error": service.ErrShareFileRequired.Error()})
+			return
+		}
+
+		closers = append(closers, file)
+		assetInputs = append(assetInputs, service.ShareCreateCardAssetInput{
+			Slot:       item.Slot,
+			FileName:   header.Filename,
+			MimeType:   header.Header.Get("Content-Type"),
+			FileReader: file,
+		})
+	}
+
+	card, err := h.shareService.CreateCardBundle(c.Request.Context(), service.ShareCreateCardBundleInput{
+		CreatorID:     user.ID,
+		Title:         payload.Title,
+		Description:   payload.Description,
+		Visibility:    payload.Visibility,
+		Status:        payload.Status,
+		Assets:        assetInputs,
+		CoverFileName: coverFileName,
+		CoverMimeType: coverMimeType,
+		CoverReader:   coverReader,
+		MaxFileSize:   maxUploadSize,
+	})
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareFileTooLarge):
+			status = http.StatusRequestEntityTooLarge
+		case errors.Is(err, service.ErrShareSaveFileFailed):
+			status = http.StatusInternalServerError
+		case errors.Is(err, service.ErrShareForbiddenRole):
+			status = http.StatusForbidden
 		}
 		c.JSON(status, gin.H{"error": err.Error()})
 		return
@@ -490,6 +731,216 @@ func (h *Handler) shareUpdateCard(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"card": card})
+}
+
+func (h *Handler) shareReplaceCardAsset(c *gin.Context) {
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		jsonError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	maxUploadSize := h.cfg.Storage.MaxFileSize
+	if maxUploadSize <= 0 {
+		maxUploadSize = shareFallbackMaxUploadSize
+	}
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxUploadSize+(1<<20))
+
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) || strings.Contains(strings.ToLower(err.Error()), "request body too large") {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": service.ErrShareFileTooLarge.Error()})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": service.ErrShareFileRequired.Error()})
+		return
+	}
+	defer file.Close()
+
+	detail, err := h.shareService.ReplaceCardAssetByOwner(c.Request.Context(), service.ShareUpdateCardAssetInput{
+		OwnerID:     user.ID,
+		CardID:      c.Param("cardId"),
+		Slot:        c.Param("slot"),
+		FileName:    header.Filename,
+		MimeType:    header.Header.Get("Content-Type"),
+		FileReader:  file,
+		MaxFileSize: maxUploadSize,
+	})
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareFileTooLarge):
+			status = http.StatusRequestEntityTooLarge
+		case errors.Is(err, service.ErrShareSaveFileFailed):
+			status = http.StatusInternalServerError
+		case errors.Is(err, service.ErrShareCardNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareCardForbidden),
+			errors.Is(err, service.ErrShareForbiddenRole):
+			status = http.StatusForbidden
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"card": detail.Card, "assets": detail.Assets})
+}
+
+func (h *Handler) shareReplaceCardCover(c *gin.Context) {
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		jsonError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	maxUploadSize := h.cfg.Storage.MaxFileSize
+	if maxUploadSize <= 0 {
+		maxUploadSize = shareFallbackMaxUploadSize
+	}
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxUploadSize+(1<<20))
+
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) || strings.Contains(strings.ToLower(err.Error()), "request body too large") {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": service.ErrShareFileTooLarge.Error()})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": service.ErrShareFileRequired.Error()})
+		return
+	}
+	defer file.Close()
+
+	detail, err := h.shareService.ReplaceCardCoverByOwner(
+		c.Request.Context(),
+		user.ID,
+		c.Param("cardId"),
+		header.Filename,
+		header.Header.Get("Content-Type"),
+		file,
+		maxUploadSize,
+	)
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareFileTooLarge):
+			status = http.StatusRequestEntityTooLarge
+		case errors.Is(err, service.ErrShareSaveFileFailed):
+			status = http.StatusInternalServerError
+		case errors.Is(err, service.ErrShareCardNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareCardForbidden),
+			errors.Is(err, service.ErrShareForbiddenRole):
+			status = http.StatusForbidden
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"card": detail.Card, "assets": detail.Assets})
+}
+
+func (h *Handler) shareDeleteCardAsset(c *gin.Context) {
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		jsonError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	detail, err := h.shareService.DeleteCardAssetByOwner(c.Request.Context(), user.ID, c.Param("cardId"), c.Param("slot"))
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareCardNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareCardForbidden),
+			errors.Is(err, service.ErrShareForbiddenRole):
+			status = http.StatusForbidden
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"card": detail.Card, "assets": detail.Assets})
+}
+
+func (h *Handler) shareDeleteCardCover(c *gin.Context) {
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		jsonError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	detail, err := h.shareService.DeleteCardCoverByOwner(c.Request.Context(), user.ID, c.Param("cardId"))
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareCardNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareCardForbidden),
+			errors.Is(err, service.ErrShareForbiddenRole):
+			status = http.StatusForbidden
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"card": detail.Card, "assets": detail.Assets})
+}
+
+func (h *Handler) shareAdminUsers(c *gin.Context) {
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		jsonError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	users, err := h.shareService.ListUsersForRoleManage(c.Request.Context(), user.ID)
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareForbiddenRole):
+			status = http.StatusForbidden
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"users": users})
+}
+
+func (h *Handler) shareAdminUpdateUserRole(c *gin.Context) {
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		jsonError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	var req struct {
+		Role string `json:"role"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	updated, err := h.shareService.UpdateUserRole(c.Request.Context(), service.ShareUpdateUserRoleInput{
+		OperatorID: user.ID,
+		UserID:     c.Param("userId"),
+		Role:       req.Role,
+	})
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareForbiddenRole):
+			status = http.StatusForbidden
+		case errors.Is(err, service.ErrShareUserNotFound):
+			status = http.StatusNotFound
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"user": updated})
 }
 
 func (h *Handler) shareGetCardAccessCode(c *gin.Context) {
@@ -721,6 +1172,25 @@ func profileAssetContentType(fileName string) string {
 	default:
 		return "application/octet-stream"
 	}
+}
+
+func resolveStoredMimeType(mimeType, fileName string) string {
+	value := strings.TrimSpace(strings.ToLower(mimeType))
+	if value != "" && value != "application/octet-stream" {
+		return value
+	}
+
+	ext := strings.ToLower(strings.TrimSpace(filepath.Ext(fileName)))
+	if ext != "" {
+		if guessed := strings.TrimSpace(strings.ToLower(mime.TypeByExtension(ext))); guessed != "" {
+			return guessed
+		}
+	}
+
+	if value != "" {
+		return value
+	}
+	return "application/octet-stream"
 }
 
 func stringPointerIfNotEmpty(value string) *string {
