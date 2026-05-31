@@ -934,6 +934,8 @@ func (h *Handler) shareAdminUpdateUserRole(c *gin.Context) {
 		switch {
 		case errors.Is(err, service.ErrShareForbiddenRole):
 			status = http.StatusForbidden
+		case errors.Is(err, service.ErrShareSelfRoleDowngrade):
+			status = http.StatusBadRequest
 		case errors.Is(err, service.ErrShareUserNotFound):
 			status = http.StatusNotFound
 		}

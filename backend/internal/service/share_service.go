@@ -60,6 +60,7 @@ var (
 	ErrShareForbiddenRole       = errors.New("manager role required")
 	ErrShareInvalidCardSlot     = errors.New("invalid card content slot")
 	ErrShareInvalidUserRole     = errors.New("invalid user role")
+	ErrShareSelfRoleDowngrade   = errors.New("cannot downgrade your own role")
 	ErrShareCardAssetRequired   = errors.New("card must keep at least one category file")
 )
 
@@ -646,6 +647,9 @@ func (s *ShareService) UpdateUserRole(ctx context.Context, input ShareUpdateUser
 	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := s.ensureShareManagerRoleTx(tx, operatorID); err != nil {
 			return err
+		}
+		if operatorID == targetUserID && nextRole == model.ShareExternalUserRoleViewer {
+			return ErrShareSelfRoleDowngrade
 		}
 
 		var user model.ShareExternalUser

@@ -35,6 +35,7 @@ const shareApiErrorMessages: Record<string, string> = {
   "access code exhausted": "当前提取码已达到使用上限",
   "manager role required": "需要管理员权限",
   "invalid user role": "用户角色不正确",
+  "cannot downgrade your own role": "不能将自己的角色降级为浏览者",
   "invalid card content slot": "分类槽位不正确",
   "card must keep at least one category file": "卡片至少保留一个分类文件",
 };

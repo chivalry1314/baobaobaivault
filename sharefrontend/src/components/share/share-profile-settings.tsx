@@ -404,6 +404,10 @@ export function ShareProfileSettings({
     if (targetUser.role === nextRole || roleUpdatePendingByUser[targetUser.id]) {
       return;
     }
+    if (targetUser.id === user.id && nextRole === "viewer") {
+      setRoleLoadError("不能将自己的角色降级为浏览者");
+      return;
+    }
 
     setRoleUpdatePendingByUser((current) => ({ ...current, [targetUser.id]: true }));
     setRoleLoadError("");
@@ -637,12 +641,13 @@ export function ShareProfileSettings({
                           <p className="mt-1 truncate text-xs text-[var(--text-muted)]">{item.email}</p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <RoleChip active={item.role === "viewer"} disabled={pending} onClick={() => void handleUpdateRole(item, "viewer")}>
+                          <RoleChip active={item.role === "viewer"} disabled={pending || isSelf} onClick={() => void handleUpdateRole(item, "viewer")}>
                             浏览者
                           </RoleChip>
                           <RoleChip active={item.role === "manager"} disabled={pending} onClick={() => void handleUpdateRole(item, "manager")}>
                             管理员
                           </RoleChip>
+                          {isSelf ? <span className="text-xs font-bold text-[var(--text-muted)]">本人不可降为浏览者</span> : null}
                           {pending ? <span className="text-xs font-bold text-[var(--text-muted)]">更新中...</span> : null}
                         </div>
                       </div>
