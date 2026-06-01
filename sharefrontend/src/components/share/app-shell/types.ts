@@ -10,4 +10,5 @@ export type AppShellProps = {
 export type NavItem = {
   href: string;
   label: string;
+  managerOnly?: boolean;
 };

@@ -1,4 +1,12 @@
 export function isNavItemActive(currentPath: string, href: string) {
+  if (href === "/creator/new") {
+    return currentPath === "/creator" || currentPath.startsWith("/creator/new");
+  }
+
+  if (href === "/creator/reviews") {
+    return currentPath.startsWith("/creator/reviews");
+  }
+
   if (href.startsWith("/creator")) {
     return currentPath.startsWith("/creator");
   }
