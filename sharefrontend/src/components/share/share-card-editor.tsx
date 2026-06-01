@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent 
 import { AppShell } from "@/components/share/app-shell";
 import { AuthRedirect } from "@/components/share/auth-redirect";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
-import type { CardAsset, CardContentSlot, CardDetailResponse, ExternalSessionUser } from "@/lib/shared";
+import type { CardAsset, CardContentSlot, CardDetailResponse, ExternalSessionUser, ShareReviewStatus } from "@/lib/shared";
 
 const slotOptions: Array<{ value: CardContentSlot; label: string }> = [
   { value: "system_theme", label: "系统主题" },
@@ -69,6 +69,19 @@ function getStatusLabel(status: CardDetailResponse["card"]["status"]) {
   return "已归档";
 }
 
+function getReviewStatusLabel(status: ShareReviewStatus) {
+  switch (status) {
+    case "pending":
+      return "待审核";
+    case "approved":
+      return "已通过";
+    case "rejected":
+      return "已驳回";
+    default:
+      return "未提交审核";
+  }
+}
+
 function createEmptySlotItem(index: number): SlotFileItem {
   return {
     slot: slotOptions[index % slotOptions.length].value,
@@ -98,6 +111,13 @@ function findAssetBySlot(assets: CardAsset[], slot: CardContentSlot) {
   return assets.find((asset) => asset.slot === slot) ?? null;
 }
 
+function isCreatorRole(user: ExternalSessionUser | null) {
+  if (!user) {
+    return false;
+  }
+  return user.role === "creator" || user.role === "manager";
+}
+
 export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
   const router = useRouter();
   const createCoverInputRef = useRef<HTMLInputElement>(null);
@@ -117,6 +137,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
   const [loadError, setLoadError] = useState("");
   const [formError, setFormError] = useState("");
   const [submitMode, setSubmitMode] = useState<"published" | "draft" | "delete" | null>(null);
+  const [reviewSubmitPending, setReviewSubmitPending] = useState(false);
   const [coverPending, setCoverPending] = useState<"replace" | "remove" | null>(null);
   const [assetPending, setAssetPending] = useState<Record<CardContentSlot, AssetOpMode | null>>({
     system_theme: null,
@@ -172,7 +193,6 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
         active = false;
       };
     }
-    const currentCardId = cardId;
 
     async function loadCard() {
       setCardLoading(true);
@@ -180,6 +200,11 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
       setFormError("");
 
       try {
+        const currentCardId = cardId;
+        if (!currentCardId) {
+          setLoadError("缺少卡片 ID。");
+          return;
+        }
         const detail = await shareApi.cardDetail(currentCardId);
         if (!active) {
           return;
@@ -215,7 +240,9 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
 
   const pageTitle = mode === "edit" ? "编辑卡片" : "创建卡片";
   const pageDescription =
-    mode === "edit" ? "更新标题、描述和可见性，维护卡片基础信息。" : "封面图用于浏览，分类文件用于下载。支持单分类或多分类打包创建。";
+    mode === "edit"
+      ? "更新标题、描述和可见性，维护卡片基础信息。"
+      : "封面图用于浏览，分类文件用于下载。支持单分类或多分类打包创建。";
 
   const submitPrimaryLabel = mode === "edit" ? "保存并发布" : "创建并发布";
   const submitSecondaryLabel = mode === "edit" ? "保存为草稿" : "创建草稿";
@@ -225,6 +252,11 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
   const hasCoverOnCard = Boolean(loadedCard?.card.previewUrl?.includes("/cover/"));
   const hasAssetPending = coverPending !== null || Object.values(assetPending).some((value) => value !== null);
   const afterSuccessPath = mode === "edit" && cardId ? `/creator/cards/${encodeURIComponent(cardId)}/edit` : "/creator";
+  const isCreator = isCreatorRole(currentUser);
+  const reviewStatus = loadedCard?.card.reviewStatus ?? "unsubmitted";
+  const canSubmitReview = Boolean(
+    isEditMode && cardId && loadedCard && !publishPending && !hasAssetPending && !reviewSubmitPending && reviewStatus !== "pending",
+  );
 
   const coverPreviewUrl = useMemo(() => {
     if (!coverFile) {
@@ -273,32 +305,6 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
       }
     };
   }, [previewUrl]);
-
-  const footer = useMemo(
-    () => (
-      <footer className="relative z-10 border-t border-white/60 bg-[rgba(255,248,248,0.72)] px-6 py-10 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 text-center md:flex-row md:text-left">
-          <div className="text-3xl font-semibold italic tracking-tight text-[var(--brand-strong)]">CardShare</div>
-          <div className="text-sm tracking-[0.14em] text-[color-mix(in_srgb,var(--brand)_28%,var(--foreground))]">© 2026 CARDSHARE</div>
-          <div className="flex flex-wrap items-center justify-center gap-6 text-sm uppercase tracking-[0.12em] text-[var(--brand)]/48">
-            <Link href="/" className="transition hover:text-[var(--brand-strong)]">
-              About
-            </Link>
-            <Link href="/" className="transition hover:text-[var(--brand-strong)]">
-              Privacy
-            </Link>
-            <Link href="/" className="transition hover:text-[var(--brand-strong)]">
-              Terms
-            </Link>
-            <Link href="/" className="transition hover:text-[var(--brand-strong)]">
-              Help
-            </Link>
-          </div>
-        </div>
-      </footer>
-    ),
-    [],
-  );
 
   function setSlotFile(index: number, file: File | null) {
     setSlotItems((current) => {
@@ -391,16 +397,25 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
       setFormError("");
 
       try {
-        await shareApi.updateCard(cardId, {
+        const payload = await shareApi.updateCard(cardId, {
           title: title.trim(),
           description: description.trim(),
           visibility: publicChecked ? "public" : "private",
           status,
         });
+        setLoadedCard((current) =>
+          current
+            ? {
+                ...current,
+                card: payload.card,
+              }
+            : current,
+        );
         router.push("/creator");
         router.refresh();
       } catch (error) {
         setFormError(getShareErrorMessage(error, "更新卡片失败，请稍后重试。"));
+      } finally {
         setSubmitMode(null);
       }
       return;
@@ -432,7 +447,31 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
       router.refresh();
     } catch (error) {
       setFormError(getShareErrorMessage(error, "创建卡片失败，请稍后重试。"));
+    } finally {
       setSubmitMode(null);
+    }
+  }
+
+  async function handleSubmitReview() {
+    if (!cardId || !canSubmitReview) {
+      return;
+    }
+    setReviewSubmitPending(true);
+    setFormError("");
+    try {
+      const payload = await shareApi.submitCardReview(cardId);
+      setLoadedCard((current) =>
+        current
+          ? {
+              ...current,
+              card: payload.card,
+            }
+          : current,
+      );
+    } catch (error) {
+      setFormError(getShareErrorMessage(error, "提交审核失败，请稍后重试。"));
+    } finally {
+      setReviewSubmitPending(false);
     }
   }
 
@@ -452,6 +491,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
       router.refresh();
     } catch (error) {
       setFormError(getShareErrorMessage(error, "删除卡片失败，请稍后重试。"));
+    } finally {
       setSubmitMode(null);
     }
   }
@@ -594,12 +634,12 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
     return <AuthRedirect nextPath={afterSuccessPath} />;
   }
 
-  if (currentUser.role !== "manager") {
+  if (!isCreator) {
     return (
-      <AppShell currentPath="/creator" footerSlot={footer}>
+      <AppShell currentPath="/creator">
         <div className="min-h-screen bg-[var(--background)] px-4 py-8 sm:px-6 sm:py-10">
           <div className="mx-auto max-w-3xl rounded-[32px] border border-[#f3c8ad] bg-[#fff4ec] px-6 py-10 text-center shadow-[0_24px_64px_-42px_rgba(120,85,94,0.22)]">
-            <p className="text-xl font-semibold text-[#9a3412]">当前账号不是管理员，无法创建或编辑多分类卡片。</p>
+            <p className="text-xl font-semibold text-[#9a3412]">当前账号没有创作权限，无法创建或编辑卡片。</p>
             <Link href="/creator" className="mt-6 inline-flex rounded-full bg-[var(--primary)] px-6 py-3 text-sm font-medium text-white transition hover:-translate-y-0.5">
               返回创作中心
             </Link>
@@ -611,7 +651,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
 
   if (mode === "edit" && loadError) {
     return (
-      <AppShell currentPath="/creator" footerSlot={footer}>
+      <AppShell currentPath="/creator">
         <div className="min-h-screen bg-[var(--background)] px-4 py-8 sm:px-6 sm:py-10">
           <div className="mx-auto max-w-3xl rounded-[32px] border border-[#f3c8ad] bg-[#fff4ec] px-6 py-10 text-center shadow-[0_24px_64px_-42px_rgba(120,85,94,0.22)]">
             <p className="text-xl font-semibold text-[#9a3412]">{loadError}</p>
@@ -625,7 +665,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
   }
 
   return (
-    <AppShell currentPath="/creator" footerSlot={footer}>
+    <AppShell currentPath="/creator">
       <div className="relative overflow-hidden bg-[linear-gradient(180deg,#f4fbff_0%,#f8fdff_48%,#f2faff_100%)]">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute left-[-8%] top-[4%] h-[28rem] w-[28rem] rounded-full bg-[rgba(176,232,249,0.38)] blur-[120px]" />
@@ -928,19 +968,30 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                 <div className="space-y-3">
                   <button
                     type="submit"
-                    disabled={publishPending || hasAssetPending}
+                    disabled={publishPending || hasAssetPending || reviewSubmitPending}
                     className="btn-primary w-full rounded-full py-3 text-sm font-black shadow-[2px_2px_0px_var(--line-strong)] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {submitMode === "published" ? "提交中..." : submitPrimaryLabel}
                   </button>
                   <button
                     type="button"
-                    disabled={publishPending || hasAssetPending}
+                    disabled={publishPending || hasAssetPending || reviewSubmitPending}
                     onClick={() => void submitCard("draft")}
                     className="btn-subtle w-full rounded-full py-3 text-sm font-black shadow-[2px_2px_0px_var(--line-strong)] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {submitMode === "draft" ? "提交中..." : submitSecondaryLabel}
                   </button>
+
+                  {mode === "edit" && loadedCard ? (
+                    <button
+                      type="button"
+                      disabled={!canSubmitReview}
+                      onClick={() => void handleSubmitReview()}
+                      className="btn-subtle w-full rounded-full py-3 text-sm font-black shadow-[2px_2px_0px_var(--line-strong)] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {reviewSubmitPending ? "提交审核中..." : "提交审核"}
+                    </button>
+                  ) : null}
 
                   {mode === "edit" && loadedCard ? (
                     <Link href={`/creator/cards/${encodeURIComponent(loadedCard.card.id)}/access-code`} className="btn-rose block w-full rounded-full py-3 text-center text-sm font-black shadow-[2px_2px_0px_var(--line-strong)] transition hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none">
@@ -951,7 +1002,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                   {mode === "edit" ? (
                     <button
                       type="button"
-                      disabled={publishPending || hasAssetPending}
+                      disabled={publishPending || hasAssetPending || reviewSubmitPending}
                       onClick={() => void handleDelete()}
                       className="mt-2 w-full rounded-full border-[3px] border-[#ff9c9c] bg-[#fce4e4] py-3 text-sm font-black text-[#ff6b6b] shadow-[2px_2px_0px_#ff9c9c] transition hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
                     >
@@ -964,6 +1015,8 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                   <div className="mt-6 space-y-1 text-[10px] font-bold text-[var(--text-subtle)]">
                     <p>卡片 ID：{loadedCard.card.id}</p>
                     <p>当前状态：{getStatusLabel(loadedCard.card.status)}</p>
+                    <p>审核状态：{getReviewStatusLabel(loadedCard.card.reviewStatus)}</p>
+                    {loadedCard.card.reviewReason ? <p>驳回原因：{loadedCard.card.reviewReason}</p> : null}
                   </div>
                 ) : (
                   <div className="mt-6 space-y-1 text-[10px] font-bold text-[var(--text-subtle)]">

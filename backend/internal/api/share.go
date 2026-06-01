@@ -56,8 +56,12 @@ func (h *Handler) registerShareRoutes(r *gin.Engine) {
 			me.GET("/access-codes", h.shareMyAccessCodes)
 			me.POST("/cards", h.shareCreateCard)
 			me.POST("/admin/cards", h.shareCreateCardBundle)
+			me.POST("/cards/:cardId/submit-review", h.shareSubmitCardReview)
 			me.GET("/admin/users", h.shareAdminUsers)
 			me.PATCH("/admin/users/:userId/role", h.shareAdminUpdateUserRole)
+			me.GET("/admin/reviews", h.shareAdminReviews)
+			me.POST("/admin/reviews/:cardId/approve", h.shareAdminApproveReview)
+			me.POST("/admin/reviews/:cardId/reject", h.shareAdminRejectReview)
 			me.PATCH("/cards/:cardId", h.shareUpdateCard)
 			me.PUT("/cards/:cardId/cover", h.shareReplaceCardCover)
 			me.DELETE("/cards/:cardId/cover", h.shareDeleteCardCover)
@@ -926,6 +930,120 @@ func (h *Handler) shareDeleteCardCover(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"card": detail.Card, "assets": detail.Assets})
+}
+
+func (h *Handler) shareSubmitCardReview(c *gin.Context) {
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		jsonError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	card, err := h.shareService.SubmitCardForReview(c.Request.Context(), user.ID, c.Param("cardId"))
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareUserNotFound),
+			errors.Is(err, service.ErrShareCardNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareForbiddenRole),
+			errors.Is(err, service.ErrShareCardForbidden):
+			status = http.StatusForbidden
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"card": card})
+}
+
+func (h *Handler) shareAdminReviews(c *gin.Context) {
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		jsonError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	dashboard, err := h.shareService.ListReviewDashboard(c.Request.Context(), user.ID, c.Query("status"))
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareUserNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareForbiddenRole):
+			status = http.StatusForbidden
+		case errors.Is(err, service.ErrShareInvalidReviewStatus):
+			status = http.StatusBadRequest
+		default:
+			status = http.StatusInternalServerError
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, dashboard)
+}
+
+func (h *Handler) shareAdminApproveReview(c *gin.Context) {
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		jsonError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	card, err := h.shareService.ApproveCard(c.Request.Context(), user.ID, c.Param("cardId"))
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareUserNotFound),
+			errors.Is(err, service.ErrShareCardNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareForbiddenRole):
+			status = http.StatusForbidden
+		default:
+			status = http.StatusInternalServerError
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"card": card})
+}
+
+func (h *Handler) shareAdminRejectReview(c *gin.Context) {
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		jsonError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	card, err := h.shareService.RejectCard(c.Request.Context(), user.ID, c.Param("cardId"), req.Reason)
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareUserNotFound),
+			errors.Is(err, service.ErrShareCardNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareForbiddenRole):
+			status = http.StatusForbidden
+		case errors.Is(err, service.ErrShareReviewReasonRequired):
+			status = http.StatusBadRequest
+		default:
+			status = http.StatusInternalServerError
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"card": card})
 }
 
 func (h *Handler) shareAdminUsers(c *gin.Context) {

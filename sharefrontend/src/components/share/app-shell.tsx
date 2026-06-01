@@ -16,6 +16,7 @@ type AppShellProps = {
 const navItems = [
   { href: "/", label: "首页" },
   { href: "/creator/new", label: "创作中心" },
+  { href: "/creator/reviews", label: "审核中心" },
 ];
 
 export function AppShell({ currentPath = "", children, headerSlot, footerSlot }: AppShellProps) {

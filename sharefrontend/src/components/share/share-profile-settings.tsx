@@ -12,7 +12,7 @@ import {
 } from "react";
 
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
-import type { ExternalSessionUser, ShareUserRoleManageItem } from "@/lib/shared";
+import type { ExternalSessionUser, ShareUserRole, ShareUserRoleManageItem } from "@/lib/shared";
 
 type SettingsDraft = {
   nickname: string;
@@ -400,12 +400,12 @@ export function ShareProfileSettings({
     }
   }
 
-  async function handleUpdateRole(targetUser: ShareUserRoleManageItem, nextRole: "viewer" | "manager") {
+  async function handleUpdateRole(targetUser: ShareUserRoleManageItem, nextRole: ShareUserRole) {
     if (targetUser.role === nextRole || roleUpdatePendingByUser[targetUser.id]) {
       return;
     }
-    if (targetUser.id === user.id && nextRole === "viewer") {
-      setRoleLoadError("不能将自己的角色降级为浏览者");
+    if (targetUser.id === user.id && nextRole !== "manager") {
+      setRoleLoadError("不能将自己的角色降级为非管理员");
       return;
     }
 
@@ -644,10 +644,13 @@ export function ShareProfileSettings({
                           <RoleChip active={item.role === "viewer"} disabled={pending || isSelf} onClick={() => void handleUpdateRole(item, "viewer")}>
                             浏览者
                           </RoleChip>
+                          <RoleChip active={item.role === "creator"} disabled={pending || isSelf} onClick={() => void handleUpdateRole(item, "creator")}>
+                            创作者
+                          </RoleChip>
                           <RoleChip active={item.role === "manager"} disabled={pending} onClick={() => void handleUpdateRole(item, "manager")}>
                             管理员
                           </RoleChip>
-                          {isSelf ? <span className="text-xs font-bold text-[var(--text-muted)]">本人不可降为浏览者</span> : null}
+                          {isSelf ? <span className="text-xs font-bold text-[var(--text-muted)]">本人不可降为创作者或浏览者</span> : null}
                           {pending ? <span className="text-xs font-bold text-[var(--text-muted)]">更新中...</span> : null}
                         </div>
                       </div>

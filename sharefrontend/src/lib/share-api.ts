@@ -1,6 +1,7 @@
-import type {
+﻿import type {
   AccessCodeDashboardResponse,
   ApiError,
+  AuthResponse,
   CardAccessCodeConfig,
   CardAssetUpdateResponse,
   CardContentSlot,
@@ -11,7 +12,9 @@ import type {
   DiscoverCardsPagination,
   ExternalSessionUser,
   PlatformCard,
+  ReviewDashboardResponse,
   SessionResponse,
+  ShareUserRole,
   ShareUserRoleManageItem,
 } from "@/lib/shared";
 
@@ -19,7 +22,7 @@ const API_ROOT = "/api/share";
 
 const shareApiErrorMessages: Record<string, string> = {
   "invalid email": "邮箱格式不正确",
-  "password must be at least 6 characters": "密码至少需要 6 位",
+  "password must be at least 6 characters": "密码长度至少 6 位",
   "invalid email or password": "邮箱或密码不正确",
   "invalid request body": "请求参数不正确",
   "email already registered": "该邮箱已注册",
@@ -35,10 +38,17 @@ const shareApiErrorMessages: Record<string, string> = {
   "access code expired": "当前提取码已过期",
   "access code exhausted": "当前提取码已达到使用上限",
   "manager role required": "需要管理员权限",
+  "manager or creator role required": "需要创作者或管理员权限",
   "invalid user role": "用户角色不正确",
-  "cannot downgrade your own role": "不能将自己的角色降级为浏览者",
+  "cannot downgrade your own role": "不能降低自己的管理员权限",
   "invalid card content slot": "分类槽位不正确",
   "card must keep at least one category file": "卡片至少保留一个分类文件",
+  "invalid review status": "审核状态不正确",
+  "review reason is required": "驳回时必须填写原因",
+  "card not found": "卡片不存在",
+  "card access denied": "没有该卡片权限",
+  "user not found": "用户不存在",
+  "authentication required": "请先登录",
 };
 
 function toErrorMessage(payload: unknown, fallback: string) {
@@ -90,6 +100,26 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export const shareApi = {
   continueAuth(input: { email: string; password: string }) {
     return request<ContinueAuthResponse>(`${API_ROOT}/auth/continue`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  register(input: { email: string; nickname: string; password: string }) {
+    return request<AuthResponse>(`${API_ROOT}/auth/register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  login(input: { email: string; password: string }) {
+    return request<AuthResponse>(`${API_ROOT}/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -168,6 +198,7 @@ export const shareApi = {
     visibility: "private" | "public";
     status: "draft" | "published" | "archived";
     file: File;
+    cover?: File;
   }) {
     const formData = new FormData();
     formData.append("title", input.title);
@@ -175,6 +206,9 @@ export const shareApi = {
     formData.append("visibility", input.visibility);
     formData.append("status", input.status);
     formData.append("file", input.file);
+    if (input.cover) {
+      formData.append("cover", input.cover);
+    }
 
     return request<{ card: PlatformCard }>(`${API_ROOT}/me/cards`, {
       method: "POST",
@@ -273,17 +307,44 @@ export const shareApi = {
     });
   },
 
+  submitCardReview(cardId: string) {
+    return request<{ card: PlatformCard }>(`${API_ROOT}/me/cards/${encodeURIComponent(cardId)}/submit-review`, {
+      method: "POST",
+    });
+  },
+
   adminUsers() {
     return request<{ users: ShareUserRoleManageItem[] }>(`${API_ROOT}/me/admin/users`);
   },
 
-  updateUserRole(userId: string, role: "viewer" | "manager") {
+  updateUserRole(userId: string, role: ShareUserRole) {
     return request<{ user: ExternalSessionUser }>(`${API_ROOT}/me/admin/users/${encodeURIComponent(userId)}/role`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ role }),
+    });
+  },
+
+  adminReviews(status?: string) {
+    const query = status ? `?status=${encodeURIComponent(status)}` : "";
+    return request<ReviewDashboardResponse>(`${API_ROOT}/me/admin/reviews${query}`);
+  },
+
+  adminApproveReview(cardId: string) {
+    return request<{ card: PlatformCard }>(`${API_ROOT}/me/admin/reviews/${encodeURIComponent(cardId)}/approve`, {
+      method: "POST",
+    });
+  },
+
+  adminRejectReview(cardId: string, reason: string) {
+    return request<{ card: PlatformCard }>(`${API_ROOT}/me/admin/reviews/${encodeURIComponent(cardId)}/reject`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ reason }),
     });
   },
 

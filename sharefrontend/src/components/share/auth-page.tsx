@@ -1,10 +1,12 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
+
+type AuthMode = "login" | "register";
 
 type FieldProps = {
   label: string;
@@ -64,7 +66,9 @@ export function AuthPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [sessionChecking, setSessionChecking] = useState(true);
+  const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
+  const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
@@ -102,15 +106,32 @@ export function AuthPage() {
     };
   }, [redirectPath, router]);
 
+  function switchMode(nextMode: AuthMode) {
+    if (pending) {
+      return;
+    }
+    setMode(nextMode);
+    setError("");
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+    const trimmedNickname = nickname.trim();
+
     if (!trimmedEmail) {
-      setError("请输入邮箱地址");
+      setError("请输入邮箱");
       return;
     }
-    if (!password.trim()) {
+
+    if (mode === "register" && !trimmedNickname) {
+      setError("请输入昵称");
+      return;
+    }
+
+    if (!trimmedPassword) {
       setError("请输入密码");
       return;
     }
@@ -119,15 +140,24 @@ export function AuthPage() {
     setError("");
 
     try {
-      await shareApi.continueAuth({
-        email: trimmedEmail,
-        password,
-      });
+      if (mode === "register") {
+        await shareApi.register({
+          email: trimmedEmail,
+          nickname: trimmedNickname,
+          password: trimmedPassword,
+        });
+      } else {
+        await shareApi.login({
+          email: trimmedEmail,
+          password: trimmedPassword,
+        });
+      }
 
       router.push(redirectPath);
       router.refresh();
     } catch (submitError) {
-      setError(getShareErrorMessage(submitError, "暂时无法继续，请稍后重试"));
+      const fallback = mode === "register" ? "暂时无法注册，请稍后重试" : "暂时无法登录，请稍后重试";
+      setError(getShareErrorMessage(submitError, fallback));
     } finally {
       setPending(false);
     }
@@ -165,7 +195,32 @@ export function AuthPage() {
               <div className="h-10 w-10 rounded-lg border-[3px] border-[var(--outline)] bg-[linear-gradient(135deg,#cdb4f3_0%,#a2d2fb_100%)]" />
             </div>
             <h1 className="text-4xl font-black tracking-tight text-[var(--foreground)]">Dreamy</h1>
-            <p className="text-sm font-extrabold text-[var(--foreground)]/80">CardShare 账号登录</p>
+            <p className="text-sm font-extrabold text-[var(--foreground)]/80">CardShare 账号入口</p>
+          </div>
+
+          <div className="mb-6 grid grid-cols-2 gap-2 rounded-2xl border-[3px] border-[var(--outline)] bg-[#f6f8fa] p-1.5">
+            <button
+              type="button"
+              onClick={() => switchMode("login")}
+              className={`rounded-xl px-4 py-2 text-sm font-black transition ${
+                mode === "login"
+                  ? "bg-[var(--button-primary)] text-[var(--foreground)]"
+                  : "text-[var(--foreground)]/70 hover:text-[var(--foreground)]"
+              }`}
+            >
+              登录
+            </button>
+            <button
+              type="button"
+              onClick={() => switchMode("register")}
+              className={`rounded-xl px-4 py-2 text-sm font-black transition ${
+                mode === "register"
+                  ? "bg-[var(--button-primary)] text-[var(--foreground)]"
+                  : "text-[var(--foreground)]/70 hover:text-[var(--foreground)]"
+              }`}
+            >
+              注册
+            </button>
           </div>
 
           {error ? (
@@ -183,13 +238,25 @@ export function AuthPage() {
               icon={<MailIcon className="h-5 w-5" />}
             />
 
+            {mode === "register" ? (
+              <Field
+                label="昵称"
+                placeholder="2-40 个字符"
+                value={nickname}
+                onChange={setNickname}
+                type="text"
+                autoComplete="nickname"
+                icon={<UserIcon className="h-5 w-5" />}
+              />
+            ) : null}
+
             <Field
               label="密码"
               placeholder="请输入密码"
               value={password}
               onChange={setPassword}
               type={showPassword ? "text" : "password"}
-              autoComplete="current-password"
+              autoComplete={mode === "register" ? "new-password" : "current-password"}
               icon={<LockIcon className="h-5 w-5" />}
               trailing={
                 <button
@@ -208,13 +275,19 @@ export function AuthPage() {
               disabled={pending}
               className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-[3px] border-[var(--outline)] bg-[var(--button-primary)] px-5 py-3.5 text-lg font-black text-[var(--foreground)] transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {pending ? "处理中..." : "继续"}
+              {pending ? "处理中..." : mode === "register" ? "立即注册" : "登录"}
               <ArrowRightIcon className="h-5 w-5" />
             </button>
           </form>
 
+          <p className="mt-4 text-center text-xs font-bold text-[var(--foreground)]/65">
+            {mode === "register"
+              ? "注册成功后会自动登录，并默认成为创作者角色。"
+              : "没有账号？切换到“注册”即可创建新账号。"}
+          </p>
+
           <div className="mt-6 flex items-center justify-center gap-4 text-sm font-bold text-[var(--foreground)]/70">
-            <Link href="/" className="transition hover:underline hover:text-[var(--foreground)]">
+            <Link href="/" className="transition hover:text-[var(--foreground)] hover:underline">
               返回首页
             </Link>
           </div>
@@ -240,6 +313,17 @@ function MailIcon({ className = "h-4 w-4" }: { className?: string }) {
     <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
       <path
         d="M4.5 6.75A2.25 2.25 0 0 1 6.75 4.5h10.5a2.25 2.25 0 0 1 2.25 2.25v10.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 17.25V6.75Zm1.5.32v.18l6 4.62 6-4.62v-.18a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75Zm12 1.75-5.54 4.27a.75.75 0 0 1-.92 0L6 8.82v8.43c0 .41.34.75.75.75h10.5c.41 0 .75-.34.75-.75V8.82Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function UserIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <path
+        d="M12 3.75a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9ZM6.75 19.5a5.25 5.25 0 0 1 10.5 0v.75h-1.5v-.75a3.75 3.75 0 0 0-7.5 0v.75h-1.5v-.75Z"
         fill="currentColor"
       />
     </svg>

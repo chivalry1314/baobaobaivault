@@ -62,6 +62,8 @@ var (
 	ErrShareInvalidUserRole     = errors.New("invalid user role")
 	ErrShareSelfRoleDowngrade   = errors.New("cannot downgrade your own role")
 	ErrShareCardAssetRequired   = errors.New("card must keep at least one category file")
+	ErrShareInvalidReviewStatus = errors.New("invalid review status")
+	ErrShareReviewReasonRequired = errors.New("review reason is required")
 )
 
 type ShareService struct {
@@ -120,6 +122,10 @@ type ShareCardView struct {
 	Description      string    `json:"description"`
 	Visibility       string    `json:"visibility"`
 	Status           string    `json:"status"`
+	ReviewStatus     string    `json:"reviewStatus"`
+	ReviewReason     string    `json:"reviewReason"`
+	SubmittedAt      *time.Time `json:"submittedAt,omitempty"`
+	ReviewedAt       *time.Time `json:"reviewedAt,omitempty"`
 	OriginalFileName string    `json:"originalFileName"`
 	MimeType         string    `json:"mimeType"`
 	Size             int64     `json:"size"`
@@ -241,6 +247,16 @@ type ShareUpdateCardInput struct {
 	Description string
 	Visibility  string
 	Status      string
+}
+
+type ShareReviewDashboardItem struct {
+	Card      ShareCardView   `json:"card"`
+	Creator   SharePublicUser `json:"creator"`
+	SubmittedAt *time.Time    `json:"submittedAt,omitempty"`
+}
+
+type ShareReviewDashboard struct {
+	Items []ShareReviewDashboardItem `json:"items"`
 }
 
 type ShareUpdateCardAssetInput struct {
@@ -475,7 +491,11 @@ func (s *ShareService) ListDiscoverCards(ctx context.Context, page, size int) ([
 
 	query := s.db.WithContext(ctx).
 		Model(&model.SharePlatformCard{}).
-		Where("visibility = ? AND status = ?", model.SharePlatformCardVisibilityPublic, model.SharePlatformCardStatusPublished)
+		Where("visibility = ? AND status = ? AND review_status = ?",
+			model.SharePlatformCardVisibilityPublic,
+			model.SharePlatformCardStatusPublished,
+			model.SharePlatformCardReviewStatusApproved,
+		)
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
@@ -531,7 +551,9 @@ func (s *ShareService) ListDashboardByUser(ctx context.Context, userID string) (
 	totalPublic := int64(0)
 	for _, card := range cards {
 		cardIDs = append(cardIDs, card.ID)
-		if card.Visibility == model.SharePlatformCardVisibilityPublic && card.Status == model.SharePlatformCardStatusPublished {
+		if card.Visibility == model.SharePlatformCardVisibilityPublic &&
+			card.Status == model.SharePlatformCardStatusPublished &&
+			card.ReviewStatus == model.SharePlatformCardReviewStatusApproved {
 			totalPublic++
 		}
 	}
@@ -604,7 +626,9 @@ func (s *ShareService) ListAccessCodeDashboardByUser(ctx context.Context, userID
 		cardView := toShareCardView(&card, assetsByCardID[card.ID])
 		config := buildShareCardAccessCodeConfig(&card)
 		hasAccessCode := strings.TrimSpace(config.Code) != ""
-		isPubliclyVisible := card.Visibility == model.SharePlatformCardVisibilityPublic && card.Status == model.SharePlatformCardStatusPublished
+		isPubliclyVisible := card.Visibility == model.SharePlatformCardVisibilityPublic &&
+			card.Status == model.SharePlatformCardStatusPublished &&
+			card.ReviewStatus == model.SharePlatformCardReviewStatusApproved
 		canReuseCurrentAccessCode := hasAccessCode && config.IsActive && isPubliclyVisible
 
 		// Any card without a currently usable public code should be selectable for generating a new code again.
@@ -676,7 +700,7 @@ func (s *ShareService) UpdateUserRole(ctx context.Context, input ShareUpdateUser
 		if err := s.ensureShareManagerRoleTx(tx, operatorID); err != nil {
 			return err
 		}
-		if operatorID == targetUserID && nextRole == model.ShareExternalUserRoleViewer {
+		if operatorID == targetUserID && nextRole != model.ShareExternalUserRoleManager {
 			return ErrShareSelfRoleDowngrade
 		}
 
@@ -700,6 +724,184 @@ func (s *ShareService) UpdateUserRole(ctx context.Context, input ShareUpdateUser
 	}
 
 	view := toShareSessionUser(&updated)
+	return &view, nil
+}
+
+func (s *ShareService) SubmitCardForReview(ctx context.Context, ownerID, cardID string) (*ShareCardView, error) {
+	card, err := s.getCardByOwner(ctx, ownerID, cardID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.ensureShareCreatorRole(ctx, ownerID); err != nil {
+		return nil, err
+	}
+
+	now := time.Now().UTC()
+	card.Status = model.SharePlatformCardStatusPublished
+	card.ReviewStatus = model.SharePlatformCardReviewStatusPending
+	card.SubmittedAt = &now
+	card.ReviewedAt = nil
+	card.ReviewerExternalUserID = nil
+	card.ReviewReason = ""
+	card.UpdatedAt = now
+
+	if err := s.db.WithContext(ctx).Save(card).Error; err != nil {
+		return nil, err
+	}
+
+	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, []string{card.ID})
+	if err != nil {
+		return nil, err
+	}
+	view := toShareCardView(card, assetsByCardID[card.ID])
+	return &view, nil
+}
+
+func (s *ShareService) ListReviewDashboard(ctx context.Context, operatorID, status string) (*ShareReviewDashboard, error) {
+	if err := s.ensureShareManagerRole(ctx, operatorID); err != nil {
+		return nil, err
+	}
+
+	query := s.db.WithContext(ctx).Model(&model.SharePlatformCard{})
+	normalized := normalizeShareReviewStatus(status)
+	if normalized != "" {
+		if !isValidShareReviewStatus(normalized) {
+			return nil, ErrShareInvalidReviewStatus
+		}
+		query = query.Where("review_status = ?", normalized)
+	} else {
+		query = query.Where("review_status IN ?", []string{
+			model.SharePlatformCardReviewStatusPending,
+			model.SharePlatformCardReviewStatusRejected,
+		})
+	}
+
+	cards := make([]model.SharePlatformCard, 0, 128)
+	if err := query.Order("submitted_at DESC NULLS LAST, updated_at DESC").Find(&cards).Error; err != nil {
+		return nil, err
+	}
+	if len(cards) == 0 {
+		return &ShareReviewDashboard{Items: []ShareReviewDashboardItem{}}, nil
+	}
+
+	cardIDs := collectShareCardIDs(cards)
+	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, cardIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	creatorIDs := make([]string, 0, len(cards))
+	creatorSet := make(map[string]struct{}, len(cards))
+	for _, card := range cards {
+		if _, ok := creatorSet[card.CreatorExternalUserID]; ok {
+			continue
+		}
+		creatorSet[card.CreatorExternalUserID] = struct{}{}
+		creatorIDs = append(creatorIDs, card.CreatorExternalUserID)
+	}
+	creators := make([]model.ShareExternalUser, 0, len(creatorIDs))
+	if err := s.db.WithContext(ctx).Where("id IN ?", creatorIDs).Find(&creators).Error; err != nil {
+		return nil, err
+	}
+	creatorMap := make(map[string]model.ShareExternalUser, len(creators))
+	for _, creator := range creators {
+		creatorMap[creator.ID] = creator
+	}
+
+	items := make([]ShareReviewDashboardItem, 0, len(cards))
+	for _, card := range cards {
+		creator := creatorMap[card.CreatorExternalUserID]
+		items = append(items, ShareReviewDashboardItem{
+			Card:       toShareCardView(&card, assetsByCardID[card.ID]),
+			Creator:    toSharePublicUser(&creator),
+			SubmittedAt: card.SubmittedAt,
+		})
+	}
+	return &ShareReviewDashboard{Items: items}, nil
+}
+
+func (s *ShareService) ApproveCard(ctx context.Context, operatorID, cardID string) (*ShareCardView, error) {
+	if err := s.ensureShareManagerRole(ctx, operatorID); err != nil {
+		return nil, err
+	}
+
+	var updated model.SharePlatformCard
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var card model.SharePlatformCard
+		if err := tx.First(&card, "id = ?", strings.TrimSpace(cardID)).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrShareCardNotFound
+			}
+			return err
+		}
+		now := time.Now().UTC()
+		card.Status = model.SharePlatformCardStatusPublished
+		card.ReviewStatus = model.SharePlatformCardReviewStatusApproved
+		card.ReviewReason = ""
+		card.SubmittedAt = &now
+		card.ReviewedAt = &now
+		op := strings.TrimSpace(operatorID)
+		card.ReviewerExternalUserID = &op
+		card.UpdatedAt = now
+		if err := tx.Save(&card).Error; err != nil {
+			return err
+		}
+		updated = card
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, []string{updated.ID})
+	if err != nil {
+		return nil, err
+	}
+	view := toShareCardView(&updated, assetsByCardID[updated.ID])
+	return &view, nil
+}
+
+func (s *ShareService) RejectCard(ctx context.Context, operatorID, cardID, reason string) (*ShareCardView, error) {
+	if err := s.ensureShareManagerRole(ctx, operatorID); err != nil {
+		return nil, err
+	}
+	reason = strings.TrimSpace(reason)
+	if reason == "" {
+		return nil, ErrShareReviewReasonRequired
+	}
+
+	var updated model.SharePlatformCard
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var card model.SharePlatformCard
+		if err := tx.First(&card, "id = ?", strings.TrimSpace(cardID)).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrShareCardNotFound
+			}
+			return err
+		}
+		now := time.Now().UTC()
+		card.Status = model.SharePlatformCardStatusDraft
+		card.ReviewStatus = model.SharePlatformCardReviewStatusRejected
+		card.ReviewReason = reason
+		card.ReviewedAt = &now
+		op := strings.TrimSpace(operatorID)
+		card.ReviewerExternalUserID = &op
+		card.UpdatedAt = now
+		if err := tx.Save(&card).Error; err != nil {
+			return err
+		}
+		updated = card
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, []string{updated.ID})
+	if err != nil {
+		return nil, err
+	}
+	view := toShareCardView(&updated, assetsByCardID[updated.ID])
 	return &view, nil
 }
 
@@ -826,7 +1028,7 @@ func (s *ShareService) CreateCard(ctx context.Context, input ShareCreateCardInpu
 	if userCount == 0 {
 		return nil, ErrShareUserNotFound
 	}
-	if err := s.ensureShareManagerRole(ctx, input.CreatorID); err != nil {
+	if err := s.ensureShareCreatorRole(ctx, input.CreatorID); err != nil {
 		return nil, err
 	}
 
@@ -856,6 +1058,11 @@ func (s *ShareService) CreateCard(ctx context.Context, input ShareCreateCardInpu
 		Description:           strings.TrimSpace(input.Description),
 		Visibility:            normalizeShareVisibility(input.Visibility),
 		Status:                status,
+		ReviewStatus:          defaultReviewStatusForStatus(status),
+		SubmittedAt:           defaultSubmittedAtForReviewStatus(defaultReviewStatusForStatus(status)),
+		ReviewedAt:            nil,
+		ReviewReason:          "",
+		ReviewerExternalUserID: nil,
 		StoredFileName:        coverStoredFileName,
 		OriginalFileName:      coverFileName,
 		MimeType:              coverMimeType,
@@ -929,7 +1136,7 @@ func (s *ShareService) CreateCardBundle(ctx context.Context, input ShareCreateCa
 	if creator.Status != model.ShareExternalUserStatusActive {
 		return nil, ErrShareUserNotFound
 	}
-	if !isShareManagerRole(creator.Role) {
+	if !isShareCreatorRole(creator.Role) {
 		return nil, ErrShareForbiddenRole
 	}
 
@@ -983,6 +1190,11 @@ func (s *ShareService) CreateCardBundle(ctx context.Context, input ShareCreateCa
 		Description:           strings.TrimSpace(input.Description),
 		Visibility:            normalizeShareVisibility(input.Visibility),
 		Status:                status,
+		ReviewStatus:          defaultReviewStatusForStatus(status),
+		SubmittedAt:           defaultSubmittedAtForReviewStatus(defaultReviewStatusForStatus(status)),
+		ReviewedAt:            nil,
+		ReviewReason:          "",
+		ReviewerExternalUserID: nil,
 		StoredFileName:        coverStoredFileName,
 		OriginalFileName:      coverFileName,
 		MimeType:              coverMimeType,
@@ -1051,7 +1263,7 @@ func (s *ShareService) UpdateCardByOwner(ctx context.Context, input ShareUpdateC
 		if card.CreatorExternalUserID != strings.TrimSpace(input.OwnerID) {
 			return ErrShareCardForbidden
 		}
-		if err := s.ensureShareManagerRoleTx(tx, card.CreatorExternalUserID); err != nil {
+		if err := s.ensureShareCreatorRoleTx(tx, card.CreatorExternalUserID); err != nil {
 			return err
 		}
 
@@ -1059,6 +1271,19 @@ func (s *ShareService) UpdateCardByOwner(ctx context.Context, input ShareUpdateC
 		card.Description = strings.TrimSpace(input.Description)
 		card.Visibility = normalizeShareVisibility(input.Visibility)
 		card.Status = status
+		if card.Status == model.SharePlatformCardStatusPublished {
+			card.ReviewStatus = model.SharePlatformCardReviewStatusPending
+			now := time.Now().UTC()
+			card.SubmittedAt = &now
+			card.ReviewedAt = nil
+			card.ReviewerExternalUserID = nil
+		} else {
+			card.ReviewStatus = model.SharePlatformCardReviewStatusUnsubmitted
+			card.SubmittedAt = nil
+			card.ReviewedAt = nil
+			card.ReviewerExternalUserID = nil
+		}
+		card.ReviewReason = ""
 		card.UpdatedAt = time.Now().UTC()
 
 		if err := tx.Save(&card).Error; err != nil {
@@ -1112,8 +1337,16 @@ func (s *ShareService) ReplaceCardAssetByOwner(ctx context.Context, input ShareU
 		if card.CreatorExternalUserID != ownerID {
 			return ErrShareCardForbidden
 		}
-		if err := s.ensureShareManagerRoleTx(tx, card.CreatorExternalUserID); err != nil {
+		if err := s.ensureShareCreatorRoleTx(tx, card.CreatorExternalUserID); err != nil {
 			return err
+		}
+		now := time.Now().UTC()
+		if card.Status == model.SharePlatformCardStatusPublished {
+			card.ReviewStatus = model.SharePlatformCardReviewStatusPending
+			card.SubmittedAt = &now
+			card.ReviewedAt = nil
+			card.ReviewerExternalUserID = nil
+			card.ReviewReason = ""
 		}
 
 		var asset model.SharePlatformCardAsset
@@ -1132,7 +1365,16 @@ func (s *ShareService) ReplaceCardAssetByOwner(ctx context.Context, input ShareU
 					return err
 				}
 				card.UpdatedAt = time.Now().UTC()
-				return tx.Model(&model.SharePlatformCard{}).Where("id = ?", card.ID).Update("updated_at", card.UpdatedAt).Error
+				return tx.Model(&model.SharePlatformCard{}).
+					Where("id = ?", card.ID).
+					Updates(map[string]any{
+						"updated_at":                card.UpdatedAt,
+						"review_status":             card.ReviewStatus,
+						"submitted_at":              card.SubmittedAt,
+						"reviewed_at":               card.ReviewedAt,
+						"review_reason":             card.ReviewReason,
+						"reviewer_external_user_id": card.ReviewerExternalUserID,
+					}).Error
 			}
 			return err
 		}
@@ -1149,7 +1391,16 @@ func (s *ShareService) ReplaceCardAssetByOwner(ctx context.Context, input ShareU
 		}
 
 		card.UpdatedAt = time.Now().UTC()
-		return tx.Model(&model.SharePlatformCard{}).Where("id = ?", card.ID).Update("updated_at", card.UpdatedAt).Error
+		return tx.Model(&model.SharePlatformCard{}).
+			Where("id = ?", card.ID).
+			Updates(map[string]any{
+				"updated_at":               card.UpdatedAt,
+				"review_status":            card.ReviewStatus,
+				"submitted_at":             card.SubmittedAt,
+				"reviewed_at":              card.ReviewedAt,
+				"review_reason":            card.ReviewReason,
+				"reviewer_external_user_id": card.ReviewerExternalUserID,
+			}).Error
 	})
 	if err != nil {
 		_ = s.removeStoredFile(ownerID, storedFileName)
@@ -1202,8 +1453,16 @@ func (s *ShareService) ReplaceCardCoverByOwner(
 		if card.CreatorExternalUserID != ownerID {
 			return ErrShareCardForbidden
 		}
-		if err := s.ensureShareManagerRoleTx(tx, card.CreatorExternalUserID); err != nil {
+		if err := s.ensureShareCreatorRoleTx(tx, card.CreatorExternalUserID); err != nil {
 			return err
+		}
+		now := time.Now().UTC()
+		if card.Status == model.SharePlatformCardStatusPublished {
+			card.ReviewStatus = model.SharePlatformCardReviewStatusPending
+			card.SubmittedAt = &now
+			card.ReviewedAt = nil
+			card.ReviewerExternalUserID = nil
+			card.ReviewReason = ""
 		}
 
 		oldStoredFileName = strings.TrimSpace(card.StoredFileName)
@@ -1212,7 +1471,20 @@ func (s *ShareService) ReplaceCardCoverByOwner(
 		card.MimeType = normalizedMimeType
 		card.Size = fileSize
 		card.UpdatedAt = time.Now().UTC()
-		return tx.Save(&card).Error
+		return tx.Model(&model.SharePlatformCard{}).
+			Where("id = ?", card.ID).
+			Updates(map[string]any{
+				"stored_file_name":          card.StoredFileName,
+				"original_file_name":        card.OriginalFileName,
+				"mime_type":                 card.MimeType,
+				"size":                      card.Size,
+				"updated_at":                card.UpdatedAt,
+				"review_status":             card.ReviewStatus,
+				"submitted_at":              card.SubmittedAt,
+				"reviewed_at":               card.ReviewedAt,
+				"review_reason":             card.ReviewReason,
+				"reviewer_external_user_id": card.ReviewerExternalUserID,
+			}).Error
 	})
 	if err != nil {
 		_ = s.removeStoredFile(ownerID, storedFileName)
@@ -1244,8 +1516,16 @@ func (s *ShareService) DeleteCardCoverByOwner(ctx context.Context, ownerID, card
 		if card.CreatorExternalUserID != ownerID {
 			return ErrShareCardForbidden
 		}
-		if err := s.ensureShareManagerRoleTx(tx, card.CreatorExternalUserID); err != nil {
+		if err := s.ensureShareCreatorRoleTx(tx, card.CreatorExternalUserID); err != nil {
 			return err
+		}
+		now := time.Now().UTC()
+		if card.Status == model.SharePlatformCardStatusPublished {
+			card.ReviewStatus = model.SharePlatformCardReviewStatusPending
+			card.SubmittedAt = &now
+			card.ReviewedAt = nil
+			card.ReviewerExternalUserID = nil
+			card.ReviewReason = ""
 		}
 
 		storedFileName = strings.TrimSpace(card.StoredFileName)
@@ -1254,7 +1534,20 @@ func (s *ShareService) DeleteCardCoverByOwner(ctx context.Context, ownerID, card
 		card.MimeType = ""
 		card.Size = 0
 		card.UpdatedAt = time.Now().UTC()
-		return tx.Save(&card).Error
+		return tx.Model(&model.SharePlatformCard{}).
+			Where("id = ?", card.ID).
+			Updates(map[string]any{
+				"stored_file_name":          card.StoredFileName,
+				"original_file_name":        card.OriginalFileName,
+				"mime_type":                 card.MimeType,
+				"size":                      card.Size,
+				"updated_at":                card.UpdatedAt,
+				"review_status":             card.ReviewStatus,
+				"submitted_at":              card.SubmittedAt,
+				"reviewed_at":               card.ReviewedAt,
+				"review_reason":             card.ReviewReason,
+				"reviewer_external_user_id": card.ReviewerExternalUserID,
+			}).Error
 	})
 	if err != nil {
 		return nil, err
@@ -1289,8 +1582,16 @@ func (s *ShareService) DeleteCardAssetByOwner(ctx context.Context, ownerID, card
 		if card.CreatorExternalUserID != ownerID {
 			return ErrShareCardForbidden
 		}
-		if err := s.ensureShareManagerRoleTx(tx, card.CreatorExternalUserID); err != nil {
+		if err := s.ensureShareCreatorRoleTx(tx, card.CreatorExternalUserID); err != nil {
 			return err
+		}
+		now := time.Now().UTC()
+		if card.Status == model.SharePlatformCardStatusPublished {
+			card.ReviewStatus = model.SharePlatformCardReviewStatusPending
+			card.SubmittedAt = &now
+			card.ReviewedAt = nil
+			card.ReviewerExternalUserID = nil
+			card.ReviewReason = ""
 		}
 
 		var asset model.SharePlatformCardAsset
@@ -1314,7 +1615,16 @@ func (s *ShareService) DeleteCardAssetByOwner(ctx context.Context, ownerID, card
 			return err
 		}
 		card.UpdatedAt = time.Now().UTC()
-		return tx.Model(&model.SharePlatformCard{}).Where("id = ?", card.ID).Update("updated_at", card.UpdatedAt).Error
+		return tx.Model(&model.SharePlatformCard{}).
+			Where("id = ?", card.ID).
+			Updates(map[string]any{
+				"updated_at":                card.UpdatedAt,
+				"review_status":             card.ReviewStatus,
+				"submitted_at":              card.SubmittedAt,
+				"reviewed_at":               card.ReviewedAt,
+				"review_reason":             card.ReviewReason,
+				"reviewer_external_user_id": card.ReviewerExternalUserID,
+			}).Error
 	})
 	if err != nil {
 		return nil, err
@@ -1330,7 +1640,7 @@ func (s *ShareService) GetCardAccessCodeByOwner(ctx context.Context, ownerID, ca
 	if err != nil {
 		return nil, err
 	}
-	if err := s.ensureShareManagerRole(ctx, ownerID); err != nil {
+	if err := s.ensureShareCreatorRole(ctx, ownerID); err != nil {
 		return nil, err
 	}
 
@@ -1343,8 +1653,11 @@ func (s *ShareService) UpdateCardAccessCodeByOwner(ctx context.Context, input Sh
 	if err != nil {
 		return nil, err
 	}
-	if err := s.ensureShareManagerRole(ctx, input.OwnerID); err != nil {
+	if err := s.ensureShareCreatorRole(ctx, input.OwnerID); err != nil {
 		return nil, err
+	}
+	if card.ReviewStatus != model.SharePlatformCardReviewStatusApproved {
+		return nil, ErrShareCardForbidden
 	}
 
 	normalizedCode := normalizeShareAccessCode(input.Code)
@@ -1387,7 +1700,7 @@ func (s *ShareService) DeleteCardAccessCodeByOwner(ctx context.Context, ownerID,
 	if err != nil {
 		return err
 	}
-	if err := s.ensureShareManagerRole(ctx, ownerID); err != nil {
+	if err := s.ensureShareCreatorRole(ctx, ownerID); err != nil {
 		return err
 	}
 
@@ -1417,7 +1730,7 @@ func (s *ShareService) DeleteCardByOwner(ctx context.Context, ownerID, cardID st
 		if card.CreatorExternalUserID != ownerID {
 			return ErrShareCardForbidden
 		}
-		if err := s.ensureShareManagerRoleTx(tx, card.CreatorExternalUserID); err != nil {
+		if err := s.ensureShareCreatorRoleTx(tx, card.CreatorExternalUserID); err != nil {
 			return err
 		}
 
@@ -1469,13 +1782,25 @@ func (s *ShareService) GetCardDetail(ctx context.Context, cardID, viewerUserID s
 	}
 
 	viewerUserID = strings.TrimSpace(viewerUserID)
+	isManager := false
+	if viewerUserID != "" {
+		var viewer model.ShareExternalUser
+		if err := s.db.WithContext(ctx).First(&viewer, "id = ?", viewerUserID).Error; err == nil {
+			isManager = isShareManagerRole(viewer.Role)
+		}
+	}
 	canEdit := viewerUserID != "" && viewerUserID == card.CreatorExternalUserID
-	canView := canEdit || (card.Visibility == model.SharePlatformCardVisibilityPublic && card.Status == model.SharePlatformCardStatusPublished)
+	canView := canEdit || (card.Visibility == model.SharePlatformCardVisibilityPublic &&
+		card.Status == model.SharePlatformCardStatusPublished &&
+		card.ReviewStatus == model.SharePlatformCardReviewStatusApproved)
+	if isManager {
+		canView = true
+	}
 	if !canView {
 		return nil, ErrShareCardForbidden
 	}
-	accessCodeStatus := deriveShareCardAccessStatus(&card, canEdit)
-	canDownload := canEdit || accessCodeStatus == ShareCardAccessStatusNone || accessCodeStatus == ShareCardAccessStatusRequired
+	accessCodeStatus := deriveShareCardAccessStatus(&card, canEdit || isManager)
+	canDownload := canEdit || isManager || accessCodeStatus == ShareCardAccessStatusNone || accessCodeStatus == ShareCardAccessStatusRequired
 
 	assets, err := s.listCardAssetsByCardID(ctx, card.ID)
 	if err != nil {
@@ -1517,7 +1842,19 @@ func (s *ShareService) CanAccessCardFile(ctx context.Context, cardID, viewerUser
 	}
 
 	viewerUserID = strings.TrimSpace(viewerUserID)
-	canAccess := viewerUserID == card.CreatorExternalUserID || (card.Visibility == model.SharePlatformCardVisibilityPublic && card.Status == model.SharePlatformCardStatusPublished)
+	isManager := false
+	if viewerUserID != "" {
+		var viewer model.ShareExternalUser
+		if err := s.db.WithContext(ctx).First(&viewer, "id = ?", viewerUserID).Error; err == nil {
+			isManager = isShareManagerRole(viewer.Role)
+		}
+	}
+	canAccess := viewerUserID == card.CreatorExternalUserID || (card.Visibility == model.SharePlatformCardVisibilityPublic &&
+		card.Status == model.SharePlatformCardStatusPublished &&
+		card.ReviewStatus == model.SharePlatformCardReviewStatusApproved)
+	if isManager {
+		canAccess = true
+	}
 	if !canAccess {
 		return nil, nil, ErrShareCardForbidden
 	}
@@ -1542,7 +1879,19 @@ func (s *ShareService) CanAccessCardCover(ctx context.Context, cardID, viewerUse
 	}
 
 	viewerUserID = strings.TrimSpace(viewerUserID)
-	canAccess := viewerUserID == card.CreatorExternalUserID || (card.Visibility == model.SharePlatformCardVisibilityPublic && card.Status == model.SharePlatformCardStatusPublished)
+	isManager := false
+	if viewerUserID != "" {
+		var viewer model.ShareExternalUser
+		if err := s.db.WithContext(ctx).First(&viewer, "id = ?", viewerUserID).Error; err == nil {
+			isManager = isShareManagerRole(viewer.Role)
+		}
+	}
+	canAccess := viewerUserID == card.CreatorExternalUserID || (card.Visibility == model.SharePlatformCardVisibilityPublic &&
+		card.Status == model.SharePlatformCardStatusPublished &&
+		card.ReviewStatus == model.SharePlatformCardReviewStatusApproved)
+	if isManager {
+		canAccess = true
+	}
 	if !canAccess {
 		return nil, ErrShareCardForbidden
 	}
@@ -1574,10 +1923,22 @@ func (s *ShareService) CanDownloadCardAsset(ctx context.Context, cardID, viewerU
 	}
 
 	viewerUserID = strings.TrimSpace(viewerUserID)
+	isManager := false
+	if viewerUserID != "" {
+		var viewer model.ShareExternalUser
+		if err := s.db.WithContext(ctx).First(&viewer, "id = ?", viewerUserID).Error; err == nil {
+			isManager = isShareManagerRole(viewer.Role)
+		}
+	}
 	if viewerUserID != "" && viewerUserID == card.CreatorExternalUserID {
 		return &card, asset, false, nil
 	}
-	if card.Visibility != model.SharePlatformCardVisibilityPublic || card.Status != model.SharePlatformCardStatusPublished {
+	if isManager {
+		return &card, asset, false, nil
+	}
+	if card.Visibility != model.SharePlatformCardVisibilityPublic ||
+		card.Status != model.SharePlatformCardStatusPublished ||
+		card.ReviewStatus != model.SharePlatformCardReviewStatusApproved {
 		return nil, nil, false, ErrShareCardForbidden
 	}
 
@@ -1943,6 +2304,34 @@ func (s *ShareService) ensureShareManagerRoleTx(tx *gorm.DB, userID string) erro
 	return nil
 }
 
+func (s *ShareService) ensureShareCreatorRole(ctx context.Context, userID string) error {
+	var user model.ShareExternalUser
+	if err := s.db.WithContext(ctx).First(&user, "id = ?", strings.TrimSpace(userID)).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrShareUserNotFound
+		}
+		return err
+	}
+	if !isShareCreatorRole(user.Role) {
+		return ErrShareForbiddenRole
+	}
+	return nil
+}
+
+func (s *ShareService) ensureShareCreatorRoleTx(tx *gorm.DB, userID string) error {
+	var user model.ShareExternalUser
+	if err := tx.First(&user, "id = ?", strings.TrimSpace(userID)).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrShareUserNotFound
+		}
+		return err
+	}
+	if !isShareCreatorRole(user.Role) {
+		return ErrShareForbiddenRole
+	}
+	return nil
+}
+
 func (s *ShareService) removeStoredFile(userID, storedName string) error {
 	path := s.getStoredFilePath(userID, storedName)
 	if path == "" {
@@ -2004,7 +2393,7 @@ func (s *ShareService) defaultRoleByEmail(email string) string {
 	if _, ok := s.managerEmailAllow[strings.ToLower(strings.TrimSpace(email))]; ok {
 		return model.ShareExternalUserRoleManager
 	}
-	return model.ShareExternalUserRoleViewer
+	return model.ShareExternalUserRoleCreator
 }
 
 func (s *ShareService) ensureManagerRoleByEmailIfNeeded(ctx context.Context, user *model.ShareExternalUser) error {
@@ -2218,12 +2607,15 @@ func normalizeShareExternalUserRole(value string) string {
 	if value == model.ShareExternalUserRoleManager {
 		return model.ShareExternalUserRoleManager
 	}
+	if value == model.ShareExternalUserRoleCreator {
+		return model.ShareExternalUserRoleCreator
+	}
 	return model.ShareExternalUserRoleViewer
 }
 
 func isValidShareExternalUserRole(value string) bool {
 	switch normalizeShareExternalUserRole(value) {
-	case model.ShareExternalUserRoleViewer, model.ShareExternalUserRoleManager:
+	case model.ShareExternalUserRoleViewer, model.ShareExternalUserRoleCreator, model.ShareExternalUserRoleManager:
 		return true
 	default:
 		return false
@@ -2287,6 +2679,11 @@ func isShareManagerRole(role string) bool {
 	return strings.EqualFold(strings.TrimSpace(role), model.ShareExternalUserRoleManager)
 }
 
+func isShareCreatorRole(role string) bool {
+	normalized := normalizeShareExternalUserRole(role)
+	return normalized == model.ShareExternalUserRoleCreator || normalized == model.ShareExternalUserRoleManager
+}
+
 func isValidShareStatus(value string) bool {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case model.SharePlatformCardStatusDraft, model.SharePlatformCardStatusPublished, model.SharePlatformCardStatusArchived:
@@ -2294,6 +2691,37 @@ func isValidShareStatus(value string) bool {
 	default:
 		return false
 	}
+}
+
+func normalizeShareReviewStatus(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
+}
+
+func isValidShareReviewStatus(value string) bool {
+	switch normalizeShareReviewStatus(value) {
+	case model.SharePlatformCardReviewStatusUnsubmitted,
+		model.SharePlatformCardReviewStatusPending,
+		model.SharePlatformCardReviewStatusApproved,
+		model.SharePlatformCardReviewStatusRejected:
+		return true
+	default:
+		return false
+	}
+}
+
+func defaultReviewStatusForStatus(status string) string {
+	if strings.EqualFold(strings.TrimSpace(status), model.SharePlatformCardStatusPublished) {
+		return model.SharePlatformCardReviewStatusPending
+	}
+	return model.SharePlatformCardReviewStatusUnsubmitted
+}
+
+func defaultSubmittedAtForReviewStatus(reviewStatus string) *time.Time {
+	if strings.EqualFold(strings.TrimSpace(reviewStatus), model.SharePlatformCardReviewStatusPending) {
+		now := time.Now().UTC()
+		return &now
+	}
+	return nil
 }
 
 func normalizeShareAccessCode(value string) string {
@@ -2460,6 +2888,10 @@ func toShareCardView(card *model.SharePlatformCard, assets []model.SharePlatform
 		Description:      card.Description,
 		Visibility:       card.Visibility,
 		Status:           card.Status,
+		ReviewStatus:     normalizeShareReviewStatus(card.ReviewStatus),
+		ReviewReason:     strings.TrimSpace(card.ReviewReason),
+		SubmittedAt:      card.SubmittedAt,
+		ReviewedAt:       card.ReviewedAt,
 		OriginalFileName: primaryFileName,
 		MimeType:         primaryMimeType,
 		Size:             primarySize,

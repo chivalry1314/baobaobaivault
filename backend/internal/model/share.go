@@ -14,6 +14,7 @@ const (
 	ShareExternalUserStatusLocked   = "locked"
 
 	ShareExternalUserRoleViewer  = "viewer"
+	ShareExternalUserRoleCreator = "creator"
 	ShareExternalUserRoleManager = "manager"
 
 	SharePlatformCardVisibilityPrivate = "private"
@@ -22,6 +23,11 @@ const (
 	SharePlatformCardStatusDraft     = "draft"
 	SharePlatformCardStatusPublished = "published"
 	SharePlatformCardStatusArchived  = "archived"
+
+	SharePlatformCardReviewStatusUnsubmitted = "unsubmitted"
+	SharePlatformCardReviewStatusPending     = "pending"
+	SharePlatformCardReviewStatusApproved    = "approved"
+	SharePlatformCardReviewStatusRejected    = "rejected"
 )
 
 // ShareExternalUser is the platform-level account for sharefrontend users.
@@ -76,6 +82,11 @@ type SharePlatformCard struct {
 	Description           string         `gorm:"type:text;default:''" json:"description"`
 	Visibility            string         `gorm:"type:varchar(20);not null;default:'private';index" json:"visibility"`
 	Status                string         `gorm:"type:varchar(20);not null;default:'published';index" json:"status"`
+	ReviewStatus          string         `gorm:"type:varchar(20);not null;default:'unsubmitted';index" json:"review_status"`
+	ReviewReason          string         `gorm:"type:text;default:''" json:"review_reason"`
+	ReviewerExternalUserID *string       `gorm:"type:uuid;index" json:"reviewer_external_user_id,omitempty"`
+	SubmittedAt           *time.Time     `json:"submitted_at,omitempty"`
+	ReviewedAt            *time.Time     `json:"reviewed_at,omitempty"`
 	AccessCode            string         `gorm:"type:varchar(64);default:''" json:"access_code"`
 	AccessCodeExpiresAt   *time.Time     `json:"access_code_expires_at,omitempty"`
 	AccessCodeUsageLimit  int            `gorm:"not null;default:0" json:"access_code_usage_limit"`

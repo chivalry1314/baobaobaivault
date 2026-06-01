@@ -1,3 +1,6 @@
+export type ShareUserRole = "viewer" | "creator" | "manager";
+export type ShareReviewStatus = "unsubmitted" | "pending" | "approved" | "rejected";
+
 export type ExternalSessionUser = {
   id: string;
   email: string;
@@ -7,7 +10,7 @@ export type ExternalSessionUser = {
   bio: string;
   coverImage: string;
   phone: string;
-  role: "viewer" | "manager";
+  role: ShareUserRole;
   createdAt: string;
 };
 
@@ -16,7 +19,7 @@ export type ShareUserRoleManageItem = {
   email: string;
   username: string;
   nickname: string;
-  role: "viewer" | "manager";
+  role: ShareUserRole;
   status: string;
   createdAt: string;
 };
@@ -39,6 +42,10 @@ export type PlatformCard = {
   description: string;
   visibility: "private" | "public";
   status: "draft" | "published" | "archived";
+  reviewStatus: ShareReviewStatus;
+  reviewReason: string;
+  submittedAt?: string | null;
+  reviewedAt?: string | null;
   originalFileName: string;
   mimeType: string;
   size: number;
@@ -86,6 +93,11 @@ export type ContinueAuthResponse = {
   user: ExternalSessionUser;
 };
 
+export type AuthResponse = {
+  ok: true;
+  user: ExternalSessionUser;
+};
+
 export type DashboardCard = {
   card: PlatformCard;
   stats: CardStats;
@@ -116,6 +128,16 @@ export type AccessCodeDashboardResponse = {
   user: ExternalSessionUser;
   items: AccessCodeDashboardItem[];
   availableCards: PlatformCard[];
+};
+
+export type ReviewDashboardItem = {
+  card: PlatformCard;
+  creator: PublicCreator;
+  submittedAt?: string | null;
+};
+
+export type ReviewDashboardResponse = {
+  items: ReviewDashboardItem[];
 };
 
 export type CardDetailResponse = {

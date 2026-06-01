@@ -2,13 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AuthRedirect } from "@/components/share/auth-redirect";
 import { PaginationControls } from "@/components/share/pagination-controls";
@@ -27,12 +21,10 @@ function formatDate(value: string | null | undefined) {
   if (!value) {
     return "--";
   }
-
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return "--";
   }
-
   return new Intl.DateTimeFormat("zh-CN", {
     year: "numeric",
     month: "2-digit",
@@ -45,7 +37,6 @@ function formatUid(raw: string) {
   if (digits.length >= 6) {
     return digits.slice(0, 6);
   }
-
   let hash = 0;
   for (const char of raw) {
     hash = (hash * 31 + char.charCodeAt(0)) % 900000;
@@ -61,7 +52,6 @@ function formatMetricValue(value: number) {
   if (value < 1000) {
     return String(value);
   }
-
   return new Intl.NumberFormat("en", {
     notation: "compact",
     maximumFractionDigits: 1,
@@ -75,12 +65,10 @@ function getDisplayName(user: ExternalSessionUser) {
   if (nickname) {
     return nickname;
   }
-
   const username = user.username.trim();
   if (username) {
     return username;
   }
-
   return user.email.split("@")[0]?.trim() || "Card Share";
 }
 
@@ -89,7 +77,6 @@ function getInitials(name: string) {
   if (!clean) {
     return "CS";
   }
-
   return Array.from(clean).slice(0, 2).join("").toUpperCase();
 }
 
@@ -97,12 +84,10 @@ function getUserTagline(user: ExternalSessionUser | null) {
   if (!user) {
     return "";
   }
-
   const bio = user.bio.trim();
   if (bio) {
     return bio;
   }
-
   return "在 Card Share 展示你的创作，让更多人看见你的灵感。";
 }
 
@@ -114,11 +99,9 @@ function getCardRank(item: DashboardCard) {
   if (item.stats.downloadCount >= 50) {
     return { label: "SSR", className: "bg-[#ffe06f] text-[#6d3a00]" };
   }
-
   if (item.stats.downloadCount >= 10) {
     return { label: "SR", className: "bg-[#f4c7df] text-[#6c3756]" };
   }
-
   return { label: "R", className: "bg-[#d4f0ff] text-[#255d72]" };
 }
 
@@ -137,43 +120,37 @@ function getStatusLabel(value: PlatformCard["status"]) {
   }
 }
 
+function getReviewStatusLabel(value: PlatformCard["reviewStatus"]) {
+  switch (value) {
+    case "pending":
+      return "待审核";
+    case "approved":
+      return "已通过";
+    case "rejected":
+      return "已驳回";
+    default:
+      return "未提交";
+  }
+}
+
 function defaultCardDescription(card: PlatformCard) {
   const text = card.description.trim();
   if (text) {
     return text;
   }
-
   return "这张卡片还没有填写描述，点击管理可补充详情。";
 }
 
-function Avatar({
-  user,
-  size = "lg",
-}: {
-  user: ExternalSessionUser;
-  size?: "sm" | "lg";
-}) {
+function Avatar({ user, size = "lg" }: { user: ExternalSessionUser; size?: "sm" | "lg" }) {
   const name = getDisplayName(user);
   const dimension = size === "sm" ? "h-14 w-14" : "h-28 w-28";
   const inner = size === "sm" ? "text-lg" : "text-3xl";
 
   if (user.avatar.trim()) {
-    return (
-      <img
-        src={user.avatar}
-        alt={name}
-        className={`${dimension} rounded-full object-cover shadow-[0_16px_36px_-24px_rgba(120,85,94,0.5)]`}
-      />
-    );
+    return <img src={user.avatar} alt={name} className={`${dimension} rounded-full object-cover shadow-[0_16px_36px_-24px_rgba(120,85,94,0.5)]`} />;
   }
 
-  return (
-    <div
-      className={`${dimension} btn-subtle flex items-center justify-center rounded-full font-black shadow-[0_16px_36px_-24px_rgba(55,98,120,0.35)] ${inner}`}
-    >
-      {getInitials(name)}
-    </div>
-  );
+  return <div className={`${dimension} btn-subtle flex items-center justify-center rounded-full font-black shadow-[0_16px_36px_-24px_rgba(55,98,120,0.35)] ${inner}`}>{getInitials(name)}</div>;
 }
 
 function SidebarButton({
@@ -190,11 +167,8 @@ function SidebarButton({
   children: ReactNode;
 }) {
   const className = `flex w-full items-center gap-3 rounded-full px-5 py-4 text-base font-black transition ${
-    active
-      ? "btn-subtle text-[var(--primary)] shadow-[0_18px_36px_-26px_rgba(57,124,153,0.35)]"
-      : "text-[var(--foreground)]/74 hover:bg-white/78 hover:text-[var(--primary)]"
+    active ? "btn-subtle text-[var(--primary)] shadow-[0_18px_36px_-26px_rgba(57,124,153,0.35)]" : "text-[var(--foreground)]/74 hover:bg-white/78 hover:text-[var(--primary)]"
   }`;
-
   if (href) {
     return (
       <Link href={href} className={className}>
@@ -203,7 +177,6 @@ function SidebarButton({
       </Link>
     );
   }
-
   return (
     <button type="button" onClick={onClick} className={className}>
       {icon}
@@ -212,46 +185,12 @@ function SidebarButton({
   );
 }
 
-function TabButton({
-  active,
-  children,
-  onClick,
-}: {
-  active: boolean;
-  children: ReactNode;
-  onClick: () => void;
-}) {
+function TabButton({ active, children, onClick }: { active: boolean; children: ReactNode; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`type-h3 border-b-2 pb-4 transition ${
-        active
-          ? "border-[var(--primary)] text-[var(--foreground)]"
-          : "border-transparent text-[var(--text-muted)] hover:text-[var(--foreground)]"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function ToggleChip({
-  active,
-  children,
-  onClick,
-}: {
-  active: boolean;
-  children: ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-full px-4 py-2 text-sm font-black transition ${
-        active ? "btn-primary text-[var(--foreground)]" : "btn-subtle text-[var(--foreground)]/72"
-      }`}
+      className={`type-h3 border-b-2 pb-4 transition ${active ? "border-[var(--primary)] text-[var(--foreground)]" : "border-transparent text-[var(--text-muted)] hover:text-[var(--foreground)]"}`}
     >
       {children}
     </button>
@@ -281,11 +220,7 @@ function EmptyState({
         </Link>
       ) : null}
       {actionLabel && onAction ? (
-        <button
-          type="button"
-          onClick={onAction}
-          className="btn-primary mt-6 rounded-full px-6 py-3 text-sm font-black"
-        >
+        <button type="button" onClick={onAction} className="btn-primary mt-6 rounded-full px-6 py-3 text-sm font-black">
           {actionLabel}
         </button>
       ) : null}
@@ -293,11 +228,7 @@ function EmptyState({
   );
 }
 
-function CreatorCard({
-  item,
-}: {
-  item: DashboardCard;
-}) {
+function CreatorCard({ item }: { item: DashboardCard }) {
   const rank = getCardRank(item);
   const editHref = `/creator/cards/${encodeURIComponent(item.card.id)}/edit`;
   const accessCodeHref = `/creator/cards/${encodeURIComponent(item.card.id)}/access-code`;
@@ -310,11 +241,8 @@ function CreatorCard({
         {isImageCard(item.card) ? (
           <img src={item.card.previewUrl} alt={item.card.title} className="h-[212px] w-full object-cover" />
         ) : (
-          <div className="flex h-[212px] items-center justify-center bg-[linear-gradient(135deg,#382129_0%,#71545c_100%)] text-lg font-black text-white/92">
-            {item.card.title}
-          </div>
+          <div className="flex h-[212px] items-center justify-center bg-[linear-gradient(135deg,#382129_0%,#71545c_100%)] px-4 text-center text-lg font-black text-white/92">{item.card.title}</div>
         )}
-
         <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-sm font-black ${rank.className}`}>{rank.label}</span>
         <span className="dream-chip absolute right-4 top-4 flex h-10 w-10 items-center justify-center text-[var(--primary)]">
           <HeartIcon className="h-5 w-5" />
@@ -328,7 +256,10 @@ function CreatorCard({
               {item.card.title}
             </Link>
           </div>
-          <span className="dream-chip px-3 py-1 text-xs text-[var(--foreground)]/62">{getVisibilityLabel(item.card.visibility)}</span>
+          <div className="flex flex-wrap justify-end gap-2">
+            <span className="dream-chip px-3 py-1 text-xs text-[var(--foreground)]/62">{getVisibilityLabel(item.card.visibility)}</span>
+            <span className="dream-chip px-3 py-1 text-xs text-[var(--foreground)]/62">{getReviewStatusLabel(item.card.reviewStatus)}</span>
+          </div>
         </div>
         <p className="type-body-sm mt-2 line-clamp-2 min-h-[3rem] text-[var(--foreground)]/72">{defaultCardDescription(item.card)}</p>
       </div>
@@ -337,26 +268,21 @@ function CreatorCard({
         <div className="dream-panel-soft px-3.5 py-3">
           {hasInlineAccessCode ? (
             <div className="flex items-center justify-between gap-3">
-              <code className="max-w-[70%] truncate rounded-full border border-[var(--outline-variant)] bg-white/65 px-3 py-1 text-sm font-black tracking-[0.12em] text-[var(--primary)]">
-                {accessCode}
-              </code>
+              <code className="max-w-[70%] truncate rounded-full border border-[var(--outline-variant)] bg-white/65 px-3 py-1 text-sm font-black tracking-[0.12em] text-[var(--primary)]">{accessCode}</code>
               <Link href={accessCodeHref} className="btn-subtle shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-black text-[var(--primary)]">
                 去管理
               </Link>
             </div>
           ) : (
-            <>
-              <div className="text-[11px] uppercase tracking-[0.24em] text-[var(--text-subtle)]">提取码状态</div>
-              <div className="mt-2.5 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="type-body-sm tracking-[0.06em] text-[var(--primary)]">未配置</div>
-                  <div className="mt-1 text-xs text-[var(--text-subtle)]">点击右侧按钮进入提取码管理</div>
-                </div>
-                <Link href={accessCodeHref} className="btn-subtle shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-black text-[var(--primary)]">
-                  去管理
-                </Link>
+            <div className="mt-2.5 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="type-body-sm tracking-[0.06em] text-[var(--primary)]">未配置</div>
+                <div className="mt-1 text-xs text-[var(--text-subtle)]">点击右侧按钮进入提取码管理</div>
               </div>
-            </>
+              <Link href={accessCodeHref} className="btn-subtle shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-black text-[var(--primary)]">
+                去管理
+              </Link>
+            </div>
           )}
         </div>
       </div>
@@ -364,14 +290,8 @@ function CreatorCard({
   );
 }
 
-function HistoryItem({
-  item,
-}: {
-  item: DashboardCard;
-}) {
+function HistoryItem({ item }: { item: DashboardCard }) {
   const editHref = `/creator/cards/${encodeURIComponent(item.card.id)}/edit`;
-  const accessCodeHref = `/creator/cards/${encodeURIComponent(item.card.id)}/access-code`;
-
   return (
     <article className="dream-panel-soft flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-center gap-4">
@@ -388,7 +308,7 @@ function HistoryItem({
             {item.card.title}
           </Link>
           <p className="mt-2 text-sm leading-7 text-[var(--foreground)]/62">
-            更新时间：{formatDate(item.card.updatedAt)}，当前状态：{getStatusLabel(item.card.status)}
+            更新时间：{formatDate(item.card.updatedAt)}，当前状态：{getStatusLabel(item.card.status)} / {getReviewStatusLabel(item.card.reviewStatus)}
           </p>
           <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--text-muted)]">
             <span className="dream-chip px-3 py-1">{getVisibilityLabel(item.card.visibility)}</span>
@@ -397,13 +317,6 @@ function HistoryItem({
           </div>
         </div>
       </div>
-
-      <Link
-        href={accessCodeHref}
-        className="btn-subtle min-w-[7.5rem] shrink-0 whitespace-nowrap rounded-full px-5 py-2.5 text-center text-sm font-black text-[var(--primary)] sm:min-w-[8.5rem]"
-      >
-        管理提取码
-      </Link>
     </article>
   );
 }
@@ -414,14 +327,12 @@ export function CreatorStudio() {
   const [currentUser, setCurrentUser] = useState<ExternalSessionUser | null>(null);
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [loadError, setLoadError] = useState("");
-
   const [activeSection, setActiveSection] = useState<ActiveSection>("dashboard");
   const [activeTab, setActiveTab] = useState<ActiveTab>("cards");
   const [cardsPage, setCardsPage] = useState(1);
   const [historyPage, setHistoryPage] = useState(1);
 
   const cards = useMemo(() => dashboard?.cards ?? [], [dashboard?.cards]);
-
   const displayName = useMemo(() => (currentUser ? getDisplayName(currentUser) : ""), [currentUser]);
 
   const accountLabel = useMemo(() => {
@@ -442,11 +353,7 @@ export function CreatorStudio() {
   );
 
   const historyItems = useMemo(() => {
-    return [...cards].sort((left, right) => {
-      const leftTime = new Date(left.card.updatedAt).getTime();
-      const rightTime = new Date(right.card.updatedAt).getTime();
-      return rightTime - leftTime;
-    });
+    return [...cards].sort((left, right) => new Date(right.card.updatedAt).getTime() - new Date(left.card.updatedAt).getTime());
   }, [cards]);
 
   const cardsTotalPages = useMemo(() => Math.max(1, Math.ceil(cards.length / CARDS_PAGE_SIZE)), [cards.length]);
@@ -481,7 +388,6 @@ export function CreatorStudio() {
     if (!currentUser?.coverImage.trim()) {
       return undefined;
     }
-
     return {
       backgroundImage: `linear-gradient(135deg,rgba(255,255,255,0.84) 0%,rgba(232,247,252,0.76) 52%,rgba(244,251,255,0.88) 100%), url(${currentUser.coverImage})`,
       backgroundSize: "cover",
@@ -490,10 +396,7 @@ export function CreatorStudio() {
   }, [currentUser]);
 
   const loadDashboard = useCallback(async () => {
-    const [cardsPayload, accessCodesPayload] = await Promise.all([
-      shareApi.myCards(),
-      shareApi.myAccessCodes().catch(() => null),
-    ]);
+    const [cardsPayload, accessCodesPayload] = await Promise.all([shareApi.myCards(), shareApi.myAccessCodes().catch(() => null)]);
 
     const activeAccessCodeByCardId = new Map<string, string>();
     const hasConfiguredAccessCodeCardIds = new Set<string>();
@@ -509,7 +412,7 @@ export function CreatorStudio() {
       }
     }
 
-    const cards = cardsPayload.cards.map((cardItem) => {
+    const mergedCards = cardsPayload.cards.map((cardItem) => {
       const mergedCode = activeAccessCodeByCardId.get(cardItem.card.id) ?? "";
       const hasConfiguredCode = hasConfiguredAccessCodeCardIds.has(cardItem.card.id) || cardItem.hasAccessCode;
       return {
@@ -520,7 +423,7 @@ export function CreatorStudio() {
     });
 
     setCurrentUser(cardsPayload.user);
-    setDashboard({ ...cardsPayload, cards });
+    setDashboard({ ...cardsPayload, cards: mergedCards });
     setLoadError("");
   }, []);
 
@@ -533,29 +436,26 @@ export function CreatorStudio() {
         if (!active) {
           return;
         }
-
         if (!session.authenticated || !session.user) {
           setCurrentUser(null);
           setDashboard(null);
           return;
         }
-
         setCurrentUser(session.user);
-
         try {
           await loadDashboard();
         } catch (error) {
           if (!active) {
             return;
           }
-          setLoadError(getShareErrorMessage(error, "加载创作者中心失败，请稍后重试"));
+          setLoadError(getShareErrorMessage(error, "加载创作中心失败，请稍后重试。"));
           setDashboard(null);
         }
       } catch (error) {
         if (!active) {
           return;
         }
-        setLoadError(getShareErrorMessage(error, "会话验证失败，请刷新页面后重试"));
+        setLoadError(getShareErrorMessage(error, "会话校验失败，请刷新页面后重试。"));
         setCurrentUser(null);
         setDashboard(null);
       } finally {
@@ -566,7 +466,6 @@ export function CreatorStudio() {
     }
 
     void bootstrap();
-
     return () => {
       active = false;
     };
@@ -598,9 +497,7 @@ export function CreatorStudio() {
   if (sessionChecking) {
     return (
       <div className="min-h-screen bg-[var(--background)] px-4 py-10 sm:px-6">
-        <div className="dream-panel mx-auto max-w-7xl px-6 py-14 text-center text-[var(--foreground)]/72">
-          正在加载创作者中心...
-        </div>
+        <div className="dream-panel mx-auto max-w-7xl px-6 py-14 text-center text-[var(--foreground)]/72">正在加载创作中心...</div>
       </div>
     );
   }
@@ -639,17 +536,18 @@ export function CreatorStudio() {
                 <SidebarButton href="/creator/access-codes" icon={<KeyIcon className="h-5 w-5" />}>
                   提取码管理
                 </SidebarButton>
+                {currentUser.role === "manager" ? (
+                  <SidebarButton href="/creator/reviews" icon={<ReviewIcon className="h-5 w-5" />}>
+                    审核中心
+                  </SidebarButton>
+                ) : null}
                 <SidebarButton active={activeSection === "settings"} onClick={() => setActiveSection("settings")} icon={<SettingsIcon className="h-5 w-5" />}>
                   个人资料设置
                 </SidebarButton>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="btn-subtle rounded-full px-4 py-3 text-sm font-black text-[var(--foreground)]/68 lg:mt-auto"
-            >
+            <button type="button" onClick={handleLogout} className="btn-subtle rounded-full px-4 py-3 text-sm font-black text-[var(--foreground)]/68 lg:mt-auto">
               退出登录
             </button>
           </div>
@@ -672,20 +570,11 @@ export function CreatorStudio() {
                   className="relative overflow-hidden rounded-[36px] bg-[linear-gradient(135deg,rgba(255,255,255,0.94) 0%,rgba(233,247,252,0.86) 52%,rgba(246,252,255,0.95) 100%)] px-6 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-12"
                   style={heroSurfaceStyle}
                 >
-                  <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-                    <div className="absolute left-[-2%] top-[-12%] h-44 w-44 rounded-full bg-[rgba(177,232,249,0.48)] blur-[36px]" />
-                    <div className="absolute right-[18%] top-[8%] h-28 w-28 rounded-full bg-[rgba(214,236,250,0.55)] blur-[24px]" />
-                    <div className="absolute bottom-[10%] right-[14%] h-36 w-36 rounded-full bg-[rgba(243,251,255,0.72)] blur-[34px]" />
-                  </div>
-
                   <div className="relative flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
                     <div className="flex flex-col gap-6 sm:flex-row sm:items-end">
-                      <div className="relative shrink-0">
-                        <div className="rounded-full border-[6px] border-white/90 bg-white/85 p-1 shadow-[0_22px_54px_-34px_rgba(120,85,94,0.45)]">
-                          <Avatar user={currentUser} />
-                        </div>
+                      <div className="rounded-full border-[6px] border-white/90 bg-white/85 p-1 shadow-[0_22px_54px_-34px_rgba(120,85,94,0.45)]">
+                        <Avatar user={currentUser} />
                       </div>
-
                       <div className="max-w-2xl">
                         <p className="type-overline text-[var(--primary)]/55">Card Share</p>
                         <h1 className="type-hero mt-3 text-[var(--foreground)]">{displayName}</h1>
@@ -747,33 +636,15 @@ export function CreatorStudio() {
                             <CreatorCard key={item.card.id} item={item} />
                           ))}
                         </div>
-                        <PaginationControls
-                          page={cardsPage}
-                          totalPages={cardsTotalPages}
-                          onPageChange={(nextPage) =>
-                            setCardsPage(
-                              Math.min(Math.max(nextPage, 1), cardsTotalPages),
-                            )
-                          }
-                        />
+                        <PaginationControls page={cardsPage} totalPages={cardsTotalPages} onPageChange={(nextPage) => setCardsPage(Math.min(Math.max(nextPage, 1), cardsTotalPages))} />
                       </div>
                     ) : (
-                      <EmptyState
-                        title="还没有卡片内容"
-                        description="点击右上角新建卡片，上传素材并填写描述后即可开始分享。"
-                        actionLabel="创建第一张卡片"
-                        onAction={openCreatePanel}
-                      />
+                      <EmptyState title="还没有卡片内容" description="点击右上角新建卡片，上传素材并填写描述后即可开始分享。" actionLabel="创建第一张卡片" onAction={openCreatePanel} />
                     )
                   ) : null}
 
                   {activeTab === "collections" ? (
-                    <EmptyState
-                      title="收藏功能即将上线"
-                      description="你很快可以在这里管理收藏的卡片内容，先去首页浏览更多作品吧。"
-                      actionLabel="前往首页"
-                      actionHref="/"
-                    />
+                    <EmptyState title="收藏功能即将上线" description="你很快可以在这里管理收藏的卡片内容，先去首页浏览更多作品吧。" actionLabel="前往首页" actionHref="/" />
                   ) : null}
 
                   {activeTab === "history" ? (
@@ -784,23 +655,10 @@ export function CreatorStudio() {
                             <HistoryItem key={item.card.id} item={item} />
                           ))}
                         </div>
-                        <PaginationControls
-                          page={historyPage}
-                          totalPages={historyTotalPages}
-                          onPageChange={(nextPage) =>
-                            setHistoryPage(
-                              Math.min(Math.max(nextPage, 1), historyTotalPages),
-                            )
-                          }
-                        />
+                        <PaginationControls page={historyPage} totalPages={historyTotalPages} onPageChange={(nextPage) => setHistoryPage(Math.min(Math.max(nextPage, 1), historyTotalPages))} />
                       </div>
                     ) : (
-                      <EmptyState
-                        title="暂无更新记录"
-                        description="当你创建或编辑卡片后，这里会展示最近的更新时间线。"
-                        actionLabel="去创建卡片"
-                        onAction={openCreatePanel}
-                      />
+                      <EmptyState title="暂无更新记录" description="当你创建或编辑卡片后，这里会展示最近的更新时间线。" actionLabel="去创建卡片" onAction={openCreatePanel} />
                     )
                   ) : null}
                 </div>
@@ -870,6 +728,17 @@ function PlusIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
       <path d="M11.25 5.25h1.5v5.25h5.25v1.5h-5.25v5.25h-1.5V12h-5.25v-1.5h5.25V5.25Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function ReviewIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <path
+        d="M6.75 3.75h10.5A2.25 2.25 0 0 1 19.5 6v12a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 18V6a2.25 2.25 0 0 1 2.25-2.25Zm0 1.5a.75.75 0 0 0-.75.75v12c0 .41.34.75.75.75h10.5a.75.75 0 0 0 .75-.75V6a.75.75 0 0 0-.75-.75H6.75Zm1.5 3h7.5v1.5h-7.5v-1.5Zm0 3.75h7.5v1.5h-7.5V12Zm0 3.75h4.5v1.5h-4.5v-1.5Z"
+        fill="currentColor"
+      />
     </svg>
   );
 }
