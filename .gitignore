@@ -8,3 +8,5 @@ config.local.yaml
 .env
 .codex/*
 backend/storage/*
+sharefrontend/.dev-err.log
+sharefrontend/.dev-out.log

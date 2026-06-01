@@ -1,4 +1,4 @@
-import CardDetailClientPage from "./card-detail-client-page";
+import CardDetailClientPage from "@/components/share/card-detail";
 
 export default async function CardDetailPage({
   params,

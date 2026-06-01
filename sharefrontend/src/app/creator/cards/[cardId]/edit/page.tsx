@@ -1,4 +1,4 @@
-import { ShareCardEditor } from "@/components/share/share-card-editor";
+﻿import { ShareCardEditor } from "@/components/share/card-editor";
 
 export default async function CreatorCardEditPage({
   params,

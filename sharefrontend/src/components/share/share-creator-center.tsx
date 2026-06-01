@@ -1,5 +1,1 @@
-import { ShareCardEditor } from "@/components/share/share-card-editor";
-
-export function ShareCreatorCenter() {
-  return <ShareCardEditor mode="create" />;
-}
+export { ShareCreatorCenter } from "@/components/share/creator-center/index";

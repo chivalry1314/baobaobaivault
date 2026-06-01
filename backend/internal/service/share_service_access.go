@@ -1,0 +1,271 @@
+package service
+
+import (
+	"context"
+	"errors"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/baobaobai/baobaobaivault/internal/model"
+	"gorm.io/gorm"
+)
+
+func (s *ShareService) GetCardDetail(ctx context.Context, cardID, viewerUserID string) (*ShareCardDetail, error) {
+	var card model.SharePlatformCard
+	if err := s.db.WithContext(ctx).First(&card, "id = ?", strings.TrimSpace(cardID)).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrShareCardNotFound
+		}
+		return nil, err
+	}
+
+	viewerUserID = strings.TrimSpace(viewerUserID)
+	isManager := false
+	if viewerUserID != "" {
+		var viewer model.ShareExternalUser
+		if err := s.db.WithContext(ctx).First(&viewer, "id = ?", viewerUserID).Error; err == nil {
+			isManager = isShareManagerRole(viewer.Role)
+		}
+	}
+	canEdit := viewerUserID != "" && viewerUserID == card.CreatorExternalUserID
+	canView := canEdit || (card.Visibility == model.SharePlatformCardVisibilityPublic &&
+		card.Status == model.SharePlatformCardStatusPublished &&
+		card.ReviewStatus == model.SharePlatformCardReviewStatusApproved)
+	if isManager {
+		canView = true
+	}
+	if !canView {
+		return nil, ErrShareCardForbidden
+	}
+	accessCodeStatus := deriveShareCardAccessStatus(&card, canEdit || isManager)
+	canDownload := canEdit || isManager || accessCodeStatus == ShareCardAccessStatusNone || accessCodeStatus == ShareCardAccessStatusRequired
+
+	assets, err := s.listCardAssetsByCardID(ctx, card.ID)
+	if err != nil {
+		return nil, err
+	}
+	assetsView := buildShareCardAssetViews(card.ID, assets)
+
+	var creator model.ShareExternalUser
+	if err := s.db.WithContext(ctx).First(&creator, "id = ?", card.CreatorExternalUserID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrShareUserNotFound
+		}
+		return nil, err
+	}
+
+	statsByCard, _, err := s.aggregateStatsByCard(ctx, []string{card.ID})
+	if err != nil {
+		return nil, err
+	}
+
+	return &ShareCardDetail{
+		Card:             toShareCardView(&card, assets),
+		Creator:          toSharePublicUser(&creator),
+		Stats:            statsByCard[card.ID],
+		Assets:           assetsView,
+		CanEdit:          canEdit,
+		CanDownload:      canDownload,
+		AccessCodeStatus: accessCodeStatus,
+	}, nil
+}
+
+func (s *ShareService) CanAccessCardFile(ctx context.Context, cardID, viewerUserID string) (*model.SharePlatformCard, *model.SharePlatformCardAsset, error) {
+	var card model.SharePlatformCard
+	if err := s.db.WithContext(ctx).First(&card, "id = ?", strings.TrimSpace(cardID)).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil, ErrShareCardNotFound
+		}
+		return nil, nil, err
+	}
+
+	viewerUserID = strings.TrimSpace(viewerUserID)
+	isManager := false
+	if viewerUserID != "" {
+		var viewer model.ShareExternalUser
+		if err := s.db.WithContext(ctx).First(&viewer, "id = ?", viewerUserID).Error; err == nil {
+			isManager = isShareManagerRole(viewer.Role)
+		}
+	}
+	canAccess := viewerUserID == card.CreatorExternalUserID || (card.Visibility == model.SharePlatformCardVisibilityPublic &&
+		card.Status == model.SharePlatformCardStatusPublished &&
+		card.ReviewStatus == model.SharePlatformCardReviewStatusApproved)
+	if isManager {
+		canAccess = true
+	}
+	if !canAccess {
+		return nil, nil, ErrShareCardForbidden
+	}
+
+	asset, err := s.pickPreviewAssetByCardID(ctx, card.ID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil, ErrShareCardNotFound
+		}
+		return nil, nil, err
+	}
+	return &card, asset, nil
+}
+
+func (s *ShareService) CanAccessCardCover(ctx context.Context, cardID, viewerUserID string) (*model.SharePlatformCard, error) {
+	var card model.SharePlatformCard
+	if err := s.db.WithContext(ctx).First(&card, "id = ?", strings.TrimSpace(cardID)).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrShareCardNotFound
+		}
+		return nil, err
+	}
+
+	viewerUserID = strings.TrimSpace(viewerUserID)
+	isManager := false
+	if viewerUserID != "" {
+		var viewer model.ShareExternalUser
+		if err := s.db.WithContext(ctx).First(&viewer, "id = ?", viewerUserID).Error; err == nil {
+			isManager = isShareManagerRole(viewer.Role)
+		}
+	}
+	canAccess := viewerUserID == card.CreatorExternalUserID || (card.Visibility == model.SharePlatformCardVisibilityPublic &&
+		card.Status == model.SharePlatformCardStatusPublished &&
+		card.ReviewStatus == model.SharePlatformCardReviewStatusApproved)
+	if isManager {
+		canAccess = true
+	}
+	if !canAccess {
+		return nil, ErrShareCardForbidden
+	}
+	if strings.TrimSpace(card.StoredFileName) == "" {
+		return nil, ErrShareCardNotFound
+	}
+	return &card, nil
+}
+
+func (s *ShareService) GetCardAssetForPreview(ctx context.Context, cardID, slot string) (*model.SharePlatformCardAsset, error) {
+	return s.getCardAssetBySlot(ctx, cardID, slot)
+}
+
+func (s *ShareService) CanDownloadCardAsset(ctx context.Context, cardID, viewerUserID, accessCode, slot string) (*model.SharePlatformCard, *model.SharePlatformCardAsset, bool, error) {
+	var card model.SharePlatformCard
+	if err := s.db.WithContext(ctx).First(&card, "id = ?", strings.TrimSpace(cardID)).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil, false, ErrShareCardNotFound
+		}
+		return nil, nil, false, err
+	}
+
+	asset, err := s.getCardAssetBySlot(ctx, card.ID, slot)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil, false, ErrShareCardNotFound
+		}
+		return nil, nil, false, err
+	}
+
+	viewerUserID = strings.TrimSpace(viewerUserID)
+	isManager := false
+	if viewerUserID != "" {
+		var viewer model.ShareExternalUser
+		if err := s.db.WithContext(ctx).First(&viewer, "id = ?", viewerUserID).Error; err == nil {
+			isManager = isShareManagerRole(viewer.Role)
+		}
+	}
+	if viewerUserID != "" && viewerUserID == card.CreatorExternalUserID {
+		return &card, asset, false, nil
+	}
+	if isManager {
+		return &card, asset, false, nil
+	}
+	if card.Visibility != model.SharePlatformCardVisibilityPublic ||
+		card.Status != model.SharePlatformCardStatusPublished ||
+		card.ReviewStatus != model.SharePlatformCardReviewStatusApproved {
+		return nil, nil, false, ErrShareCardForbidden
+	}
+
+	switch deriveShareCardAccessStatus(&card, false) {
+	case ShareCardAccessStatusNone:
+		return &card, asset, false, nil
+	case ShareCardAccessStatusExpired:
+		return nil, nil, false, ErrShareAccessCodeExpired
+	case ShareCardAccessStatusExhausted:
+		return nil, nil, false, ErrShareAccessCodeExhausted
+	case ShareCardAccessStatusRequired:
+		normalizedCode := normalizeShareAccessCode(accessCode)
+		if normalizedCode == "" {
+			return nil, nil, false, ErrShareAccessCodeRequired
+		}
+		if normalizedCode != strings.TrimSpace(card.AccessCode) {
+			return nil, nil, false, ErrShareInvalidAccessCode
+		}
+		return &card, asset, true, nil
+	default:
+		return nil, nil, false, ErrShareCardForbidden
+	}
+}
+
+func (s *ShareService) RecordDownload(ctx context.Context, cardID string, downloaderUserID *string, source string, consumeAccessCode bool) error {
+	entry := model.SharePlatformDownloadLog{
+		CardID:                   strings.TrimSpace(cardID),
+		DownloaderExternalUserID: normalizeOptionalID(downloaderUserID),
+		Source:                   strings.TrimSpace(source),
+		DownloadedAt:             time.Now().UTC(),
+	}
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if consumeAccessCode {
+			result := tx.Model(&model.SharePlatformCard{}).
+				Where("id = ?", strings.TrimSpace(cardID)).
+				Where("access_code_usage_limit <= 0 OR access_code_usage_count < access_code_usage_limit").
+				UpdateColumn("access_code_usage_count", gorm.Expr("access_code_usage_count + 1"))
+			if result.Error != nil {
+				return result.Error
+			}
+			if result.RowsAffected == 0 {
+				return ErrShareAccessCodeExhausted
+			}
+		}
+		return tx.Create(&entry).Error
+	})
+}
+
+func (s *ShareService) OpenCardFile(card *model.SharePlatformCard, asset *model.SharePlatformCardAsset) (*os.File, os.FileInfo, error) {
+	path := s.getStoredFilePath(card.CreatorExternalUserID, asset.StoredFileName)
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	stat, err := file.Stat()
+	if err != nil {
+		_ = file.Close()
+		return nil, nil, err
+	}
+	return file, stat, nil
+}
+
+func (s *ShareService) OpenCardCoverFile(card *model.SharePlatformCard) (*os.File, os.FileInfo, error) {
+	path := s.getStoredFilePath(card.CreatorExternalUserID, card.StoredFileName)
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	stat, err := file.Stat()
+	if err != nil {
+		_ = file.Close()
+		return nil, nil, err
+	}
+	return file, stat, nil
+}
+
+func (s *ShareService) OpenProfileAsset(userID, storedFileName string) (*os.File, os.FileInfo, error) {
+	path := s.getProfileAssetPath(userID, storedFileName)
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	stat, err := file.Stat()
+	if err != nil {
+		_ = file.Close()
+		return nil, nil, err
+	}
+
+	return file, stat, nil
+}

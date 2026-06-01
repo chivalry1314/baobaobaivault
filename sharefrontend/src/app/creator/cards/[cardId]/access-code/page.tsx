@@ -1,4 +1,4 @@
-import { ShareCardAccessCode } from "@/components/share/share-card-access-code";
+import { ShareCardAccessCode } from "@/components/share/card-access-code";
 
 export default async function CreatorCardAccessCodePage({
   params,
