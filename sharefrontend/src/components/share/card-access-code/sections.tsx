@@ -67,17 +67,14 @@ export function AccessCodeLoadingSkeleton() {
 }
 
 export function AccessCodeError(props: { message: string }) {
-  const { message } = props;
   return (
     <div className="mx-auto mt-10 max-w-4xl rounded-[28px] border border-[#f3c8ad] bg-[#fff4ec] px-6 py-4 text-sm text-[#9a3412]">
-      {message}
+      {props.message}
     </div>
   );
 }
 
-export function AccessCodeCardPreview(props: {
-  detail: CardDetailResponse;
-}) {
+export function AccessCodeCardPreview(props: { detail: CardDetailResponse }) {
   const { detail } = props;
   return (
     <section className="dream-panel p-6">
@@ -195,7 +192,11 @@ export function AccessCodeFormPanel(props: {
         </div>
       </div>
 
-      <div className={`transition ${isPaid ? "opacity-100" : "pointer-events-none opacity-45"}`}>
+      <div
+        className={`transition ${
+          isPaid ? "opacity-100" : "pointer-events-none opacity-45"
+        }`}
+      >
         <div className="dream-divider mt-10 h-px border-t border-dashed" />
 
         <div className="mt-10">
@@ -232,7 +233,9 @@ export function AccessCodeFormPanel(props: {
         <div className="dream-divider mt-10 h-px border-t border-dashed" />
 
         <div className="mt-10">
-          <h3 className="text-[2rem] font-medium text-[var(--foreground)]">有效期</h3>
+          <h3 className="text-[2rem] font-medium text-[var(--foreground)]">
+            有效期
+          </h3>
 
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {expireOptions.map((option) => {
@@ -266,7 +269,9 @@ export function AccessCodeFormPanel(props: {
 
         <div className="mt-10">
           <div className="flex items-center justify-between gap-4">
-            <h3 className="text-[2rem] font-medium text-[var(--foreground)]">使用次数上限</h3>
+            <h3 className="text-[2rem] font-medium text-[var(--foreground)]">
+              使用次数上限
+            </h3>
 
             <label className="inline-flex items-center gap-3 text-lg text-[var(--foreground)]/68">
               <span>不限次数</span>
@@ -304,7 +309,9 @@ export function AccessCodeFormPanel(props: {
           </div>
 
           {usageText ? (
-            <p className="mt-4 text-base text-[var(--text-muted)]">{usageText}</p>
+            <p className="mt-4 text-base text-[var(--text-muted)]">
+              {usageText}
+            </p>
           ) : null}
         </div>
       </div>
@@ -447,4 +454,3 @@ function StepPill(props: {
     </div>
   );
 }
-

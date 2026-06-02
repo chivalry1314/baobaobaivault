@@ -1,7 +1,10 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 
 import { PaginationControls } from "@/components/share/pagination-controls/index";
-import { formatDateTime, getReviewStatusLabel } from "@/components/share/review-dashboard/helpers";
+import {
+  formatDateTime,
+  getReviewStatusLabel,
+} from "@/components/share/review-dashboard/helpers";
 import type { ReviewFilter } from "@/components/share/review-dashboard/types";
 import type { ReviewDashboardItem } from "@/lib/shared";
 
@@ -23,35 +26,35 @@ export function ReviewHeader() {
 
 export function ReviewFilterBar(props: {
   statusFilter: ReviewFilter;
-  handleFilter: (nextFilter: ReviewFilter) => Promise<void>;
+  handleFilter: (nextFilter: ReviewFilter) => void;
 }) {
   const { statusFilter, handleFilter } = props;
   return (
     <div className="mt-4 flex flex-wrap items-center gap-2">
       <button
         type="button"
-        onClick={() => void handleFilter("")}
+        onClick={() => handleFilter("")}
         className={`rounded-full px-4 py-2 text-xs font-black ${statusFilter === "" ? "btn-primary" : "btn-subtle"}`}
       >
         全部待处理
       </button>
       <button
         type="button"
-        onClick={() => void handleFilter("pending")}
+        onClick={() => handleFilter("pending")}
         className={`rounded-full px-4 py-2 text-xs font-black ${statusFilter === "pending" ? "btn-primary" : "btn-subtle"}`}
       >
         待审核
       </button>
       <button
         type="button"
-        onClick={() => void handleFilter("rejected")}
+        onClick={() => handleFilter("rejected")}
         className={`rounded-full px-4 py-2 text-xs font-black ${statusFilter === "rejected" ? "btn-primary" : "btn-subtle"}`}
       >
         已驳回
       </button>
       <button
         type="button"
-        onClick={() => void handleFilter("approved")}
+        onClick={() => handleFilter("approved")}
         className={`rounded-full px-4 py-2 text-xs font-black ${statusFilter === "approved" ? "btn-primary" : "btn-subtle"}`}
       >
         已通过
@@ -183,5 +186,3 @@ export function ReviewGrid(props: {
     </div>
   );
 }
-
-

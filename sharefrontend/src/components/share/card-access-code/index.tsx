@@ -1,6 +1,5 @@
-﻿"use client";
+"use client";
 
-import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { AppShell } from "@/components/share/app-shell";
@@ -47,13 +46,10 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
     handleSubmit,
   } = useShareCardAccessCode({ cardId, isWizardFlow });
 
-  const footer = useMemo(
-    () => (
-      <footer className="relative z-10 px-6 pb-10 pt-12 text-center text-sm tracking-[0.08em] text-[color-mix(in_srgb,var(--brand)_28%,var(--foreground))]">
-        (c) 2026 CardShare
-      </footer>
-    ),
-    [],
+  const footer = (
+    <footer className="relative z-10 px-6 pb-10 pt-12 text-center text-sm tracking-[0.08em] text-[color-mix(in_srgb,var(--brand)_28%,var(--foreground))]">
+      (c) 2026 CardShare
+    </footer>
   );
 
   if (sessionChecking) {
@@ -115,4 +111,3 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
     </AppShell>
   );
 }
-

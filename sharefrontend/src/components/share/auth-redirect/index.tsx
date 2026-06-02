@@ -1,17 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 
 import { normalizeNextPath } from "@/components/share/auth-redirect/helpers";
 import type { AuthRedirectProps } from "@/components/share/auth-redirect/types";
 
 export function AuthRedirect({ nextPath = "/creator" }: AuthRedirectProps) {
   const normalizedNextPath = normalizeNextPath(nextPath);
-  const loginHref = useMemo(
-    () => `/login?next=${encodeURIComponent(normalizedNextPath)}`,
-    [normalizedNextPath],
-  );
+  const loginHref = `/login?next=${encodeURIComponent(normalizedNextPath)}`;
 
   useEffect(() => {
     window.location.replace(loginHref);

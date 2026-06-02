@@ -1,13 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
 
 import { AccessModeFilterPills } from "@/components/share/access-mode-filter";
 import { AppShell } from "@/components/share/app-shell";
 import { AuthRedirect } from "@/components/share/auth-redirect/index";
 import { useShareAccessCodeDashboard } from "@/components/share/access-code-dashboard/hooks";
-import { AccessCodeCard, BackIcon, CardWithoutCodeRow, EmptyState, PlusIcon, SearchIcon, SparkleIcon } from "@/components/share/access-code-dashboard/sections";
+import {
+  AccessCodeCard,
+  BackIcon,
+  CardWithoutCodeRow,
+  EmptyState,
+  PlusIcon,
+  SearchIcon,
+  SparkleIcon,
+} from "@/components/share/access-code-dashboard/sections";
 import { PaginationControls } from "@/components/share/pagination-controls/index";
 import { UnifiedFooter } from "@/components/share/unified-footer/index";
 
@@ -43,7 +50,7 @@ export function ShareAccessCodeDashboard() {
     handleConfigureAccessCode,
   } = useShareAccessCodeDashboard();
 
-  const footer = useMemo(() => <UnifiedFooter />, []);
+  const footer = <UnifiedFooter />;
 
   if (loading && !dashboard && authenticated) {
     return (
@@ -65,7 +72,10 @@ export function ShareAccessCodeDashboard() {
   return (
     <AppShell currentPath="/creator" footerSlot={footer}>
       <div className="relative overflow-hidden">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+        >
           <div className="absolute left-[-9%] top-[8%] h-[22rem] w-[22rem] rounded-full bg-[rgba(207,243,250,0.5)] blur-[96px]" />
           <div className="absolute right-[-8%] bottom-[10%] h-[22rem] w-[22rem] rounded-full bg-[rgba(249,205,205,0.36)] blur-[96px]" />
         </div>
@@ -83,8 +93,12 @@ export function ShareAccessCodeDashboard() {
               </Link>
 
               <div>
-                <h1 className="text-4xl font-black tracking-tight text-[var(--foreground)] md:text-5xl">提取码管理</h1>
-                <p className="mt-3 text-lg font-bold text-[var(--foreground)]/70">统一查看、复制、停用与恢复每张卡片的提取码。</p>
+                <h1 className="text-4xl font-black tracking-tight text-[var(--foreground)] md:text-5xl">
+                  提取码管理
+                </h1>
+                <p className="mt-3 text-lg font-bold text-[var(--foreground)]/70">
+                  统一查看、复制、停用与恢复每张卡片的提取码。
+                </p>
               </div>
             </div>
           </div>
@@ -92,7 +106,9 @@ export function ShareAccessCodeDashboard() {
           {feedback ? (
             <div
               className={`mb-6 rounded-[20px] border px-5 py-4 text-sm font-bold ${
-                feedback.type === "success" ? "border-[#b8dec8] bg-[#f2fff5] text-[#166534]" : "border-[#f3c8ad] bg-[#fff6ef] text-[#9a3412]"
+                feedback.type === "success"
+                  ? "border-[#b8dec8] bg-[#f2fff5] text-[#166534]"
+                  : "border-[#f3c8ad] bg-[#fff6ef] text-[#9a3412]"
               }`}
             >
               {feedback.message}
@@ -100,7 +116,10 @@ export function ShareAccessCodeDashboard() {
           ) : null}
 
           <div className="relative overflow-hidden rounded-3xl border-[4px] border-[var(--line-strong)] bg-white p-6 shadow-[6px_6px_0px_var(--line-strong)] md:p-8">
-            <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 overflow-hidden"
+            >
               <div className="absolute left-[8%] top-[12%] h-40 w-40 rounded-full bg-[#cff3fa] opacity-45 blur-3xl" />
               <div className="absolute bottom-[10%] right-[9%] h-40 w-40 rounded-full bg-[#f9cdcd] opacity-35 blur-3xl" />
             </div>
@@ -120,9 +139,13 @@ export function ShareAccessCodeDashboard() {
                   </label>
 
                   <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                    <AccessModeFilterPills value={accessModeFilter} onChange={setAccessModeFilter} />
+                    <AccessModeFilterPills
+                      value={accessModeFilter}
+                      onChange={setAccessModeFilter}
+                    />
                     <div className="rounded-full border-[3px] border-[var(--line-strong)] bg-[#fcf1a7] px-4 py-2 text-sm font-black text-[var(--foreground)]">
-                      共 {totalItems} 条，当前第 {Math.min(itemsPage, itemsTotalPages)} / {itemsTotalPages} 页，显示 {pagedItems.length} 条
+                      共 {totalItems} 条，当前第 {Math.min(itemsPage, itemsTotalPages)} /{" "}
+                      {itemsTotalPages} 页，显示 {pagedItems.length} 条
                     </div>
                   </div>
                 </div>
@@ -149,32 +172,53 @@ export function ShareAccessCodeDashboard() {
                       未配置提取码的卡片
                     </div>
                     <div className="rounded-full border-[2px] border-[var(--line-strong)] bg-white px-3 py-1 text-xs font-black text-[var(--foreground)]/76">
-                      共 {cardsWithoutCode.length} 条，当前第 {Math.min(cardsWithoutCodePage, cardsWithoutCodeTotalPages)} / {cardsWithoutCodeTotalPages} 页
+                      共 {cardsWithoutCode.length} 条，当前第{" "}
+                      {Math.min(cardsWithoutCodePage, cardsWithoutCodeTotalPages)} /{" "}
+                      {cardsWithoutCodeTotalPages} 页
                     </div>
                   </div>
                   <div className="space-y-4">
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                       {pagedCardsWithoutCode.map((card) => (
-                        <CardWithoutCodeRow key={card.id} card={card} onConfigureAccessCode={handleConfigureAccessCode} />
+                        <CardWithoutCodeRow
+                          key={card.id}
+                          card={card}
+                          onConfigureAccessCode={handleConfigureAccessCode}
+                        />
                       ))}
                     </div>
                     <PaginationControls
                       page={cardsWithoutCodePage}
                       totalPages={cardsWithoutCodeTotalPages}
-                      onPageChange={(nextPage) => setCardsWithoutCodePage(Math.min(Math.max(nextPage, 1), cardsWithoutCodeTotalPages))}
+                      onPageChange={(nextPage) =>
+                        setCardsWithoutCodePage(
+                          Math.min(
+                            Math.max(nextPage, 1),
+                            cardsWithoutCodeTotalPages,
+                          ),
+                        )
+                      }
                     />
                   </div>
                 </div>
               ) : null}
 
               {!loadError && totalItems === 0 ? (
-                <EmptyState cardsWithoutCode={cardsWithoutCode} onConfigureAccessCode={handleConfigureAccessCode} onCreateCard={handleCreateCard} />
+                <EmptyState
+                  cardsWithoutCode={cardsWithoutCode}
+                  onConfigureAccessCode={handleConfigureAccessCode}
+                  onCreateCard={handleCreateCard}
+                />
               ) : null}
 
               {!loadError && totalItems > 0 && items.length === 0 ? (
                 <div className="rounded-[24px] border-[3px] border-[var(--line-strong)] bg-[#f8fcff] px-6 py-12 text-center">
-                  <h2 className="text-2xl font-black text-[var(--foreground)]">没有匹配到提取码</h2>
-                  <p className="mt-3 text-sm font-bold text-[var(--foreground)]/62">试试更短的关键词，切换免费 / 付费筛选，或清空搜索后查看全部提取码。</p>
+                  <h2 className="text-2xl font-black text-[var(--foreground)]">
+                    没有匹配到提取码
+                  </h2>
+                  <p className="mt-3 text-sm font-bold text-[var(--foreground)]/62">
+                    试试更短的关键词、切换免费/付费筛选，或清空搜索后查看全部提取码。
+                  </p>
                 </div>
               ) : null}
 
@@ -194,7 +238,15 @@ export function ShareAccessCodeDashboard() {
                       />
                     ))}
                   </div>
-                  <PaginationControls page={itemsPage} totalPages={itemsTotalPages} onPageChange={(nextPage) => setItemsPage(Math.min(Math.max(nextPage, 1), itemsTotalPages))} />
+                  <PaginationControls
+                    page={itemsPage}
+                    totalPages={itemsTotalPages}
+                    onPageChange={(nextPage) =>
+                      setItemsPage(
+                        Math.min(Math.max(nextPage, 1), itemsTotalPages),
+                      )
+                    }
+                  />
                 </div>
               ) : null}
             </div>

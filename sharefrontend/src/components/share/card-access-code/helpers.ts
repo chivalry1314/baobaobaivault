@@ -9,7 +9,7 @@ import type { ExpireOption } from "@/components/share/card-access-code/types";
 export const expireOptions: ExpireOption[] = [
   { value: 1, label: "1 天", description: "短期时效分享" },
   { value: 7, label: "7 天", description: "推荐有效期" },
-  { value: 0, label: "永久", description: "不限到期时间" },
+  { value: 0, label: "永久", description: "不限制到期时间" },
 ];
 
 export function getDisplayName(
@@ -75,10 +75,10 @@ export function getUsageHelperText(config: CardAccessCodeConfig | null) {
   if (!config?.isActive) {
     return "";
   }
+
   const usage = `当前提取码已使用 ${config.usageCount} 次。`;
   if (config.expiresAt) {
     return `${usage} 到期时间：${formatDateTime(config.expiresAt)}`;
   }
   return `${usage} 当前为永久有效。`;
 }
-

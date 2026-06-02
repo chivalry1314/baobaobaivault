@@ -37,9 +37,10 @@ export function toRows(cards: HomeFeedCard[], columnCount: number) {
   if (cards.length === 0) {
     return [] as HomeFeedCard[][];
   }
+
   const rows: HomeFeedCard[][] = [];
-  for (let i = 0; i < cards.length; i += columnCount) {
-    rows.push(cards.slice(i, i + columnCount));
+  for (let index = 0; index < cards.length; index += columnCount) {
+    rows.push(cards.slice(index, index + columnCount));
   }
   return rows;
 }
@@ -50,8 +51,9 @@ export function toHomeFeedCards(cards: DiscoverCardItem[]): HomeFeedCard[] {
     const descriptionText = item.card.description || "创作者暂未填写描述。";
     const creatorName = item.creator.nickname || item.creator.username || "Creator";
 
-    const tags = (item.card.categories ?? []).filter((slot): slot is CardContentSlot =>
-      CATEGORY_SLOTS.includes(slot as (typeof CATEGORY_SLOTS)[number]),
+    const tags = (item.card.categories ?? []).filter(
+      (slot): slot is CardContentSlot =>
+        CATEGORY_SLOTS.includes(slot as (typeof CATEGORY_SLOTS)[number]),
     );
 
     return {

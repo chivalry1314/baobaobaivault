@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { ShareSessionProvider } from "@/components/share/session-provider";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,7 +16,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN" className="antialiased" data-scroll-behavior="smooth">
-      <body>{children}</body>
+      <body>
+        <ShareSessionProvider>{children}</ShareSessionProvider>
+      </body>
     </html>
   );
 }

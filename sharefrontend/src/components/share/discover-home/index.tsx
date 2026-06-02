@@ -1,7 +1,5 @@
 "use client";
 
-import type { VirtualItem, Virtualizer } from "@tanstack/react-virtual";
-
 import { AppShell } from "@/components/share/app-shell";
 import { useDiscoverHome } from "@/components/share/discover-home/hooks";
 import {
@@ -15,12 +13,9 @@ import {
   DiscoverSearchBar,
   DiscoverVirtualRows,
 } from "@/components/share/discover-home/sections";
-import type { HomeFeedCard } from "@/components/share/discover-home/types";
-import type { FilterChip } from "@/components/share/discover-home/constants";
+import type { DiscoverHomeProps } from "@/components/share/discover-home/types";
 
-type RowVirtualizer = Virtualizer<Window, Element>;
-
-export function DiscoverHome() {
+export function DiscoverHome({ initialDiscover }: DiscoverHomeProps) {
   const {
     query,
     setQuery,
@@ -45,42 +40,47 @@ export function DiscoverHome() {
     showNoResult,
     skeletonCount,
     resetFilters,
-  } = useDiscoverHome();
-
-  const typedVirtualRows = virtualRows as VirtualItem[];
-  const typedRowVirtualizer = rowVirtualizer as RowVirtualizer;
-  const typedCardRows = cardRows as HomeFeedCard[][];
-  const typedSetQuery = setQuery as (value: string) => void;
-  const typedSetActiveChip = setActiveChip as (chip: FilterChip) => void;
+  } = useDiscoverHome({ initialDiscover });
 
   return (
     <AppShell currentPath="/">
       <section className="relative z-10 mx-auto mt-3 w-full max-w-[var(--layout-max)] px-4 pb-6 md:px-6">
         <main className="mt-4 w-full">
           <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-6 xl:mx-0">
-            <DiscoverSearchBar query={query} setQuery={typedSetQuery} />
-            <DiscoverChips activeChip={activeChip} setActiveChip={typedSetActiveChip} />
-            <DiscoverAccessModeFilters value={accessModeFilter} onChange={setAccessModeFilter} />
+            <DiscoverSearchBar query={query} setQuery={setQuery} />
+            <DiscoverChips
+              activeChip={activeChip}
+              setActiveChip={setActiveChip}
+            />
+            <DiscoverAccessModeFilters
+              value={accessModeFilter}
+              onChange={setAccessModeFilter}
+            />
 
             {error ? <DiscoverError error={error} /> : null}
 
             <div ref={virtualListRef}>
               {showInitialSkeleton ? (
-                <DiscoverGridSkeleton columnCount={columnCount} skeletonCount={skeletonCount} />
+                <DiscoverGridSkeleton
+                  columnCount={columnCount}
+                  skeletonCount={skeletonCount}
+                />
               ) : showNoResult ? (
                 <DiscoverNoResult onReset={resetFilters} />
               ) : (
                 <DiscoverVirtualRows
                   columnCount={columnCount}
                   totalHeight={totalHeight}
-                  virtualRows={typedVirtualRows}
-                  rowVirtualizer={typedRowVirtualizer}
-                  cardRows={typedCardRows}
+                  virtualRows={virtualRows}
+                  rowVirtualizer={rowVirtualizer}
+                  cardRows={cardRows}
                 />
               )}
             </div>
 
-            {loadingMore ? <DiscoverLoadingMore columnCount={columnCount} /> : null}
+            {loadingMore ? (
+              <DiscoverLoadingMore columnCount={columnCount} />
+            ) : null}
 
             <DiscoverMetrics
               loading={loading}

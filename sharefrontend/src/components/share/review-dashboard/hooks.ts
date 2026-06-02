@@ -1,12 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { REVIEW_PAGE_SIZE, type ReviewFilter } from "@/components/share/review-dashboard/types";
+import { useShareSession } from "@/components/share/session-provider";
+import {
+  REVIEW_PAGE_SIZE,
+  type ReviewFilter,
+} from "@/components/share/review-dashboard/types";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
-import type { ExternalSessionUser, ReviewDashboardItem } from "@/lib/shared";
+import type { ReviewDashboardItem } from "@/lib/shared";
 
 export function useShareReviewDashboard() {
-  const [sessionChecking, setSessionChecking] = useState(true);
-  const [currentUser, setCurrentUser] = useState<ExternalSessionUser | null>(null);
+  const { user: currentUser, sessionChecking } = useShareSession();
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<ReviewDashboardItem[]>([]);
   const [loadError, setLoadError] = useState("");
@@ -15,48 +18,32 @@ export function useShareReviewDashboard() {
   const [pendingCardId, setPendingCardId] = useState("");
   const [page, setPage] = useState(1);
 
-  async function loadReviews(nextFilter: ReviewFilter) {
+  const loadReviews = useCallback(async (nextFilter: ReviewFilter) => {
     setLoading(true);
     setLoadError("");
+
     try {
       const payload = await shareApi.adminReviews(nextFilter || undefined);
       setItems(payload.items);
       setPage(1);
     } catch (error) {
-      setLoadError(getShareErrorMessage(error, "加载审核列表失败，请稍后重试。"));
+      setLoadError(
+        getShareErrorMessage(error, "加载审核列表失败，请稍后重试。"),
+      );
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    let active = true;
-    async function bootstrap() {
-      try {
-        const session = await shareApi.session();
-        if (!active) {
-          return;
-        }
-        if (!session.authenticated || !session.user) {
-          setCurrentUser(null);
-          return;
-        }
-        setCurrentUser(session.user);
-        if (session.user.role !== "manager") {
-          return;
-        }
-        await loadReviews(statusFilter);
-      } finally {
-        if (active) {
-          setSessionChecking(false);
-        }
-      }
+    if (!currentUser || currentUser.role !== "manager") {
+      setItems([]);
+      setLoading(false);
+      return;
     }
-    void bootstrap();
-    return () => {
-      active = false;
-    };
-  }, []);
+
+    void loadReviews(statusFilter);
+  }, [currentUser?.id, currentUser?.role, loadReviews, statusFilter]);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(items.length / REVIEW_PAGE_SIZE)),
@@ -76,11 +63,14 @@ export function useShareReviewDashboard() {
   async function handleApprove(cardId: string) {
     setPendingCardId(cardId);
     setActionError("");
+
     try {
       await shareApi.adminApproveReview(cardId);
       await loadReviews(statusFilter);
     } catch (error) {
-      setActionError(getShareErrorMessage(error, "审核通过失败，请稍后重试。"));
+      setActionError(
+        getShareErrorMessage(error, "审核通过失败，请稍后重试。"),
+      );
     } finally {
       setPendingCardId("");
     }
@@ -95,8 +85,10 @@ export function useShareReviewDashboard() {
       setActionError("驳回原因不能为空。");
       return;
     }
+
     setPendingCardId(cardId);
     setActionError("");
+
     try {
       await shareApi.adminRejectReview(cardId, reason.trim());
       await loadReviews(statusFilter);
@@ -107,9 +99,8 @@ export function useShareReviewDashboard() {
     }
   }
 
-  async function handleFilter(nextFilter: ReviewFilter) {
+  function handleFilter(nextFilter: ReviewFilter) {
     setStatusFilter(nextFilter);
-    await loadReviews(nextFilter);
   }
 
   return {

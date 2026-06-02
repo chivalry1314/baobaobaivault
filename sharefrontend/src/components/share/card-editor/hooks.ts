@@ -1,4 +1,4 @@
-﻿import { useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 
 import { slotOptions } from "@/components/share/card-editor/constants";
@@ -13,6 +13,7 @@ import {
   isImageMime,
   type SlotFileItem,
 } from "@/components/share/card-editor/helpers";
+import { useShareSession } from "@/components/share/session-provider";
 import type {
   AssetPendingMap,
   CreateMode,
@@ -23,7 +24,6 @@ import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type {
   CardContentSlot,
   CardDetailResponse,
-  ExternalSessionUser,
   ShareCardAccessMode,
 } from "@/lib/shared";
 
@@ -42,10 +42,9 @@ const initialAssetPending: AssetPendingMap = {
 
 export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
   const router = useRouter();
+  const { user: currentUser, sessionChecking } = useShareSession();
 
-  const [sessionChecking, setSessionChecking] = useState(true);
   const [cardLoading, setCardLoading] = useState(mode === "edit");
-  const [currentUser, setCurrentUser] = useState<ExternalSessionUser | null>(null);
   const [loadedCard, setLoadedCard] = useState<CardDetailResponse | null>(null);
 
   const [title, setTitle] = useState("");
@@ -54,56 +53,32 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
   const [accessMode, setAccessMode] = useState<ShareCardAccessMode>("free");
   const [createMode, setCreateMode] = useState<CreateMode>("single");
   const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [slotItems, setSlotItems] = useState<SlotFileItem[]>([createEmptySlotItem(0)]);
+  const [slotItems, setSlotItems] = useState<SlotFileItem[]>([
+    createEmptySlotItem(0),
+  ]);
 
   const [loadError, setLoadError] = useState("");
   const [formError, setFormError] = useState("");
   const [submitMode, setSubmitMode] = useState<SubmitMode>(null);
   const [reviewSubmitPending, setReviewSubmitPending] = useState(false);
-  const [coverPending, setCoverPending] = useState<"replace" | "remove" | null>(null);
-  const [assetPending, setAssetPending] = useState<AssetPendingMap>(initialAssetPending);
+  const [coverPending, setCoverPending] = useState<"replace" | "remove" | null>(
+    null,
+  );
+  const [assetPending, setAssetPending] =
+    useState<AssetPendingMap>(initialAssetPending);
 
   const isEditMode = mode === "edit";
 
   useEffect(() => {
     let active = true;
 
-    async function bootstrap() {
-      try {
-        const session = await shareApi.session();
-        if (!active) {
-          return;
-        }
-        if (!session.authenticated || !session.user) {
-          setCurrentUser(null);
-          return;
-        }
-        setCurrentUser(session.user);
-      } catch {
-        if (active) {
-          setCurrentUser(null);
-        }
-      } finally {
-        if (active) {
-          setSessionChecking(false);
-        }
-      }
-    }
-
-    void bootstrap();
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-
     if (!isEditMode) {
+      setCardLoading(false);
       return () => {
         active = false;
       };
     }
+
     if (!currentUser || !cardId) {
       return () => {
         active = false;
@@ -121,6 +96,7 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
           setLoadError("缺少卡片 ID。");
           return;
         }
+
         const detail = await shareApi.cardDetail(currentCardId);
         if (!active) {
           return;
@@ -141,7 +117,9 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
           return;
         }
         setLoadedCard(null);
-        setLoadError(getShareErrorMessage(error, "加载卡片信息失败，请稍后重试。"));
+        setLoadError(
+          getShareErrorMessage(error, "加载卡片信息失败，请稍后重试。"),
+        );
       } finally {
         if (active) {
           setCardLoading(false);
@@ -171,7 +149,9 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
     coverPending !== null ||
     Object.values(assetPending).some((value) => value !== null);
   const afterSuccessPath =
-    mode === "edit" && cardId ? `/creator/cards/${encodeURIComponent(cardId)}/edit` : "/creator";
+    mode === "edit" && cardId
+      ? `/creator/cards/${encodeURIComponent(cardId)}/edit`
+      : "/creator";
   const isCreator = isCreatorRole(currentUser);
   const reviewStatus = loadedCard?.card.reviewStatus ?? "unsubmitted";
   const canSubmitReview = Boolean(
@@ -293,7 +273,9 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
       setSlotItems((current) => [current[0] ?? createEmptySlotItem(0)]);
       return;
     }
-    setSlotItems((current) => (current.length > 0 ? current : [createEmptySlotItem(0)]));
+    setSlotItems((current) =>
+      current.length > 0 ? current : [createEmptySlotItem(0)],
+    );
   }
 
   function validateCreateInputs() {
@@ -364,7 +346,9 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
       return;
     }
 
-    const effectiveItems = (createMode === "single" ? slotItems.slice(0, 1) : slotItems).filter(
+    const effectiveItems = (
+      createMode === "single" ? slotItems.slice(0, 1) : slotItems
+    ).filter(
       (item): item is { slot: CardContentSlot; file: File } => Boolean(item.file),
     );
 
@@ -528,7 +512,11 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
     if (!existing) {
       return;
     }
-    if (!window.confirm(`确认删除分类「${getSlotLabel(slot)}」文件吗？删除后将无法恢复。`)) {
+    if (
+      !window.confirm(
+        `确认删除分类「${getSlotLabel(slot)}」文件吗？删除后将无法恢复。`,
+      )
+    ) {
       return;
     }
 

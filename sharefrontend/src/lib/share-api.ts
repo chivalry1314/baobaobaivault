@@ -84,7 +84,6 @@ export function getShareErrorMessage(error: unknown, fallback: string) {
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     credentials: "include",
-    cache: "no-store",
     ...options,
   });
 
@@ -138,7 +137,9 @@ export const shareApi = {
   },
 
   session() {
-    return request<SessionResponse>(`${API_ROOT}/auth/session`);
+    return request<SessionResponse>(`${API_ROOT}/auth/session`, {
+      cache: "no-store",
+    });
   },
 
   updateProfile(input: {
@@ -184,15 +185,24 @@ export const shareApi = {
   },
 
   cardDetail(cardId: string) {
-    return request<CardDetailResponse>(`${API_ROOT}/cards/${encodeURIComponent(cardId)}`);
+    return request<CardDetailResponse>(
+      `${API_ROOT}/cards/${encodeURIComponent(cardId)}`,
+      {
+        cache: "no-store",
+      },
+    );
   },
 
   myCards() {
-    return request<DashboardResponse>(`${API_ROOT}/me/cards`);
+    return request<DashboardResponse>(`${API_ROOT}/me/cards`, {
+      cache: "no-store",
+    });
   },
 
   myAccessCodes() {
-    return request<AccessCodeDashboardResponse>(`${API_ROOT}/me/access-codes`);
+    return request<AccessCodeDashboardResponse>(`${API_ROOT}/me/access-codes`, {
+      cache: "no-store",
+    });
   },
 
   createCard(input: {
@@ -322,7 +332,12 @@ export const shareApi = {
   },
 
   adminUsers() {
-    return request<{ users: ShareUserRoleManageItem[] }>(`${API_ROOT}/me/admin/users`);
+    return request<{ users: ShareUserRoleManageItem[] }>(
+      `${API_ROOT}/me/admin/users`,
+      {
+        cache: "no-store",
+      },
+    );
   },
 
   updateUserRole(userId: string, role: ShareUserRole) {
@@ -337,7 +352,12 @@ export const shareApi = {
 
   adminReviews(status?: string) {
     const query = status ? `?status=${encodeURIComponent(status)}` : "";
-    return request<ReviewDashboardResponse>(`${API_ROOT}/me/admin/reviews${query}`);
+    return request<ReviewDashboardResponse>(
+      `${API_ROOT}/me/admin/reviews${query}`,
+      {
+        cache: "no-store",
+      },
+    );
   },
 
   adminApproveReview(cardId: string) {
@@ -357,7 +377,12 @@ export const shareApi = {
   },
 
   cardAccessCode(cardId: string) {
-    return request<{ config: CardAccessCodeConfig }>(`${API_ROOT}/me/cards/${encodeURIComponent(cardId)}/access-code`);
+    return request<{ config: CardAccessCodeConfig }>(
+      `${API_ROOT}/me/cards/${encodeURIComponent(cardId)}/access-code`,
+      {
+        cache: "no-store",
+      },
+    );
   },
 
   updateCardAccessCode(

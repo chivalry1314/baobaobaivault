@@ -16,8 +16,6 @@ export function AppShell({
   footerSlot,
 }: AppShellProps) {
   const { user } = useAccountEntry();
-  void footerSlot;
-  const normalizedFooter = <UnifiedFooter />;
   const navItems = NAV_ITEMS.filter((item) =>
     item.managerOnly ? user?.role === "manager" : true,
   );
@@ -31,7 +29,7 @@ export function AppShell({
         headerSlot={headerSlot}
       />
       <main className="relative z-10 flex-1">{children}</main>
-      {normalizedFooter}
+      {footerSlot ?? <UnifiedFooter />}
     </div>
   );
 }

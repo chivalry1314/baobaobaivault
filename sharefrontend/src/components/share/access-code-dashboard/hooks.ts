@@ -1,32 +1,40 @@
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { matchesAccessModeFilter, type ShareAccessModeFilter } from "@/components/share/access-mode-filter";
+import {
+  matchesAccessModeFilter,
+  type ShareAccessModeFilter,
+} from "@/components/share/access-mode-filter";
 import {
   ACCESS_CODES_PAGE_SIZE,
-  CARDS_WITHOUT_CODE_PAGE_SIZE,
   buildCardShareLink,
+  CARDS_WITHOUT_CODE_PAGE_SIZE,
   copyText,
   isActiveItem,
 } from "@/components/share/access-code-dashboard/helpers";
 import type { FeedbackState } from "@/components/share/access-code-dashboard/types";
 import { ShareApiError, getShareErrorMessage, shareApi } from "@/lib/share-api";
-import type { AccessCodeDashboardItem, AccessCodeDashboardResponse } from "@/lib/shared";
+import type {
+  AccessCodeDashboardItem,
+  AccessCodeDashboardResponse,
+} from "@/lib/shared";
 
 export function useShareAccessCodeDashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(true);
-  const [dashboard, setDashboard] = useState<AccessCodeDashboardResponse | null>(null);
+  const [dashboard, setDashboard] =
+    useState<AccessCodeDashboardResponse | null>(null);
   const [loadError, setLoadError] = useState("");
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [searchValue, setSearchValue] = useState("");
-  const [accessModeFilter, setAccessModeFilter] = useState<ShareAccessModeFilter>("all");
+  const [accessModeFilter, setAccessModeFilter] =
+    useState<ShareAccessModeFilter>("all");
   const [pendingAction, setPendingAction] = useState("");
   const [itemsPage, setItemsPage] = useState(1);
   const [cardsWithoutCodePage, setCardsWithoutCodePage] = useState(1);
 
-  async function loadDashboard() {
+  const loadDashboard = useCallback(async () => {
     setLoading(true);
 
     try {
@@ -41,19 +49,18 @@ export function useShareAccessCodeDashboard() {
         setLoadError("");
       } else {
         setAuthenticated(true);
-        setLoadError(getShareErrorMessage(error, "提取码数据加载失败，请稍后重试。"));
+        setLoadError(
+          getShareErrorMessage(error, "提取码数据加载失败，请稍后重试。"),
+        );
       }
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void loadDashboard();
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, []);
+    void loadDashboard();
+  }, [loadDashboard]);
 
   const items = useMemo(() => {
     const source = dashboard?.items ?? [];
@@ -64,7 +71,10 @@ export function useShareAccessCodeDashboard() {
       if (activeDiff !== 0) {
         return activeDiff;
       }
-      return new Date(right.card.updatedAt).getTime() - new Date(left.card.updatedAt).getTime();
+      return (
+        new Date(right.card.updatedAt).getTime() -
+        new Date(left.card.updatedAt).getTime()
+      );
     });
 
     return sorted.filter((item) => {
@@ -74,25 +84,54 @@ export function useShareAccessCodeDashboard() {
       if (!keyword) {
         return true;
       }
-      return [item.card.title, item.card.description, item.card.originalFileName, item.config.code].join(" ").toLowerCase().includes(keyword);
+      return [
+        item.card.title,
+        item.card.description,
+        item.card.originalFileName,
+        item.config.code,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(keyword);
     });
   }, [accessModeFilter, dashboard, searchValue]);
 
   const availableCards = dashboard?.availableCards ?? [];
   const cardsWithoutCode = useMemo(() => {
-    const configuredIds = new Set((dashboard?.items ?? []).map((item) => item.card.id));
-    return availableCards.filter((card) => !configuredIds.has(card.id) && matchesAccessModeFilter(card.accessMode, accessModeFilter));
+    const configuredIds = new Set(
+      (dashboard?.items ?? []).map((item) => item.card.id),
+    );
+    return availableCards.filter(
+      (card) =>
+        !configuredIds.has(card.id) &&
+        matchesAccessModeFilter(card.accessMode, accessModeFilter),
+    );
   }, [accessModeFilter, availableCards, dashboard?.items]);
 
-  const cardsWithoutCodeTotalPages = useMemo(() => Math.max(1, Math.ceil(cardsWithoutCode.length / CARDS_WITHOUT_CODE_PAGE_SIZE)), [cardsWithoutCode.length]);
+  const cardsWithoutCodeTotalPages = useMemo(
+    () =>
+      Math.max(
+        1,
+        Math.ceil(cardsWithoutCode.length / CARDS_WITHOUT_CODE_PAGE_SIZE),
+      ),
+    [cardsWithoutCode.length],
+  );
+
   const pagedCardsWithoutCode = useMemo(() => {
-    const safePage = Math.min(Math.max(cardsWithoutCodePage, 1), cardsWithoutCodeTotalPages);
+    const safePage = Math.min(
+      Math.max(cardsWithoutCodePage, 1),
+      cardsWithoutCodeTotalPages,
+    );
     const start = (safePage - 1) * CARDS_WITHOUT_CODE_PAGE_SIZE;
     return cardsWithoutCode.slice(start, start + CARDS_WITHOUT_CODE_PAGE_SIZE);
   }, [cardsWithoutCode, cardsWithoutCodePage, cardsWithoutCodeTotalPages]);
 
   const totalItems = dashboard?.items.length ?? 0;
-  const itemsTotalPages = useMemo(() => Math.max(1, Math.ceil(items.length / ACCESS_CODES_PAGE_SIZE)), [items.length]);
+  const itemsTotalPages = useMemo(
+    () => Math.max(1, Math.ceil(items.length / ACCESS_CODES_PAGE_SIZE)),
+    [items.length],
+  );
+
   const pagedItems = useMemo(() => {
     const safePage = Math.min(Math.max(itemsPage, 1), itemsTotalPages);
     const start = (safePage - 1) * ACCESS_CODES_PAGE_SIZE;
@@ -112,7 +151,9 @@ export function useShareAccessCodeDashboard() {
   }, [itemsTotalPages]);
 
   useEffect(() => {
-    setCardsWithoutCodePage((current) => Math.min(Math.max(current, 1), cardsWithoutCodeTotalPages));
+    setCardsWithoutCodePage((current) =>
+      Math.min(Math.max(current, 1), cardsWithoutCodeTotalPages),
+    );
   }, [cardsWithoutCodeTotalPages]);
 
   async function handleCopyLink(item: AccessCodeDashboardItem) {
@@ -124,7 +165,7 @@ export function useShareAccessCodeDashboard() {
       await copyText(buildCardShareLink(item.card.id, item.config.code));
       setFeedback({
         type: "success",
-        message: `已复制「${item.card.title}」提取码链接。`,
+        message: `已复制「${item.card.title}」的提取码链接。`,
       });
     } catch (error) {
       setFeedback({
@@ -188,7 +229,9 @@ export function useShareAccessCodeDashboard() {
         await shareApi.updateCardAccessCode(item.card.id, {
           code: item.config.code,
           expireDays: item.config.isExpired ? 7 : item.config.expireDays || 7,
-          usageLimit: item.config.unlimited ? 0 : Math.max(item.config.usageLimit, 1),
+          usageLimit: item.config.unlimited
+            ? 0
+            : Math.max(item.config.usageLimit, 1),
           unlimited: item.config.unlimited,
         });
       }
@@ -209,7 +252,9 @@ export function useShareAccessCodeDashboard() {
   }
 
   async function handleDelete(item: AccessCodeDashboardItem) {
-    if (!window.confirm(`确认删除「${item.card.title}」的提取码吗？删除后不可恢复。`)) {
+    if (
+      !window.confirm(`确认删除「${item.card.title}」的提取码吗？删除后不可恢复。`)
+    ) {
       return;
     }
 

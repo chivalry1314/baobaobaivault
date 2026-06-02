@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 import { buildCardViewModel } from "@/components/share/card-detail/helpers";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
@@ -20,7 +20,7 @@ export function useCardDetail({ cardId }: UseCardDetailArgs) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [unlockCode, setUnlockCode] = useState(codeFromQuery);
-  const [downloadPendingSlot, setDownloadPendingSlot] = useState<string>("");
+  const [downloadPendingSlot, setDownloadPendingSlot] = useState("");
   const [downloadError, setDownloadError] = useState("");
 
   useEffect(() => {
@@ -93,7 +93,9 @@ export function useCardDetail({ cardId }: UseCardDetailArgs) {
         let message = `下载失败 (${response.status})`;
         const contentType = response.headers.get("content-type") || "";
         if (contentType.includes("application/json")) {
-          const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+          const payload = (await response.json().catch(() => null)) as
+            | { error?: string }
+            | null;
           if (typeof payload?.error === "string" && payload.error.trim()) {
             message = payload.error.trim();
           }
@@ -141,4 +143,3 @@ export function useCardDetail({ cardId }: UseCardDetailArgs) {
     handleAssetDownload,
   };
 }
-

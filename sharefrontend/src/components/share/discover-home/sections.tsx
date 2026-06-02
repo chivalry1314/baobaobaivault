@@ -1,7 +1,10 @@
 import Link from "next/link";
 import type { VirtualItem, Virtualizer } from "@tanstack/react-virtual";
 
-import { AccessModeFilterPills, type ShareAccessModeFilter } from "@/components/share/access-mode-filter";
+import {
+  AccessModeFilterPills,
+  type ShareAccessModeFilter,
+} from "@/components/share/access-mode-filter";
 import { AccessModeBadge } from "@/components/share/access-mode-badge";
 import {
   CHIP_LABELS,
@@ -26,7 +29,11 @@ export function DiscoverSearchBar(props: {
         placeholder="搜索卡片..."
         className="w-full rounded-full border-[4px] border-[var(--outline)] bg-white px-5 py-3 pr-16 text-lg font-bold text-[var(--foreground)] placeholder:text-[var(--text-subtle)] transition-all group-hover:bg-gray-50"
       />
-      <button className="absolute bottom-1.5 right-1.5 top-1.5 flex h-12 w-12 items-center justify-center rounded-full border-[4px] border-[var(--outline)] bg-[#cdb4f3] transition-all hover:opacity-90">
+      <button
+        type="button"
+        aria-label="搜索"
+        className="absolute bottom-1.5 right-1.5 top-1.5 flex h-12 w-12 items-center justify-center rounded-full border-[4px] border-[var(--outline)] bg-[#cdb4f3] transition-all hover:opacity-90"
+      >
         <SearchIcon />
       </button>
     </div>
@@ -38,6 +45,7 @@ export function DiscoverChips(props: {
   setActiveChip: (chip: FilterChip) => void;
 }) {
   const { activeChip, setActiveChip } = props;
+
   return (
     <div className="no-scrollbar flex items-end justify-between gap-3 overflow-x-auto px-1 py-1 lg:gap-5">
       {FILTER_CHIPS.map((chip) => {
@@ -51,7 +59,9 @@ export function DiscoverChips(props: {
           >
             <span className="flex flex-col items-center gap-2">
               <span
-                className={`flex h-12 w-12 items-center justify-center rounded-[1.1rem] border-[4px] border-[var(--outline)] xl:h-14 xl:w-14 ${active ? "bg-[#cdb4f3]" : CHIP_VISUALS[chip].className} transition-all group-hover:opacity-90`}
+                className={`flex h-12 w-12 items-center justify-center rounded-[1.1rem] border-[4px] border-[var(--outline)] xl:h-14 xl:w-14 ${
+                  active ? "bg-[#cdb4f3]" : CHIP_VISUALS[chip].className
+                } transition-all group-hover:opacity-90`}
               >
                 <ChipIcon chip={chip} />
               </span>
@@ -73,8 +83,12 @@ export function DiscoverAccessModeFilters(props: {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] border-[4px] border-[var(--outline)] bg-white px-4 py-3">
       <div>
-        <div className="text-sm font-black text-[var(--foreground)]">访问方式</div>
-        <div className="mt-1 text-xs font-bold text-[var(--foreground)]/56">快速筛选免费卡片或需提取码卡片</div>
+        <div className="text-sm font-black text-[var(--foreground)]">
+          访问方式
+        </div>
+        <div className="mt-1 text-xs font-bold text-[var(--foreground)]/56">
+          快速筛选免费卡片或需要提取码的卡片
+        </div>
       </div>
       <AccessModeFilterPills value={props.value} onChange={props.onChange} />
     </div>
@@ -110,7 +124,9 @@ export function DiscoverNoResult(props: { onReset: () => void }) {
   return (
     <div className="rounded-3xl border-[4px] border-[var(--outline)] bg-white px-5 py-9 text-center text-[var(--foreground)]">
       <p className="text-2xl font-black">没有找到匹配内容</p>
-      <p className="mt-3 font-bold">当前筛选无结果，请尝试切换分类或关键词。</p>
+      <p className="mt-3 font-bold">
+        当前筛选无结果，请尝试切换分类或关键词。
+      </p>
       <button
         type="button"
         onClick={props.onReset}
@@ -129,10 +145,14 @@ export function DiscoverVirtualRows(props: {
   rowVirtualizer: Virtualizer<Window, Element>;
   cardRows: HomeFeedCard[][];
 }) {
-  const { columnCount, totalHeight, virtualRows, rowVirtualizer, cardRows } = props;
+  const { columnCount, totalHeight, virtualRows, rowVirtualizer, cardRows } =
+    props;
 
   return (
-    <div className="relative w-full" style={{ height: `${Math.max(totalHeight, 1)}px` }}>
+    <div
+      className="relative w-full"
+      style={{ height: `${Math.max(totalHeight, 1)}px` }}
+    >
       {virtualRows.map((virtualRow) => {
         const rowCards = cardRows[virtualRow.index] ?? [];
         const rowStart = virtualRow.start - rowVirtualizer.options.scrollMargin;
@@ -149,7 +169,9 @@ export function DiscoverVirtualRows(props: {
           >
             <div
               className="grid gap-4 pb-4"
-              style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }}
+              style={{
+                gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
+              }}
             >
               {rowCards.map((card, offset) => (
                 <CardItem
@@ -170,7 +192,9 @@ export function DiscoverLoadingMore(props: { columnCount: number }) {
   return (
     <div
       className="grid gap-4"
-      style={{ gridTemplateColumns: `repeat(${props.columnCount}, minmax(0, 1fr))` }}
+      style={{
+        gridTemplateColumns: `repeat(${props.columnCount}, minmax(0, 1fr))`,
+      }}
     >
       {Array.from({ length: props.columnCount }).map((_, index) => (
         <CardSkeleton key={`loading-more-${index}`} />
@@ -187,6 +211,7 @@ export function DiscoverMetrics(props: {
   hasMore: boolean;
 }) {
   const { loading, filteredCount, sourceCount, loadingMore, hasMore } = props;
+
   return (
     <div className="flex flex-wrap gap-2 text-sm">
       <span className="metric-pill rounded-full px-3 py-1.5 font-black">
@@ -194,7 +219,7 @@ export function DiscoverMetrics(props: {
       </span>
       {!loading && filteredCount !== sourceCount ? (
         <span className="metric-pill rounded-full px-3 py-1.5 font-black">
-          共加载 {sourceCount} 条
+          共加载 ${sourceCount} 条
         </span>
       ) : null}
       {loadingMore ? (
@@ -239,7 +264,9 @@ function CardItem({ card, index }: { card: HomeFeedCard; index: number }) {
         </div>
       </div>
 
-      <h4 className="px-1 text-[1.5rem] font-black text-[var(--foreground)]">{card.title}</h4>
+      <h4 className="px-1 text-[1.5rem] font-black text-[var(--foreground)]">
+        {card.title}
+      </h4>
       <p className="mt-1.5 line-clamp-2 text-sm font-bold text-[var(--on-surface-variant)]">
         {card.description}
       </p>

@@ -1,30 +1,50 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { matchesAccessModeFilter, type ShareAccessModeFilter } from "@/components/share/access-mode-filter";
-import { CARDS_PAGE_SIZE, formatMetricValue, getDisplayName, HISTORY_PAGE_SIZE } from "@/components/share/creator-studio/helpers";
-import type { ActiveSection, ActiveTab } from "@/components/share/creator-studio/types";
+import {
+  matchesAccessModeFilter,
+  type ShareAccessModeFilter,
+} from "@/components/share/access-mode-filter";
+import {
+  CARDS_PAGE_SIZE,
+  formatMetricValue,
+  getDisplayName,
+  HISTORY_PAGE_SIZE,
+} from "@/components/share/creator-studio/helpers";
+import { useShareSession } from "@/components/share/session-provider";
+import type {
+  ActiveSection,
+  ActiveTab,
+} from "@/components/share/creator-studio/types";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type { DashboardResponse, ExternalSessionUser } from "@/lib/shared";
 
 export function useCreatorStudio() {
   const router = useRouter();
-  const [sessionChecking, setSessionChecking] = useState(true);
-  const [currentUser, setCurrentUser] = useState<ExternalSessionUser | null>(null);
+  const { user, sessionChecking, clearSession, setUser } = useShareSession();
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [loadError, setLoadError] = useState("");
-  const [activeSection, setActiveSection] = useState<ActiveSection>("dashboard");
+  const [activeSection, setActiveSection] =
+    useState<ActiveSection>("dashboard");
   const [activeTab, setActiveTab] = useState<ActiveTab>("cards");
-  const [accessModeFilter, setAccessModeFilter] = useState<ShareAccessModeFilter>("all");
+  const [accessModeFilter, setAccessModeFilter] =
+    useState<ShareAccessModeFilter>("all");
   const [cardsPage, setCardsPage] = useState(1);
   const [historyPage, setHistoryPage] = useState(1);
 
+  const currentUser = user;
   const allCards = useMemo(() => dashboard?.cards ?? [], [dashboard?.cards]);
   const cards = useMemo(
-    () => allCards.filter((item) => matchesAccessModeFilter(item.card.accessMode, accessModeFilter)),
+    () =>
+      allCards.filter((item) =>
+        matchesAccessModeFilter(item.card.accessMode, accessModeFilter),
+      ),
     [accessModeFilter, allCards],
   );
-  const displayName = useMemo(() => (currentUser ? getDisplayName(currentUser) : ""), [currentUser]);
+  const displayName = useMemo(
+    () => (currentUser ? getDisplayName(currentUser) : ""),
+    [currentUser],
+  );
 
   const accountLabel = useMemo(() => {
     if (!currentUser) {
@@ -38,17 +58,33 @@ export function useCreatorStudio() {
     () => [
       { value: formatMetricValue(dashboard?.stats.totalCards ?? 0), label: "卡片总数" },
       { value: formatMetricValue(dashboard?.stats.totalPublic ?? 0), label: "公开卡片" },
-      { value: formatMetricValue(dashboard?.stats.totalDownloads ?? 0), label: "累计下载", accent: true },
+      {
+        value: formatMetricValue(dashboard?.stats.totalDownloads ?? 0),
+        label: "累计下载",
+        accent: true,
+      },
     ],
     [dashboard],
   );
 
-  const historyItems = useMemo(() => {
-    return [...cards].sort((left, right) => new Date(right.card.updatedAt).getTime() - new Date(left.card.updatedAt).getTime());
-  }, [cards]);
+  const historyItems = useMemo(
+    () =>
+      [...cards].sort(
+        (left, right) =>
+          new Date(right.card.updatedAt).getTime() -
+          new Date(left.card.updatedAt).getTime(),
+      ),
+    [cards],
+  );
 
-  const cardsTotalPages = useMemo(() => Math.max(1, Math.ceil(cards.length / CARDS_PAGE_SIZE)), [cards.length]);
-  const historyTotalPages = useMemo(() => Math.max(1, Math.ceil(historyItems.length / HISTORY_PAGE_SIZE)), [historyItems.length]);
+  const cardsTotalPages = useMemo(
+    () => Math.max(1, Math.ceil(cards.length / CARDS_PAGE_SIZE)),
+    [cards.length],
+  );
+  const historyTotalPages = useMemo(
+    () => Math.max(1, Math.ceil(historyItems.length / HISTORY_PAGE_SIZE)),
+    [historyItems.length],
+  );
 
   const pagedCards = useMemo(() => {
     const safePage = Math.min(Math.max(cardsPage, 1), cardsTotalPages);
@@ -72,7 +108,9 @@ export function useCreatorStudio() {
   }, [cardsTotalPages]);
 
   useEffect(() => {
-    setHistoryPage((current) => Math.min(Math.max(current, 1), historyTotalPages));
+    setHistoryPage((current) =>
+      Math.min(Math.max(current, 1), historyTotalPages),
+    );
   }, [historyTotalPages]);
 
   const heroSurfaceStyle = useMemo(() => {
@@ -87,7 +125,10 @@ export function useCreatorStudio() {
   }, [currentUser]);
 
   const loadDashboard = useCallback(async () => {
-    const [cardsPayload, accessCodesPayload] = await Promise.all([shareApi.myCards(), shareApi.myAccessCodes().catch(() => null)]);
+    const [cardsPayload, accessCodesPayload] = await Promise.all([
+      shareApi.myCards(),
+      shareApi.myAccessCodes().catch(() => null),
+    ]);
 
     const activeAccessCodeByCardId = new Map<string, string>();
     const hasConfiguredAccessCodeCardIds = new Set<string>();
@@ -105,7 +146,9 @@ export function useCreatorStudio() {
 
     const mergedCards = cardsPayload.cards.map((cardItem) => {
       const mergedCode = activeAccessCodeByCardId.get(cardItem.card.id) ?? "";
-      const hasConfiguredCode = hasConfiguredAccessCodeCardIds.has(cardItem.card.id) || cardItem.hasAccessCode;
+      const hasConfiguredCode =
+        hasConfiguredAccessCodeCardIds.has(cardItem.card.id) ||
+        cardItem.hasAccessCode;
       return {
         ...cardItem,
         hasAccessCode: hasConfiguredCode,
@@ -113,46 +156,31 @@ export function useCreatorStudio() {
       };
     });
 
-    setCurrentUser(cardsPayload.user);
+    setUser(cardsPayload.user);
     setDashboard({ ...cardsPayload, cards: mergedCards });
     setLoadError("");
-  }, []);
+  }, [setUser]);
 
   useEffect(() => {
     let active = true;
 
     async function bootstrap() {
+      if (!currentUser) {
+        setDashboard(null);
+        setLoadError("");
+        return;
+      }
+
       try {
-        const session = await shareApi.session();
-        if (!active) {
-          return;
-        }
-        if (!session.authenticated || !session.user) {
-          setCurrentUser(null);
-          setDashboard(null);
-          return;
-        }
-        setCurrentUser(session.user);
-        try {
-          await loadDashboard();
-        } catch (error) {
-          if (!active) {
-            return;
-          }
-          setLoadError(getShareErrorMessage(error, "加载创作中心失败，请稍后重试。"));
-          setDashboard(null);
-        }
+        await loadDashboard();
       } catch (error) {
         if (!active) {
           return;
         }
-        setLoadError(getShareErrorMessage(error, "会话校验失败，请刷新页面后重试。"));
-        setCurrentUser(null);
+        setLoadError(
+          getShareErrorMessage(error, "加载创作中心失败，请稍后重试。"),
+        );
         setDashboard(null);
-      } finally {
-        if (active) {
-          setSessionChecking(false);
-        }
       }
     }
 
@@ -160,11 +188,11 @@ export function useCreatorStudio() {
     return () => {
       active = false;
     };
-  }, [loadDashboard]);
+  }, [currentUser?.id, loadDashboard]);
 
-  function handleProfileSaved(user: ExternalSessionUser) {
-    setCurrentUser(user);
-    setDashboard((current) => (current ? { ...current, user } : current));
+  function handleProfileSaved(nextUser: ExternalSessionUser) {
+    setUser(nextUser);
+    setDashboard((current) => (current ? { ...current, user: nextUser } : current));
   }
 
   function openCreatePanel() {
@@ -175,14 +203,16 @@ export function useCreatorStudio() {
     try {
       await loadDashboard();
     } catch (error) {
-      setLoadError(getShareErrorMessage(error, "重新加载失败，请稍后重试"));
+      setLoadError(getShareErrorMessage(error, "重新加载失败，请稍后重试。"));
     }
   }
 
   async function handleLogout() {
     await shareApi.logout().catch(() => null);
-    setCurrentUser(null);
+    clearSession();
     setDashboard(null);
+    router.push("/");
+    router.refresh();
   }
 
   return {

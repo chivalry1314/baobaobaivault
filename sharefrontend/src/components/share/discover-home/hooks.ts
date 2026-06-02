@@ -2,7 +2,10 @@ import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useInView } from "react-intersection-observer";
 
-import { matchesAccessModeFilter, type ShareAccessModeFilter } from "@/components/share/access-mode-filter";
+import {
+  matchesAccessModeFilter,
+  type ShareAccessModeFilter,
+} from "@/components/share/access-mode-filter";
 import {
   DISCOVER_PAGE_SIZE,
   type FilterChip,
@@ -13,24 +16,39 @@ import {
   toHomeFeedCards,
   toRows,
 } from "@/components/share/discover-home/helpers";
+import type {
+  DiscoverHomeHookResult,
+  DiscoverInitialPayload,
+} from "@/components/share/discover-home/types";
 import { shareApi } from "@/lib/share-api";
 import type { DiscoverCardItem } from "@/lib/shared";
 
-export function useDiscoverHome() {
-  const [cards, setCards] = useState<DiscoverCardItem[]>([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(true);
+export function useDiscoverHome({
+  initialDiscover = null,
+}: {
+  initialDiscover?: DiscoverInitialPayload;
+} = {}): DiscoverHomeHookResult {
+  const [cards, setCards] = useState<DiscoverCardItem[]>(
+    initialDiscover?.cards ?? [],
+  );
+  const [page, setPage] = useState(initialDiscover?.pagination.page ?? 1);
+  const [hasMore, setHasMore] = useState(
+    initialDiscover?.pagination.hasMore ?? true,
+  );
+  const [loading, setLoading] = useState(initialDiscover === null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [activeChip, setActiveChip] = useState<FilterChip>("all");
-  const [accessModeFilter, setAccessModeFilter] = useState<ShareAccessModeFilter>("all");
+  const [accessModeFilter, setAccessModeFilter] =
+    useState<ShareAccessModeFilter>("all");
   const [columnCount, setColumnCount] = useState(1);
   const [scrollMargin, setScrollMargin] = useState(0);
 
   const virtualListRef = useRef<HTMLDivElement | null>(null);
-  const loadedCardIdsRef = useRef<Set<string>>(new Set());
+  const loadedCardIdsRef = useRef<Set<string>>(
+    new Set((initialDiscover?.cards ?? []).map((item) => item.card.id)),
+  );
   const { ref: loadMoreRef, inView } = useInView({
     root: null,
     rootMargin: "640px 0px",
@@ -43,9 +61,11 @@ export function useDiscoverHome() {
     if (typeof window === "undefined") {
       return;
     }
+
     const updateColumns = () => {
       setColumnCount(resolveColumnCount(window.innerWidth));
     };
+
     updateColumns();
     window.addEventListener("resize", updateColumns);
     return () => {
@@ -54,6 +74,10 @@ export function useDiscoverHome() {
   }, []);
 
   useEffect(() => {
+    if (initialDiscover) {
+      return;
+    }
+
     let active = true;
 
     async function loadFirstPage() {
@@ -65,11 +89,14 @@ export function useDiscoverHome() {
           page: 1,
           size: DISCOVER_PAGE_SIZE,
         });
+
         if (!active) {
           return;
         }
 
-        loadedCardIdsRef.current = new Set(payload.cards.map((item) => item.card.id));
+        loadedCardIdsRef.current = new Set(
+          payload.cards.map((item) => item.card.id),
+        );
         setCards(payload.cards);
         setPage(payload.pagination.page);
         setHasMore(payload.pagination.hasMore);
@@ -77,10 +104,9 @@ export function useDiscoverHome() {
         if (!active) {
           return;
         }
+
         setError(
-          loadError instanceof Error
-            ? loadError.message
-            : "加载失败，请稍后重试。",
+          loadError instanceof Error ? loadError.message : "加载失败，请稍后重试。",
         );
       } finally {
         if (active) {
@@ -93,7 +119,7 @@ export function useDiscoverHome() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [initialDiscover]);
 
   useEffect(() => {
     if (!inView || !hasMore || loading || loadingMore) {
@@ -110,24 +136,25 @@ export function useDiscoverHome() {
         const nextCards = payload.cards.filter(
           (item) => !existingCardIds.has(item.card.id),
         );
+
         if (nextCards.length > 0) {
           nextCards.forEach((item) => {
             existingCardIds.add(item.card.id);
           });
           setCards((current) => [...current, ...nextCards]);
         }
+
         setPage(payload.pagination.page);
         if (payload.cards.length === 0 || nextCards.length === 0) {
           setHasMore(false);
           return;
         }
+
         setHasMore(payload.pagination.hasMore);
       })
       .catch((loadError) => {
         setError(
-          loadError instanceof Error
-            ? loadError.message
-            : "加载失败，请稍后重试。",
+          loadError instanceof Error ? loadError.message : "加载失败，请稍后重试。",
         );
       })
       .finally(() => {
@@ -162,10 +189,12 @@ export function useDiscoverHome() {
     if (typeof window === "undefined") {
       return;
     }
+
     const updateScrollMargin = () => {
       if (!virtualListRef.current) {
         return;
       }
+
       const nextMargin =
         virtualListRef.current.getBoundingClientRect().top + window.scrollY;
       setScrollMargin((current) =>
@@ -176,6 +205,7 @@ export function useDiscoverHome() {
     updateScrollMargin();
     const rafId = window.requestAnimationFrame(updateScrollMargin);
     window.addEventListener("resize", updateScrollMargin);
+
     return () => {
       window.cancelAnimationFrame(rafId);
       window.removeEventListener("resize", updateScrollMargin);

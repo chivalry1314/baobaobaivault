@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
 
-import {
-  generateAccessCode,
-} from "@/components/share/card-access-code/helpers";
+import { generateAccessCode } from "@/components/share/card-access-code/helpers";
+import { useShareSession } from "@/components/share/session-provider";
 import type { UseShareCardAccessCodeArgs } from "@/components/share/card-access-code/types";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type {
   CardAccessCodeConfig,
   CardDetailResponse,
-  ExternalSessionUser,
   ShareCardAccessMode,
 } from "@/lib/shared";
 
@@ -16,9 +14,8 @@ export function useShareCardAccessCode({
   cardId,
   isWizardFlow,
 }: UseShareCardAccessCodeArgs) {
-  const [sessionChecking, setSessionChecking] = useState(true);
+  const { user: currentUser, sessionChecking } = useShareSession();
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<ExternalSessionUser | null>(null);
   const [detail, setDetail] = useState<CardDetailResponse | null>(null);
   const [config, setConfig] = useState<CardAccessCodeConfig | null>(null);
 
@@ -34,41 +31,12 @@ export function useShareCardAccessCode({
   useEffect(() => {
     let active = true;
 
-    async function bootstrap() {
-      try {
-        const session = await shareApi.session();
-        if (!active) {
-          return;
-        }
-
-        if (!session.authenticated || !session.user) {
-          setCurrentUser(null);
-          return;
-        }
-
-        setCurrentUser(session.user);
-      } catch {
-        if (active) {
-          setCurrentUser(null);
-        }
-      } finally {
-        if (active) {
-          setSessionChecking(false);
-        }
-      }
-    }
-
-    void bootstrap();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-
     if (!currentUser) {
+      setLoading(false);
+      setDetail(null);
+      setConfig(null);
+      setError("");
+      setSuccess("");
       return () => {
         active = false;
       };
@@ -89,7 +57,7 @@ export function useShareCardAccessCode({
         }
 
         if (!detailResponse.canEdit) {
-          setError("你没有该卡片的编辑权限，无法配置提取码。");
+          setError("你没有这张卡片的编辑权限，无法配置提取码。");
           setDetail(null);
           setConfig(null);
           return;
@@ -127,7 +95,7 @@ export function useShareCardAccessCode({
     return () => {
       active = false;
     };
-  }, [cardId, currentUser]);
+  }, [cardId, currentUser?.id]);
 
   async function handleSubmit() {
     if (!detail) {
@@ -161,7 +129,8 @@ export function useShareCardAccessCode({
         status: isWizardFlow ? "published" : detail.card.status,
         code: accessMode === "paid" ? code.trim().toUpperCase() : "",
         expireDays: accessMode === "paid" ? expireDays : 0,
-        usageLimit: accessMode === "paid" ? (unlimited ? 0 : Number(usageLimit)) : 0,
+        usageLimit:
+          accessMode === "paid" ? (unlimited ? 0 : Number(usageLimit)) : 0,
         unlimited: accessMode === "paid" ? unlimited : true,
       });
 
@@ -176,7 +145,11 @@ export function useShareCardAccessCode({
       setUsageLimit(
         nextConfig.usageLimit > 0 ? String(nextConfig.usageLimit) : usageLimit,
       );
-      setSuccess(accessMode === "paid" ? "付费卡片提取码已保存。" : "已切换为免费卡片，无需提取码。");
+      setSuccess(
+        accessMode === "paid"
+          ? "付费卡片提取码已保存。"
+          : "已切换为免费卡片，无需提取码。",
+      );
     } catch (submitError) {
       setError(getShareErrorMessage(submitError, "保存失败，请重试。"));
     } finally {
