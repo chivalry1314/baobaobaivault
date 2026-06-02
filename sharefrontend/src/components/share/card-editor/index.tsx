@@ -23,6 +23,8 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
     setDescription,
     publicChecked,
     setPublicChecked,
+    accessMode,
+    setAccessMode,
     createMode,
     slotItems,
     setSlotValue,
@@ -182,6 +184,8 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                 mode={mode}
                 publicChecked={publicChecked}
                 setPublicChecked={setPublicChecked}
+                accessMode={accessMode}
+                setAccessMode={setAccessMode}
                 publishPending={publishPending}
                 hasAssetPending={hasAssetPending}
                 reviewSubmitPending={reviewSubmitPending}

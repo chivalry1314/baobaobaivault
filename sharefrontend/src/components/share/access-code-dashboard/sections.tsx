@@ -1,6 +1,7 @@
 ﻿import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { AccessModeBadge } from "@/components/share/access-mode-badge";
 import {
   formatDate,
   formatDateTime,
@@ -64,6 +65,9 @@ export function CardWithoutCodeRow(props: {
       <div className="min-w-0">
         <p className="truncate text-base font-black text-[var(--foreground)]">{card.title}</p>
         <p className="mt-1 text-xs text-[var(--foreground)]/56">{card.originalFileName || "未命名文件"}</p>
+        <div className="mt-2">
+          <AccessModeBadge mode={card.accessMode} compact />
+        </div>
       </div>
       <ActionButton onClick={() => onConfigureAccessCode(card.id)}>
         <EditIcon className="h-4 w-4" />
@@ -124,6 +128,9 @@ export function AccessCodeCard(props: {
             <div className="min-w-0">
               <h2 className="truncate text-[1.35rem] font-black leading-none text-[var(--foreground)]">{item.card.title}</h2>
               <p className="mt-1 text-[11px] font-bold text-[var(--foreground)]/52">创建于 {formatDate(item.card.createdAt)}</p>
+              <div className="mt-2">
+                <AccessModeBadge mode={item.card.accessMode} compact />
+              </div>
               <div className="my-2 border-t border-dashed border-[var(--line-strong)]/24" />
 
               <div>

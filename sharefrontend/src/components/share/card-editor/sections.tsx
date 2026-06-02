@@ -4,7 +4,7 @@ import { type ChangeEvent, type RefObject } from "react";
 import { slotOptions } from "@/components/share/card-editor/constants";
 import { findAssetBySlot, getReviewStatusLabel, getSlotLabel, getStatusLabel, type SlotFileItem } from "@/components/share/card-editor/helpers";
 import type { AssetOpMode, CreateMode, EditorMode, SubmitMode } from "@/components/share/card-editor/types";
-import type { CardContentSlot, CardDetailResponse } from "@/lib/shared";
+import type { CardContentSlot, CardDetailResponse, ShareCardAccessMode } from "@/lib/shared";
 
 
 export function CardAssetsPanel(props: {
@@ -308,6 +308,8 @@ export function PublishActionsPanel(props: {
   mode: EditorMode;
   publicChecked: boolean;
   setPublicChecked: (checked: boolean) => void;
+  accessMode: ShareCardAccessMode;
+  setAccessMode: (mode: ShareCardAccessMode) => void;
   publishPending: boolean;
   hasAssetPending: boolean;
   reviewSubmitPending: boolean;
@@ -324,6 +326,8 @@ export function PublishActionsPanel(props: {
     mode,
     publicChecked,
     setPublicChecked,
+    accessMode,
+    setAccessMode,
     publishPending,
     hasAssetPending,
     reviewSubmitPending,
@@ -348,6 +352,33 @@ export function PublishActionsPanel(props: {
         </span>
         <input type="checkbox" checked={publicChecked} onChange={(event) => setPublicChecked(event.target.checked)} className="hidden" />
       </label>
+
+      <div className="mb-6">
+        <p className="mb-3 text-sm font-bold text-[var(--foreground)]">卡片访问模式</p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setAccessMode("free")}
+            className={`rounded-full border-[2px] px-4 py-2 text-sm font-black ${
+              accessMode === "free" ? "bg-[var(--button-primary)]" : "bg-white"
+            }`}
+          >
+            免费（无需提取码）
+          </button>
+          <button
+            type="button"
+            onClick={() => setAccessMode("paid")}
+            className={`rounded-full border-[2px] px-4 py-2 text-sm font-black ${
+              accessMode === "paid" ? "bg-[var(--button-primary)]" : "bg-white"
+            }`}
+          >
+            付费（需提取码）
+          </button>
+        </div>
+        <p className="mt-2 text-xs font-bold text-[var(--text-subtle)]">
+          说明：付费模式会要求用户输入提取码，免费模式可直接下载分类文件。
+        </p>
+      </div>
 
       <div className="space-y-3">
         <button

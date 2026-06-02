@@ -11,6 +11,7 @@ import {
 import type {
   CardAccessCodeConfig,
   CardDetailResponse,
+  ShareCardAccessMode,
 } from "@/lib/shared";
 
 export function AccessCodeWizardSteps() {
@@ -49,7 +50,7 @@ export function AccessCodeHero(props: { backHref: string }) {
           卡片提取码设置
         </h1>
         <p className="mt-3 text-base text-[var(--foreground)]/62 sm:text-lg">
-          设置有效期和次数上限，统一管理该卡片的分享权限。
+          你可以把卡片设置为免费或付费，付费模式下可配置提取码规则。
         </p>
       </div>
     </div>
@@ -119,6 +120,8 @@ export function AccessCodeCardPreview(props: {
 }
 
 export function AccessCodeFormPanel(props: {
+  accessMode: ShareCardAccessMode;
+  setAccessMode: (mode: ShareCardAccessMode) => void;
   code: string;
   setCode: (value: string) => void;
   setCodeRandom: () => void;
@@ -134,6 +137,8 @@ export function AccessCodeFormPanel(props: {
   onSubmit: () => void;
 }) {
   const {
+    accessMode,
+    setAccessMode,
     code,
     setCode,
     setCodeRandom,
@@ -150,6 +155,7 @@ export function AccessCodeFormPanel(props: {
   } = props;
 
   const usageText = getUsageHelperText(config);
+  const isPaid = accessMode === "paid";
 
   return (
     <section className="dream-panel p-8 sm:p-10">
@@ -161,108 +167,146 @@ export function AccessCodeFormPanel(props: {
 
       <div className={success ? "mt-6" : ""}>
         <label className="block text-2xl font-medium text-[var(--foreground)]">
-          提取码 <span className="text-[#d74b75]">*</span>
+          卡片状态<span className="text-[#d74b75]">*</span>
         </label>
-
-        <div className="mt-5 flex flex-col gap-4 lg:flex-row">
-          <input
-            type="text"
-            value={code}
-            onChange={(event) => setCode(event.target.value.toUpperCase())}
-            className="dream-input min-w-0 flex-1 px-7 py-5 text-[2rem] tracking-[0.16em] placeholder:text-[var(--foreground)]/28"
-            placeholder="例如 ABC-9KD-7QX"
-          />
-
+        <div className="mt-5 flex flex-wrap gap-3">
           <button
             type="button"
-            onClick={setCodeRandom}
-            className="btn-subtle inline-flex items-center justify-center gap-3 rounded-full px-7 py-5 text-xl font-black"
+            onClick={() => setAccessMode("free")}
+            className={`rounded-full border-[3px] px-6 py-3 text-lg font-semibold transition ${
+              accessMode === "free"
+                ? "border-[var(--line-strong)] bg-[#eef8ff]"
+                : "border-[rgba(46,40,86,0.26)] bg-white"
+            }`}
           >
-            <RefreshIcon className="h-6 w-6" />
-            <span>随机生成</span>
+            免费（无需提取码）
+          </button>
+          <button
+            type="button"
+            onClick={() => setAccessMode("paid")}
+            className={`rounded-full border-[3px] px-6 py-3 text-lg font-semibold transition ${
+              accessMode === "paid"
+                ? "border-[var(--line-strong)] bg-[#eef8ff]"
+                : "border-[rgba(46,40,86,0.26)] bg-white"
+            }`}
+          >
+            付费（需要提取码）
           </button>
         </div>
-
-        <p className="mt-4 text-lg text-[var(--foreground)]/62">
-          建议使用字母和数字组合，便于手动输入与分享。
-        </p>
       </div>
 
-      <div className="dream-divider mt-10 h-px border-t border-dashed" />
+      <div className={`transition ${isPaid ? "opacity-100" : "pointer-events-none opacity-45"}`}>
+        <div className="dream-divider mt-10 h-px border-t border-dashed" />
 
-      <div className="mt-10">
-        <h3 className="text-[2rem] font-medium text-[var(--foreground)]">有效期</h3>
+        <div className="mt-10">
+          <label className="block text-2xl font-medium text-[var(--foreground)]">
+            提取码<span className="text-[#d74b75]">*</span>
+          </label>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
-          {expireOptions.map((option) => {
-            const active = option.value === expireDays;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setExpireDays(option.value)}
-                className={`relative rounded-[28px] border-[3px] px-6 py-6 text-center transition ${
-                  active
-                    ? "border-[var(--line-strong)] bg-[#eef8ff] shadow-[0_4px_0_rgba(46,40,86,0.2)]"
-                    : "border-[rgba(46,40,86,0.26)] bg-white hover:border-[var(--line-strong)]"
-                }`}
-              >
-                {active ? (
-                  <HeartMiniIcon className="absolute right-4 top-4 h-5 w-5 text-[var(--brand-strong)]" />
-                ) : null}
-                <div className="text-[2rem] font-semibold text-[var(--foreground)]">
-                  {option.label}
-                </div>
-                <div className="mt-2 text-lg text-[var(--text-muted)]">
-                  {option.description}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+          <div className="mt-5 flex flex-col gap-4 lg:flex-row">
+            <input
+              type="text"
+              value={code}
+              onChange={(event) => setCode(event.target.value.toUpperCase())}
+              className="dream-input min-w-0 flex-1 px-7 py-5 text-[2rem] tracking-[0.16em] placeholder:text-[var(--foreground)]/28"
+              placeholder="例如 ABC-9KD-7QX"
+              disabled={!isPaid}
+            />
 
-      <div className="mt-10">
-        <div className="flex items-center justify-between gap-4">
-          <h3 className="text-[2rem] font-medium text-[var(--foreground)]">使用次数上限</h3>
-
-          <label className="inline-flex items-center gap-3 text-lg text-[var(--foreground)]/68">
-            <span>不限次数</span>
             <button
               type="button"
-              onClick={() => setUnlimited((current) => !current)}
-              className={`relative h-9 w-16 rounded-full border-[2px] border-[var(--line-strong)] transition ${
-                unlimited ? "bg-[#b3e4f6]" : "bg-[#e4ecf1]"
-              }`}
-              aria-pressed={unlimited}
+              onClick={setCodeRandom}
+              disabled={!isPaid}
+              className="btn-subtle inline-flex items-center justify-center gap-3 rounded-full px-7 py-5 text-xl font-black disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <span
-                className={`absolute top-1 h-7 w-7 rounded-full bg-white shadow-[0_8px_16px_-12px_rgba(0,0,0,0.45)] transition ${
-                  unlimited ? "left-8" : "left-1"
-                }`}
-              />
+              <RefreshIcon className="h-6 w-6" />
+              <span>随机生成</span>
             </button>
-          </label>
+          </div>
+
+          <p className="mt-4 text-lg text-[var(--foreground)]/62">
+            建议使用字母和数字组合，便于手动输入与分享。
+          </p>
         </div>
 
-        <div className="relative mt-5">
-          <PeopleIcon className="pointer-events-none absolute left-6 top-1/2 h-7 w-7 -translate-y-1/2 text-[var(--foreground)]/36" />
-          <input
-            type="number"
-            min={1}
-            disabled={unlimited}
-            value={usageLimit}
-            onChange={(event) => setUsageLimit(event.target.value)}
-            className="dream-input w-full px-16 py-5 pr-16 text-[2rem] disabled:cursor-not-allowed disabled:bg-[#f8f3f5] disabled:text-[var(--foreground)]/36"
-          />
-          <span className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 text-2xl text-[var(--text-muted)]">
-            次
-          </span>
+        <div className="dream-divider mt-10 h-px border-t border-dashed" />
+
+        <div className="mt-10">
+          <h3 className="text-[2rem] font-medium text-[var(--foreground)]">有效期</h3>
+
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {expireOptions.map((option) => {
+              const active = option.value === expireDays;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setExpireDays(option.value)}
+                  disabled={!isPaid}
+                  className={`relative rounded-[28px] border-[3px] px-6 py-6 text-center transition ${
+                    active
+                      ? "border-[var(--line-strong)] bg-[#eef8ff] shadow-[0_4px_0_rgba(46,40,86,0.2)]"
+                      : "border-[rgba(46,40,86,0.26)] bg-white hover:border-[var(--line-strong)]"
+                  } disabled:cursor-not-allowed disabled:opacity-60`}
+                >
+                  {active ? (
+                    <HeartMiniIcon className="absolute right-4 top-4 h-5 w-5 text-[var(--brand-strong)]" />
+                  ) : null}
+                  <div className="text-[2rem] font-semibold text-[var(--foreground)]">
+                    {option.label}
+                  </div>
+                  <div className="mt-2 text-lg text-[var(--text-muted)]">
+                    {option.description}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {usageText ? (
-          <p className="mt-4 text-base text-[var(--text-muted)]">{usageText}</p>
-        ) : null}
+        <div className="mt-10">
+          <div className="flex items-center justify-between gap-4">
+            <h3 className="text-[2rem] font-medium text-[var(--foreground)]">使用次数上限</h3>
+
+            <label className="inline-flex items-center gap-3 text-lg text-[var(--foreground)]/68">
+              <span>不限次数</span>
+              <button
+                type="button"
+                onClick={() => setUnlimited((current) => !current)}
+                disabled={!isPaid}
+                className={`relative h-9 w-16 rounded-full border-[2px] border-[var(--line-strong)] transition ${
+                  unlimited ? "bg-[#b3e4f6]" : "bg-[#e4ecf1]"
+                } disabled:cursor-not-allowed disabled:opacity-60`}
+                aria-pressed={unlimited}
+              >
+                <span
+                  className={`absolute top-1 h-7 w-7 rounded-full bg-white shadow-[0_8px_16px_-12px_rgba(0,0,0,0.45)] transition ${
+                    unlimited ? "left-8" : "left-1"
+                  }`}
+                />
+              </button>
+            </label>
+          </div>
+
+          <div className="relative mt-5">
+            <PeopleIcon className="pointer-events-none absolute left-6 top-1/2 h-7 w-7 -translate-y-1/2 text-[var(--foreground)]/36" />
+            <input
+              type="number"
+              min={1}
+              disabled={!isPaid || unlimited}
+              value={usageLimit}
+              onChange={(event) => setUsageLimit(event.target.value)}
+              className="dream-input w-full px-16 py-5 pr-16 text-[2rem] disabled:cursor-not-allowed disabled:bg-[#f8f3f5] disabled:text-[var(--foreground)]/36"
+            />
+            <span className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 text-2xl text-[var(--text-muted)]">
+              次
+            </span>
+          </div>
+
+          {usageText ? (
+            <p className="mt-4 text-base text-[var(--text-muted)]">{usageText}</p>
+          ) : null}
+        </div>
       </div>
 
       <div className="dream-divider mt-10 h-px border-t border-dashed" />
@@ -403,3 +447,4 @@ function StepPill(props: {
     </div>
   );
 }
+

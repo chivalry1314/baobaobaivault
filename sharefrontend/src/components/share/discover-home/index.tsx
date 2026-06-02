@@ -5,6 +5,7 @@ import type { VirtualItem, Virtualizer } from "@tanstack/react-virtual";
 import { AppShell } from "@/components/share/app-shell";
 import { useDiscoverHome } from "@/components/share/discover-home/hooks";
 import {
+  DiscoverAccessModeFilters,
   DiscoverChips,
   DiscoverError,
   DiscoverGridSkeleton,
@@ -25,6 +26,8 @@ export function DiscoverHome() {
     setQuery,
     activeChip,
     setActiveChip,
+    accessModeFilter,
+    setAccessModeFilter,
     error,
     loading,
     loadingMore,
@@ -57,6 +60,7 @@ export function DiscoverHome() {
           <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-6 xl:mx-0">
             <DiscoverSearchBar query={query} setQuery={typedSetQuery} />
             <DiscoverChips activeChip={activeChip} setActiveChip={typedSetActiveChip} />
+            <DiscoverAccessModeFilters value={accessModeFilter} onChange={setAccessModeFilter} />
 
             {error ? <DiscoverError error={error} /> : null}
 

@@ -28,6 +28,9 @@ const (
 	SharePlatformCardReviewStatusPending     = "pending"
 	SharePlatformCardReviewStatusApproved    = "approved"
 	SharePlatformCardReviewStatusRejected    = "rejected"
+
+	SharePlatformCardAccessModeFree = "free"
+	SharePlatformCardAccessModePaid = "paid"
 )
 
 // ShareExternalUser is the platform-level account for sharefrontend users.
@@ -83,6 +86,7 @@ type SharePlatformCard struct {
 	Visibility            string         `gorm:"type:varchar(20);not null;default:'private';index" json:"visibility"`
 	Status                string         `gorm:"type:varchar(20);not null;default:'published';index" json:"status"`
 	ReviewStatus          string         `gorm:"type:varchar(20);not null;default:'unsubmitted';index" json:"review_status"`
+	AccessMode            string         `gorm:"type:varchar(20);not null;default:'free';index" json:"access_mode"`
 	ReviewReason          string         `gorm:"type:text;default:''" json:"review_reason"`
 	ReviewerExternalUserID *string       `gorm:"type:uuid;index" json:"reviewer_external_user_id,omitempty"`
 	SubmittedAt           *time.Time     `json:"submitted_at,omitempty"`

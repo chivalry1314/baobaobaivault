@@ -9,6 +9,7 @@ import type {
   CardAccessCodeConfig,
   CardDetailResponse,
   ExternalSessionUser,
+  ShareCardAccessMode,
 } from "@/lib/shared";
 
 export function useShareCardAccessCode({
@@ -21,6 +22,7 @@ export function useShareCardAccessCode({
   const [detail, setDetail] = useState<CardDetailResponse | null>(null);
   const [config, setConfig] = useState<CardAccessCodeConfig | null>(null);
 
+  const [accessMode, setAccessMode] = useState<ShareCardAccessMode>("paid");
   const [code, setCode] = useState("");
   const [expireDays, setExpireDays] = useState<number>(7);
   const [unlimited, setUnlimited] = useState(false);
@@ -96,6 +98,7 @@ export function useShareCardAccessCode({
         const nextConfig = accessCodeResponse.config;
         setDetail(detailResponse);
         setConfig(nextConfig);
+        setAccessMode(detailResponse.card.accessMode ?? "free");
         setCode(nextConfig.code || generateAccessCode());
         setExpireDays(nextConfig.code ? nextConfig.expireDays : 7);
         setUnlimited(nextConfig.code ? nextConfig.unlimited : false);
@@ -127,17 +130,23 @@ export function useShareCardAccessCode({
   }, [cardId, currentUser]);
 
   async function handleSubmit() {
-    const normalizedCode = code.trim().toUpperCase();
-    if (!normalizedCode) {
-      setError("请输入提取码。");
+    if (!detail) {
       return;
     }
 
-    if (!unlimited) {
-      const numericLimit = Number(usageLimit);
-      if (!Number.isFinite(numericLimit) || numericLimit <= 0) {
-        setError("使用次数上限必须是大于 0 的数字。");
+    if (accessMode === "paid") {
+      const normalizedCode = code.trim().toUpperCase();
+      if (!normalizedCode) {
+        setError("请输入提取码。");
         return;
+      }
+
+      if (!unlimited) {
+        const numericLimit = Number(usageLimit);
+        if (!Number.isFinite(numericLimit) || numericLimit <= 0) {
+          setError("使用次数上限必须是大于 0 的数字。");
+          return;
+        }
       }
     }
 
@@ -147,46 +156,29 @@ export function useShareCardAccessCode({
 
     try {
       const response = await shareApi.updateCardAccessCode(cardId, {
-        code: normalizedCode,
-        expireDays,
-        usageLimit: unlimited ? 0 : Number(usageLimit),
-        unlimited,
+        accessMode,
+        visibility: isWizardFlow ? "public" : detail.card.visibility,
+        status: isWizardFlow ? "published" : detail.card.status,
+        code: accessMode === "paid" ? code.trim().toUpperCase() : "",
+        expireDays: accessMode === "paid" ? expireDays : 0,
+        usageLimit: accessMode === "paid" ? (unlimited ? 0 : Number(usageLimit)) : 0,
+        unlimited: accessMode === "paid" ? unlimited : true,
       });
 
-      if (
-        isWizardFlow &&
-        detail &&
-        (detail.card.visibility !== "public" || detail.card.status !== "published")
-      ) {
-        const updateCardResponse = await shareApi.updateCard(cardId, {
-          title: detail.card.title,
-          description: detail.card.description,
-          visibility: "public",
-          status: "published",
-        });
-
-        setDetail((current) => {
-          if (!current) {
-            return current;
-          }
-          return {
-            ...current,
-            card: updateCardResponse.card,
-          };
-        });
-      }
+      const refreshedDetail = await shareApi.cardDetail(cardId);
+      setDetail(refreshedDetail);
 
       const nextConfig = response.config;
       setConfig(nextConfig);
-      setCode(nextConfig.code);
+      setCode(nextConfig.code || code);
       setExpireDays(nextConfig.expireDays);
       setUnlimited(nextConfig.unlimited);
       setUsageLimit(
         nextConfig.usageLimit > 0 ? String(nextConfig.usageLimit) : usageLimit,
       );
-      setSuccess("提取码已保存。");
+      setSuccess(accessMode === "paid" ? "付费卡片提取码已保存。" : "已切换为免费卡片，无需提取码。");
     } catch (submitError) {
-      setError(getShareErrorMessage(submitError, "保存提取码失败，请重试。"));
+      setError(getShareErrorMessage(submitError, "保存失败，请重试。"));
     } finally {
       setPending(false);
     }
@@ -198,6 +190,8 @@ export function useShareCardAccessCode({
     currentUser,
     detail,
     config,
+    accessMode,
+    setAccessMode,
     code,
     setCode,
     expireDays,

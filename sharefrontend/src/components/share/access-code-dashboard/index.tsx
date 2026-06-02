@@ -1,8 +1,9 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useMemo } from "react";
 
+import { AccessModeFilterPills } from "@/components/share/access-mode-filter";
 import { AppShell } from "@/components/share/app-shell";
 import { AuthRedirect } from "@/components/share/auth-redirect/index";
 import { useShareAccessCodeDashboard } from "@/components/share/access-code-dashboard/hooks";
@@ -19,6 +20,8 @@ export function ShareAccessCodeDashboard() {
     feedback,
     searchValue,
     setSearchValue,
+    accessModeFilter,
+    setAccessModeFilter,
     pendingAction,
     itemsPage,
     setItemsPage,
@@ -104,7 +107,7 @@ export function ShareAccessCodeDashboard() {
 
             <div className="relative z-10">
               {!loadError && totalItems > 0 ? (
-                <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="mb-6 flex flex-col gap-4">
                   <label className="relative block w-full md:max-w-[520px]">
                     <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--foreground)]/40" />
                     <input
@@ -116,8 +119,11 @@ export function ShareAccessCodeDashboard() {
                     />
                   </label>
 
-                  <div className="rounded-full border-[3px] border-[var(--line-strong)] bg-[#fcf1a7] px-4 py-2 text-sm font-black text-[var(--foreground)]">
-                    共 {totalItems} 条，当前第 {Math.min(itemsPage, itemsTotalPages)} / {itemsTotalPages} 页，显示 {pagedItems.length} 条
+                  <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                    <AccessModeFilterPills value={accessModeFilter} onChange={setAccessModeFilter} />
+                    <div className="rounded-full border-[3px] border-[var(--line-strong)] bg-[#fcf1a7] px-4 py-2 text-sm font-black text-[var(--foreground)]">
+                      共 {totalItems} 条，当前第 {Math.min(itemsPage, itemsTotalPages)} / {itemsTotalPages} 页，显示 {pagedItems.length} 条
+                    </div>
                   </div>
                 </div>
               ) : null}
@@ -168,7 +174,7 @@ export function ShareAccessCodeDashboard() {
               {!loadError && totalItems > 0 && items.length === 0 ? (
                 <div className="rounded-[24px] border-[3px] border-[var(--line-strong)] bg-[#f8fcff] px-6 py-12 text-center">
                   <h2 className="text-2xl font-black text-[var(--foreground)]">没有匹配到提取码</h2>
-                  <p className="mt-3 text-sm font-bold text-[var(--foreground)]/62">试试更短的关键词，或清空搜索后查看全部提取码。</p>
+                  <p className="mt-3 text-sm font-bold text-[var(--foreground)]/62">试试更短的关键词，切换免费 / 付费筛选，或清空搜索后查看全部提取码。</p>
                 </div>
               ) : null}
 
@@ -198,6 +204,3 @@ export function ShareAccessCodeDashboard() {
     </AppShell>
   );
 }
-
-
-

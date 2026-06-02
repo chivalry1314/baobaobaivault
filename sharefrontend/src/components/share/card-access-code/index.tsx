@@ -30,6 +30,8 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
     currentUser,
     detail,
     config,
+    accessMode,
+    setAccessMode,
     code,
     setCode,
     expireDays,
@@ -58,7 +60,7 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
     return (
       <div className="min-h-screen bg-[var(--background)] px-4 py-8 sm:px-6 sm:py-10">
         <div className="mx-auto max-w-7xl rounded-[32px] border border-white/80 bg-white/82 px-6 py-14 text-center text-[var(--foreground)]/72 shadow-[0_24px_64px_-42px_rgba(120,85,94,0.32)]">
-          姝ｅ湪楠岃瘉鐧诲綍鐘舵€?..
+          正在验证登录状态...
         </div>
       </div>
     );
@@ -88,6 +90,8 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
             <div className="mt-10 grid gap-8 xl:grid-cols-[380px_minmax(0,1fr)]">
               <AccessCodeCardPreview detail={detail} />
               <AccessCodeFormPanel
+                accessMode={accessMode}
+                setAccessMode={setAccessMode}
                 code={code}
                 setCode={setCode}
                 setCodeRandom={setCodeRandom}

@@ -22,6 +22,9 @@ func (s *ShareService) CreateCard(ctx context.Context, input ShareCreateCardInpu
 	if !isValidShareVisibility(input.Visibility) {
 		return nil, ErrShareInvalidVisibility
 	}
+	if !isValidShareCardAccessMode(input.AccessMode) {
+		return nil, ErrShareInvalidAccessMode
+	}
 
 	status := strings.TrimSpace(input.Status)
 	if status == "" {
@@ -71,6 +74,7 @@ func (s *ShareService) CreateCard(ctx context.Context, input ShareCreateCardInpu
 		Description:            strings.TrimSpace(input.Description),
 		Visibility:             normalizeShareVisibility(input.Visibility),
 		Status:                 status,
+		AccessMode:             normalizeShareCardAccessMode(input.AccessMode),
 		ReviewStatus:           defaultReviewStatusForStatus(status),
 		SubmittedAt:            defaultSubmittedAtForReviewStatus(defaultReviewStatusForStatus(status)),
 		ReviewedAt:             nil,
@@ -121,6 +125,9 @@ func (s *ShareService) CreateCardBundle(ctx context.Context, input ShareCreateCa
 	}
 	if !isValidShareVisibility(input.Visibility) {
 		return nil, ErrShareInvalidVisibility
+	}
+	if !isValidShareCardAccessMode(input.AccessMode) {
+		return nil, ErrShareInvalidAccessMode
 	}
 	if len(input.Assets) == 0 {
 		return nil, ErrShareFileRequired
@@ -203,6 +210,7 @@ func (s *ShareService) CreateCardBundle(ctx context.Context, input ShareCreateCa
 		Description:            strings.TrimSpace(input.Description),
 		Visibility:             normalizeShareVisibility(input.Visibility),
 		Status:                 status,
+		AccessMode:             normalizeShareCardAccessMode(input.AccessMode),
 		ReviewStatus:           defaultReviewStatusForStatus(status),
 		SubmittedAt:            defaultSubmittedAtForReviewStatus(defaultReviewStatusForStatus(status)),
 		ReviewedAt:             nil,
@@ -258,6 +266,9 @@ func (s *ShareService) UpdateCardByOwner(ctx context.Context, input ShareUpdateC
 	if !isValidShareVisibility(input.Visibility) {
 		return nil, ErrShareInvalidVisibility
 	}
+	if !isValidShareCardAccessMode(input.AccessMode) {
+		return nil, ErrShareInvalidAccessMode
+	}
 
 	status := strings.ToLower(strings.TrimSpace(input.Status))
 	if !isValidShareStatus(status) {
@@ -280,23 +291,43 @@ func (s *ShareService) UpdateCardByOwner(ctx context.Context, input ShareUpdateC
 			return err
 		}
 
-		card.Title = strings.TrimSpace(input.Title)
-		card.Description = strings.TrimSpace(input.Description)
-		card.Visibility = normalizeShareVisibility(input.Visibility)
+		nextTitle := strings.TrimSpace(input.Title)
+		nextDescription := strings.TrimSpace(input.Description)
+		nextVisibility := normalizeShareVisibility(input.Visibility)
+		shouldResetReview := card.Title != nextTitle ||
+			card.Description != nextDescription ||
+			card.Visibility != nextVisibility ||
+			card.Status != status
+
+		card.Title = nextTitle
+		card.Description = nextDescription
+		card.Visibility = nextVisibility
 		card.Status = status
-		if card.Status == model.SharePlatformCardStatusPublished {
+		if strings.TrimSpace(input.AccessMode) != "" {
+			card.AccessMode = normalizeShareCardAccessMode(input.AccessMode)
+			if card.AccessMode == model.SharePlatformCardAccessModeFree {
+				card.AccessCode = ""
+				card.AccessCodeExpiresAt = nil
+				card.AccessCodeUsageLimit = 0
+				card.AccessCodeUsageCount = 0
+			}
+		}
+		if shouldResetReview && card.Status == model.SharePlatformCardStatusPublished {
 			card.ReviewStatus = model.SharePlatformCardReviewStatusPending
 			now := time.Now().UTC()
 			card.SubmittedAt = &now
 			card.ReviewedAt = nil
 			card.ReviewerExternalUserID = nil
-		} else {
+		} else if shouldResetReview {
 			card.ReviewStatus = model.SharePlatformCardReviewStatusUnsubmitted
 			card.SubmittedAt = nil
 			card.ReviewedAt = nil
 			card.ReviewerExternalUserID = nil
+			card.ReviewReason = ""
 		}
-		card.ReviewReason = ""
+		if shouldResetReview {
+			card.ReviewReason = ""
+		}
 		card.UpdatedAt = time.Now().UTC()
 
 		if err := tx.Save(&card).Error; err != nil {

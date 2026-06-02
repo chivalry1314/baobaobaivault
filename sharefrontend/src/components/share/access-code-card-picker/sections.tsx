@@ -1,5 +1,6 @@
 ﻿import type { ReactNode } from "react";
 
+import { AccessModeBadge } from "@/components/share/access-mode-badge";
 import {
   formatDate,
   getRarityLabel,
@@ -90,6 +91,7 @@ export function CardPickerListItem({
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2 text-sm text-[var(--foreground)]/58">
+          <AccessModeBadge mode={item.card.accessMode} compact />
           <span className="dream-chip px-3 py-1">{getVisibilityLabel(item.card)}</span>
           <span className="dream-chip px-3 py-1">下载 {item.stats.downloadCount}</span>
           <span className="dream-chip px-3 py-1">{item.card.originalFileName}</span>
@@ -131,7 +133,10 @@ export function CardPickerGridItem({
         </span>
 
         <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(17,12,15,0)_0%,rgba(17,12,15,0.82)_100%)] px-5 pb-5 pt-16">
-          <div className="inline-flex rounded-full bg-white/18 px-3 py-1 text-xs tracking-[0.08em] text-white/92">{getVisibilityLabel(item.card)}</div>
+          <div className="flex flex-wrap gap-2">
+            <div className="inline-flex rounded-full bg-white/18 px-3 py-1 text-xs tracking-[0.08em] text-white/92">{getVisibilityLabel(item.card)}</div>
+            <AccessModeBadge mode={item.card.accessMode} compact className="border-white/35 shadow-sm" />
+          </div>
           <div className="mt-4 text-[2rem] font-black leading-none text-white">{item.card.title}</div>
         </div>
 

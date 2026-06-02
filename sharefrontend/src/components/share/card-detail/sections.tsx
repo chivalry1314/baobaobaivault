@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AccessModeBadge } from "@/components/share/access-mode-badge";
 import { SLOT_LABEL_MAP } from "@/components/share/card-detail/constants";
 import { formatBytes, getInitials } from "@/components/share/card-detail/helpers";
 import type { CardViewModel } from "@/components/share/card-detail/types";
@@ -52,7 +53,7 @@ export function CardDetailContent(props: {
       <section className="w-full shrink-0 lg:w-[55%] xl:w-[60%]">
         <div className="group relative h-[600px] overflow-hidden rounded-[2rem] border-[4px] border-[var(--outline)] bg-[var(--secondary)] p-3 md:h-[700px]">
           <Link href="/" className="btn-subtle absolute left-6 top-6 z-20 rounded-full px-4 py-2 font-black">
-            ← 返回
+            返回
           </Link>
 
           <div className="absolute right-6 top-6 z-20 flex items-center gap-2 rounded-full border-[3px] border-[var(--outline)] bg-white px-4 py-2">
@@ -105,6 +106,9 @@ export function CardDetailContent(props: {
           </div>
 
           <h3 className="type-h2 text-[var(--foreground)]">卡片描述</h3>
+          <div className="mt-3">
+            <AccessModeBadge mode={detail.card.accessMode} />
+          </div>
           <p className="type-body mt-3 font-bold text-[var(--foreground)]/80">
             {detail.card.description.trim() || "这是一张公开分享卡片，你可以预览内容并按规则下载分类文件。"}
           </p>
@@ -130,9 +134,11 @@ export function CardDetailContent(props: {
         </section>
 
         <section className="relative overflow-hidden rounded-[1.8rem] border-[4px] border-[var(--outline)] bg-[var(--tertiary)] p-6 text-center sm:p-7">
-          <h3 className="type-h2 text-[var(--foreground)]">提取分享卡片</h3>
+          <h3 className="type-h2 text-[var(--foreground)]">下载分享卡片</h3>
           <p className="mt-2 text-sm font-bold text-[var(--foreground)]/78">
-            输入提取码后可下载文件，支持系统主题、微信主题、App、角色人设、世界书。
+            {viewModel.isPaid
+              ? "付费卡片需输入提取码后下载，支持系统主题、微信主题、App、角色人设、世界书。"
+              : "免费卡片可直接下载，支持系统主题、微信主题、App、角色人设、世界书。"}
           </p>
 
           <div className="relative mt-6">
@@ -145,9 +151,9 @@ export function CardDetailContent(props: {
                   setDownloadError("");
                 }
               }}
-              disabled={!viewModel.requiresAccessCode}
+              disabled={!viewModel.isPaid}
               placeholder={
-                viewModel.requiresAccessCode
+                viewModel.isPaid
                   ? "请输入提取码（示例：SHARE2026）"
                   : "当前卡片无需提取码"
               }

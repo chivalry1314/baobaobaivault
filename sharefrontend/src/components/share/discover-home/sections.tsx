@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { VirtualItem, Virtualizer } from "@tanstack/react-virtual";
 
+import { AccessModeFilterPills, type ShareAccessModeFilter } from "@/components/share/access-mode-filter";
+import { AccessModeBadge } from "@/components/share/access-mode-badge";
 import {
   CHIP_LABELS,
   CHIP_VISUALS,
@@ -60,6 +62,21 @@ export function DiscoverChips(props: {
           </button>
         );
       })}
+    </div>
+  );
+}
+
+export function DiscoverAccessModeFilters(props: {
+  value: ShareAccessModeFilter;
+  onChange: (value: ShareAccessModeFilter) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] border-[4px] border-[var(--outline)] bg-white px-4 py-3">
+      <div>
+        <div className="text-sm font-black text-[var(--foreground)]">访问方式</div>
+        <div className="mt-1 text-xs font-bold text-[var(--foreground)]/56">快速筛选免费卡片或需提取码卡片</div>
+      </div>
+      <AccessModeFilterPills value={props.value} onChange={props.onChange} />
     </div>
   );
 }
@@ -229,6 +246,9 @@ function CardItem({ card, index }: { card: HomeFeedCard; index: number }) {
       <div className="mt-2.5 flex items-center justify-between px-1 text-xs font-bold text-[var(--foreground)]/68">
         <span>{card.creatorName}</span>
         <span>{card.metric}</span>
+      </div>
+      <div className="mt-2 px-1">
+        <AccessModeBadge mode={card.accessMode} compact />
       </div>
     </Link>
   );

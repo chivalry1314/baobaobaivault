@@ -76,8 +76,10 @@ export function buildCardViewModel(detail: CardDetailResponse | null, unlockCode
   const creatorHandle = detail ? getCreatorHandle(detail) : "";
   const metric = detail ? formatMetric(detail.stats.downloadCount) : "0";
   const tags = detail ? buildSlotTags(detail) : [];
+  const accessMode = detail?.card.accessMode ?? "free";
   const accessCodeStatus = detail?.accessCodeStatus ?? "none";
-  const requiresAccessCode = Boolean(detail && !detail.canEdit && accessCodeStatus === "required");
+  const isPaid = accessMode === "paid";
+  const requiresAccessCode = Boolean(detail && !detail.canEdit && isPaid && accessCodeStatus === "required");
   const normalizedUnlockCode = unlockCode.trim().toUpperCase();
   const displayAsset = detail ? pickDisplayAsset(detail) : null;
 
@@ -93,20 +95,24 @@ export function buildCardViewModel(detail: CardDetailResponse | null, unlockCode
 
   const downloadHint = detail?.canEdit
     ? "你创建的卡片可直接下载分类文件。"
-    : requiresAccessCode
-      ? "请先输入提取码后再下载分类文件。"
-      : accessCodeStatus === "expired"
-        ? "当前提取码已过期，暂时无法下载。"
-        : accessCodeStatus === "exhausted"
-          ? "当前提取码使用次数已达上限，暂时无法下载。"
-          : "公开卡片可直接下载各分类文件。";
+    : !isPaid
+      ? "当前为免费卡片，可直接下载各分类文件。"
+      : accessCodeStatus === "required"
+        ? "请先输入提取码后再下载分类文件。"
+        : accessCodeStatus === "expired"
+          ? "当前提取码已过期，暂时无法下载。"
+          : accessCodeStatus === "exhausted"
+            ? "当前提取码使用次数已达上限，暂时无法下载。"
+            : "当前卡片可下载各分类文件。";
 
   return {
     creatorName,
     creatorHandle,
     metric,
     tags,
+    accessMode,
     accessCodeStatus,
+    isPaid,
     requiresAccessCode,
     normalizedUnlockCode,
     displayAsset,
@@ -118,3 +124,4 @@ export function buildCardViewModel(detail: CardDetailResponse | null, unlockCode
     downloadHint,
   };
 }
+

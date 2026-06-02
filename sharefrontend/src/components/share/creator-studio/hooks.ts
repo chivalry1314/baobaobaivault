@@ -1,9 +1,11 @@
-﻿import { CARDS_PAGE_SIZE, formatMetricValue, getDisplayName, HISTORY_PAGE_SIZE } from "@/components/share/creator-studio/helpers";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+import { matchesAccessModeFilter, type ShareAccessModeFilter } from "@/components/share/access-mode-filter";
+import { CARDS_PAGE_SIZE, formatMetricValue, getDisplayName, HISTORY_PAGE_SIZE } from "@/components/share/creator-studio/helpers";
 import type { ActiveSection, ActiveTab } from "@/components/share/creator-studio/types";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type { DashboardResponse, ExternalSessionUser } from "@/lib/shared";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
 
 export function useCreatorStudio() {
   const router = useRouter();
@@ -13,10 +15,15 @@ export function useCreatorStudio() {
   const [loadError, setLoadError] = useState("");
   const [activeSection, setActiveSection] = useState<ActiveSection>("dashboard");
   const [activeTab, setActiveTab] = useState<ActiveTab>("cards");
+  const [accessModeFilter, setAccessModeFilter] = useState<ShareAccessModeFilter>("all");
   const [cardsPage, setCardsPage] = useState(1);
   const [historyPage, setHistoryPage] = useState(1);
 
-  const cards = useMemo(() => dashboard?.cards ?? [], [dashboard?.cards]);
+  const allCards = useMemo(() => dashboard?.cards ?? [], [dashboard?.cards]);
+  const cards = useMemo(
+    () => allCards.filter((item) => matchesAccessModeFilter(item.card.accessMode, accessModeFilter)),
+    [accessModeFilter, allCards],
+  );
   const displayName = useMemo(() => (currentUser ? getDisplayName(currentUser) : ""), [currentUser]);
 
   const accountLabel = useMemo(() => {
@@ -58,7 +65,7 @@ export function useCreatorStudio() {
   useEffect(() => {
     setCardsPage(1);
     setHistoryPage(1);
-  }, [dashboard]);
+  }, [dashboard, accessModeFilter]);
 
   useEffect(() => {
     setCardsPage((current) => Math.min(Math.max(current, 1), cardsTotalPages));
@@ -187,6 +194,8 @@ export function useCreatorStudio() {
     setActiveSection,
     activeTab,
     setActiveTab,
+    accessModeFilter,
+    setAccessModeFilter,
     cardsPage,
     setCardsPage,
     historyPage,

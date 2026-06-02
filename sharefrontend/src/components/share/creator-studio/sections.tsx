@@ -1,6 +1,7 @@
 ﻿import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { AccessModeBadge } from "@/components/share/access-mode-badge";
 import {
   defaultCardDescription,
   formatCardCode,
@@ -131,6 +132,7 @@ export function CreatorCard({ item }: { item: DashboardCard }) {
             </Link>
           </div>
           <div className="flex flex-wrap justify-end gap-2">
+            <AccessModeBadge mode={item.card.accessMode} compact />
             <span className="dream-chip px-3 py-1 text-xs text-[var(--foreground)]/62">{getVisibilityLabel(item.card.visibility)}</span>
             <span className="dream-chip px-3 py-1 text-xs text-[var(--foreground)]/62">{getReviewStatusLabel(item.card.reviewStatus)}</span>
           </div>
@@ -185,6 +187,7 @@ export function HistoryItem({ item }: { item: DashboardCard }) {
             更新时间：{formatDate(item.card.updatedAt)}，当前状态：{getStatusLabel(item.card.status)} / {getReviewStatusLabel(item.card.reviewStatus)}
           </p>
           <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--text-muted)]">
+            <AccessModeBadge mode={item.card.accessMode} compact />
             <span className="dream-chip px-3 py-1">{getVisibilityLabel(item.card.visibility)}</span>
             <span className="dream-chip px-3 py-1">下载 {item.stats.downloadCount} 次</span>
             <span className="dream-chip px-3 py-1">编号 {formatCardCode(item.card.id)}</span>

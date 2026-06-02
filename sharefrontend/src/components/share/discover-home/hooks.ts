@@ -2,6 +2,7 @@ import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useInView } from "react-intersection-observer";
 
+import { matchesAccessModeFilter, type ShareAccessModeFilter } from "@/components/share/access-mode-filter";
 import {
   DISCOVER_PAGE_SIZE,
   type FilterChip,
@@ -24,6 +25,7 @@ export function useDiscoverHome() {
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [activeChip, setActiveChip] = useState<FilterChip>("all");
+  const [accessModeFilter, setAccessModeFilter] = useState<ShareAccessModeFilter>("all");
   const [columnCount, setColumnCount] = useState(1);
   const [scrollMargin, setScrollMargin] = useState(0);
 
@@ -141,12 +143,15 @@ export function useDiscoverHome() {
       if (!matchesChip(card, activeChip)) {
         return false;
       }
+      if (!matchesAccessModeFilter(card.accessMode, accessModeFilter)) {
+        return false;
+      }
       if (!keyword) {
         return true;
       }
       return card.searchableText.includes(keyword);
     });
-  }, [activeChip, deferredQuery, sourceCards]);
+  }, [activeChip, accessModeFilter, deferredQuery, sourceCards]);
 
   const cardRows = useMemo(
     () => toRows(filteredCards, columnCount),
@@ -195,6 +200,8 @@ export function useDiscoverHome() {
     setQuery,
     activeChip,
     setActiveChip,
+    accessModeFilter,
+    setAccessModeFilter,
     error,
     loading,
     loadingMore,
@@ -214,6 +221,7 @@ export function useDiscoverHome() {
     resetFilters: () => {
       setQuery("");
       setActiveChip("all");
+      setAccessModeFilter("all");
     },
   };
 }

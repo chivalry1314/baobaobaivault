@@ -51,6 +51,8 @@ var (
 	ErrShareSaveFileFailed       = errors.New("failed to save file")
 	ErrShareInvalidVisibility    = errors.New("invalid card visibility")
 	ErrShareInvalidCardStatus    = errors.New("invalid card status")
+	ErrShareInvalidAccessMode    = errors.New("invalid card access mode")
+	ErrSharePaidAccessRequired   = errors.New("paid access mode required")
 	ErrShareInvalidAccessCode    = errors.New("invalid access code")
 	ErrShareInvalidAccessRules   = errors.New("invalid access code rules")
 	ErrShareAccessCodeRequired   = errors.New("access code required")
@@ -121,6 +123,7 @@ type ShareCardView struct {
 	Description      string     `json:"description"`
 	Visibility       string     `json:"visibility"`
 	Status           string     `json:"status"`
+	AccessMode       string     `json:"accessMode"`
 	ReviewStatus     string     `json:"reviewStatus"`
 	ReviewReason     string     `json:"reviewReason"`
 	SubmittedAt      *time.Time `json:"submittedAt,omitempty"`
@@ -210,6 +213,7 @@ type ShareCreateCardInput struct {
 	Description   string
 	Visibility    string
 	Status        string
+	AccessMode    string
 	FileName      string
 	MimeType      string
 	FileReader    io.Reader
@@ -232,6 +236,7 @@ type ShareCreateCardBundleInput struct {
 	Description   string
 	Visibility    string
 	Status        string
+	AccessMode    string
 	Assets        []ShareCreateCardAssetInput
 	CoverFileName string
 	CoverMimeType string
@@ -246,6 +251,7 @@ type ShareUpdateCardInput struct {
 	Description string
 	Visibility  string
 	Status      string
+	AccessMode  string
 }
 
 type ShareReviewDashboardItem struct {
@@ -299,6 +305,9 @@ type ShareCardAccessCodeConfig struct {
 type ShareUpdateCardAccessCodeInput struct {
 	OwnerID    string
 	CardID     string
+	AccessMode string
+	Visibility string
+	Status     string
 	Code       string
 	ExpireDays int
 	UsageLimit int
@@ -858,6 +867,23 @@ func normalizeShareVisibility(value string) string {
 	return model.SharePlatformCardVisibilityPrivate
 }
 
+func normalizeShareCardAccessMode(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	if value == model.SharePlatformCardAccessModePaid {
+		return model.SharePlatformCardAccessModePaid
+	}
+	return model.SharePlatformCardAccessModeFree
+}
+
+func isValidShareCardAccessMode(value string) bool {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "", model.SharePlatformCardAccessModeFree, model.SharePlatformCardAccessModePaid:
+		return true
+	default:
+		return false
+	}
+}
+
 func normalizeShareExternalUserRole(value string) string {
 	value = strings.ToLower(strings.TrimSpace(value))
 	if value == model.ShareExternalUserRoleManager {
@@ -1028,6 +1054,20 @@ func deriveShareAccessExpireDays(expiresAt *time.Time) int {
 }
 
 func buildShareCardAccessCodeConfig(card *model.SharePlatformCard) ShareCardAccessCodeConfig {
+	if normalizeShareCardAccessMode(card.AccessMode) == model.SharePlatformCardAccessModeFree {
+		return ShareCardAccessCodeConfig{
+			CardID:     card.ID,
+			Code:       "",
+			ExpiresAt:  nil,
+			ExpireDays: 0,
+			UsageLimit: 0,
+			UsageCount: 0,
+			Unlimited:  true,
+			IsActive:   false,
+			IsExpired:  false,
+		}
+	}
+
 	now := time.Now().UTC()
 	expiresAt := card.AccessCodeExpiresAt
 	isExpired := expiresAt != nil && expiresAt.Before(now)
@@ -1052,8 +1092,12 @@ func deriveShareCardAccessStatus(card *model.SharePlatformCard, canEdit bool) Sh
 	if canEdit {
 		return ShareCardAccessStatusNone
 	}
-	if strings.TrimSpace(card.AccessCode) == "" {
+	if normalizeShareCardAccessMode(card.AccessMode) == model.SharePlatformCardAccessModeFree {
 		return ShareCardAccessStatusNone
+	}
+
+	if strings.TrimSpace(card.AccessCode) == "" {
+		return ShareCardAccessStatusRequired
 	}
 
 	now := time.Now().UTC()
@@ -1144,6 +1188,7 @@ func toShareCardView(card *model.SharePlatformCard, assets []model.SharePlatform
 		Description:      card.Description,
 		Visibility:       card.Visibility,
 		Status:           card.Status,
+		AccessMode:       normalizeShareCardAccessMode(card.AccessMode),
 		ReviewStatus:     normalizeShareReviewStatus(card.ReviewStatus),
 		ReviewReason:     strings.TrimSpace(card.ReviewReason),
 		SubmittedAt:      card.SubmittedAt,

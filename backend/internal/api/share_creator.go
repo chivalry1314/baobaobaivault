@@ -166,6 +166,7 @@ func (h *Handler) shareCreateCard(c *gin.Context) {
 		Description:   c.PostForm("description"),
 		Visibility:    c.PostForm("visibility"),
 		Status:        c.PostForm("status"),
+		AccessMode:    c.PostForm("accessMode"),
 		FileName:      header.Filename,
 		MimeType:      header.Header.Get("Content-Type"),
 		FileReader:    file,
@@ -213,6 +214,7 @@ func (h *Handler) shareCreateCardBundle(c *gin.Context) {
 		Description string `json:"description"`
 		Visibility  string `json:"visibility"`
 		Status      string `json:"status"`
+		AccessMode  string `json:"accessMode"`
 		Items       []struct {
 			Slot      string `json:"slot"`
 			FileField string `json:"fileField"`
@@ -282,6 +284,7 @@ func (h *Handler) shareCreateCardBundle(c *gin.Context) {
 		Description:   payload.Description,
 		Visibility:    payload.Visibility,
 		Status:        payload.Status,
+		AccessMode:    payload.AccessMode,
 		Assets:        assetInputs,
 		CoverFileName: coverFileName,
 		CoverMimeType: coverMimeType,
@@ -317,6 +320,7 @@ func (h *Handler) shareUpdateCard(c *gin.Context) {
 		Description string `json:"description"`
 		Visibility  string `json:"visibility"`
 		Status      string `json:"status"`
+		AccessMode  string `json:"accessMode"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
@@ -330,13 +334,15 @@ func (h *Handler) shareUpdateCard(c *gin.Context) {
 		Description: req.Description,
 		Visibility:  req.Visibility,
 		Status:      req.Status,
+		AccessMode:  req.AccessMode,
 	})
 	if err != nil {
 		status := http.StatusBadRequest
 		switch {
 		case errors.Is(err, service.ErrShareCardNotFound):
 			status = http.StatusNotFound
-		case errors.Is(err, service.ErrShareCardForbidden):
+		case errors.Is(err, service.ErrShareCardForbidden),
+			errors.Is(err, service.ErrSharePaidAccessRequired):
 			status = http.StatusForbidden
 		}
 		c.JSON(status, gin.H{"error": err.Error()})
@@ -533,6 +539,9 @@ func (h *Handler) shareUpdateCardAccessCode(c *gin.Context) {
 	}
 
 	var req struct {
+		AccessMode string `json:"accessMode"`
+		Visibility string `json:"visibility"`
+		Status     string `json:"status"`
 		Code       string `json:"code"`
 		ExpireDays int    `json:"expireDays"`
 		UsageLimit int    `json:"usageLimit"`
@@ -546,6 +555,9 @@ func (h *Handler) shareUpdateCardAccessCode(c *gin.Context) {
 	config, err := h.shareService.UpdateCardAccessCodeByOwner(c.Request.Context(), service.ShareUpdateCardAccessCodeInput{
 		OwnerID:    user.ID,
 		CardID:     c.Param("cardId"),
+		AccessMode: req.AccessMode,
+		Visibility: req.Visibility,
+		Status:     req.Status,
 		Code:       req.Code,
 		ExpireDays: req.ExpireDays,
 		UsageLimit: req.UsageLimit,

@@ -20,7 +20,9 @@ export type CardViewModel = {
   creatorHandle: string;
   metric: string;
   tags: string[];
+  accessMode: "free" | "paid";
   accessCodeStatus: "none" | "required" | "expired" | "exhausted";
+  isPaid: boolean;
   requiresAccessCode: boolean;
   normalizedUnlockCode: string;
   displayAsset: CardAsset | null;

@@ -46,7 +46,7 @@ export function useCardDetail({ cardId }: UseCardDetailArgs) {
           return;
         }
         setError(
-          loadError instanceof Error ? loadError.message : "卡片详情加载失败",
+          getShareErrorMessage(loadError, "卡片详情加载失败，请稍后重试。"),
         );
       } finally {
         if (active) {
@@ -141,3 +141,4 @@ export function useCardDetail({ cardId }: UseCardDetailArgs) {
     handleAssetDownload,
   };
 }
+

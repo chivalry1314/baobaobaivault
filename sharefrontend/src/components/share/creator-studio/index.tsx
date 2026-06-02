@@ -1,9 +1,10 @@
-﻿"use client";
+"use client";
 
+import { AccessModeFilterPills } from "@/components/share/access-mode-filter";
 import { AuthRedirect } from "@/components/share/auth-redirect/index";
 import { useCreatorStudio } from "@/components/share/creator-studio/hooks";
-import { Avatar, CreatorCard, CreatorStudioIcons, EmptyState, HistoryItem, SidebarButton, TabButton } from "@/components/share/creator-studio/sections";
 import { getUserTagline, formatUid } from "@/components/share/creator-studio/helpers";
+import { Avatar, CreatorCard, CreatorStudioIcons, EmptyState, HistoryItem, SidebarButton, TabButton } from "@/components/share/creator-studio/sections";
 import { PaginationControls } from "@/components/share/pagination-controls/index";
 import { ShareProfileSettings } from "@/components/share/profile-settings";
 import { UnifiedFooter } from "@/components/share/unified-footer/index";
@@ -19,6 +20,8 @@ export function CreatorStudio() {
     setActiveSection,
     activeTab,
     setActiveTab,
+    accessModeFilter,
+    setAccessModeFilter,
     cardsPage,
     setCardsPage,
     historyPage,
@@ -173,6 +176,16 @@ export function CreatorStudio() {
                 </div>
 
                 <div className="pt-6">
+                  {activeTab !== "collections" ? (
+                    <div className="mb-6 flex flex-col gap-3 rounded-[24px] border-[3px] border-[var(--outline-variant)] bg-[rgba(248,252,255,0.92)] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <div className="text-sm font-black text-[var(--foreground)]">访问方式筛选</div>
+                        <div className="mt-1 text-xs font-bold text-[var(--foreground)]/56">只看免费卡片，或只看需提取码的卡片</div>
+                      </div>
+                      <AccessModeFilterPills value={accessModeFilter} onChange={setAccessModeFilter} />
+                    </div>
+                  ) : null}
+
                   {activeTab === "cards" ? (
                     cards.length > 0 ? (
                       <div className="space-y-5">
@@ -217,6 +230,3 @@ export function CreatorStudio() {
     </div>
   );
 }
-
-
-

@@ -14,6 +14,7 @@
   PlatformCard,
   ReviewDashboardResponse,
   SessionResponse,
+  ShareCardAccessMode,
   ShareUserRole,
   ShareUserRoleManageItem,
 } from "@/lib/shared";
@@ -42,6 +43,8 @@ const shareApiErrorMessages: Record<string, string> = {
   "invalid user role": "用户角色不正确",
   "cannot downgrade your own role": "不能降低自己的管理员权限",
   "invalid card content slot": "分类槽位不正确",
+  "invalid card access mode": "卡片状态不正确",
+  "paid access mode required": "请先把卡片切换为付费模式后再保存提取码",
   "card must keep at least one category file": "卡片至少保留一个分类文件",
   "invalid review status": "审核状态不正确",
   "review reason is required": "驳回时必须填写原因",
@@ -197,6 +200,7 @@ export const shareApi = {
     description: string;
     visibility: "private" | "public";
     status: "draft" | "published" | "archived";
+    accessMode: ShareCardAccessMode;
     file: File;
     cover?: File;
   }) {
@@ -205,6 +209,7 @@ export const shareApi = {
     formData.append("description", input.description);
     formData.append("visibility", input.visibility);
     formData.append("status", input.status);
+    formData.append("accessMode", input.accessMode);
     formData.append("file", input.file);
     if (input.cover) {
       formData.append("cover", input.cover);
@@ -221,6 +226,7 @@ export const shareApi = {
     description: string;
     visibility: "private" | "public";
     status: "draft" | "published" | "archived";
+    accessMode: ShareCardAccessMode;
     cover?: File;
     items: Array<{
       slot: CardContentSlot;
@@ -233,6 +239,7 @@ export const shareApi = {
       description: input.description,
       visibility: input.visibility,
       status: input.status,
+      accessMode: input.accessMode,
       items: input.items.map((item, index) => ({
         slot: item.slot,
         fileField: `file_${index}`,
@@ -260,6 +267,7 @@ export const shareApi = {
       description: string;
       visibility: "private" | "public";
       status: "draft" | "published" | "archived";
+      accessMode?: ShareCardAccessMode;
     },
   ) {
     return request<{ card: PlatformCard }>(`${API_ROOT}/me/cards/${encodeURIComponent(cardId)}`, {
@@ -355,6 +363,9 @@ export const shareApi = {
   updateCardAccessCode(
     cardId: string,
     input: {
+      accessMode?: ShareCardAccessMode;
+      visibility?: "private" | "public";
+      status?: "draft" | "published" | "archived";
       code: string;
       expireDays: number;
       usageLimit: number;

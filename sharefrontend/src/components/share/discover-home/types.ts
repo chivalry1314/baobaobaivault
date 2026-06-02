@@ -1,6 +1,7 @@
 import type { CardContentSlot, DiscoverCardItem } from "@/lib/shared";
 
 import type { FilterChip } from "@/components/share/discover-home/constants";
+import type { ShareAccessModeFilter } from "@/components/share/access-mode-filter";
 
 export type HomeFeedCard = {
   id: string;
@@ -8,6 +9,7 @@ export type HomeFeedCard = {
   description: string;
   creatorName: string;
   metric: string;
+  accessMode: "free" | "paid";
   href: string;
   imageUrl: string;
   searchableText: string;
@@ -24,6 +26,7 @@ export type DiscoverState = {
   error: string;
   query: string;
   activeChip: FilterChip;
+  accessModeFilter: ShareAccessModeFilter;
   columnCount: number;
   scrollMargin: number;
 };

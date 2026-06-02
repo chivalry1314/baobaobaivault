@@ -60,6 +60,7 @@ export function toHomeFeedCards(cards: DiscoverCardItem[]): HomeFeedCard[] {
       description: descriptionText,
       creatorName,
       metric: formatMetric(item.stats.downloadCount),
+      accessMode: item.card.accessMode,
       href: `/cards/${encodeURIComponent(item.card.id)}`,
       imageUrl: item.card.previewUrl,
       searchableText: [

@@ -24,6 +24,7 @@ import type {
   CardContentSlot,
   CardDetailResponse,
   ExternalSessionUser,
+  ShareCardAccessMode,
 } from "@/lib/shared";
 
 type UseShareCardEditorArgs = {
@@ -50,6 +51,7 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [publicChecked, setPublicChecked] = useState(true);
+  const [accessMode, setAccessMode] = useState<ShareCardAccessMode>("free");
   const [createMode, setCreateMode] = useState<CreateMode>("single");
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [slotItems, setSlotItems] = useState<SlotFileItem[]>([createEmptySlotItem(0)]);
@@ -133,6 +135,7 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
         setTitle(detail.card.title);
         setDescription(detail.card.description);
         setPublicChecked(detail.card.visibility === "public");
+        setAccessMode(detail.card.accessMode ?? "free");
       } catch (error) {
         if (!active) {
           return;
@@ -335,6 +338,7 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
           description: description.trim(),
           visibility: publicChecked ? "public" : "private",
           status,
+          accessMode,
         });
         setLoadedCard((current) =>
           current
@@ -373,6 +377,7 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
         description: description.trim(),
         visibility: publicChecked ? "public" : "private",
         status,
+        accessMode,
         cover: coverFile ?? undefined,
         items: effectiveItems,
       });
@@ -562,6 +567,8 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
     setDescription,
     publicChecked,
     setPublicChecked,
+    accessMode,
+    setAccessMode,
     createMode,
     slotItems,
     setSlotValue,

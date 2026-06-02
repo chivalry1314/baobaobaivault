@@ -7,3 +7,4 @@ export const SLOT_LABEL_MAP: SlotLabelMap = {
   character_persona: "角色人设",
   world_book: "世界书",
 };
+

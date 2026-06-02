@@ -1,6 +1,7 @@
-﻿import { useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+import { matchesAccessModeFilter, type ShareAccessModeFilter } from "@/components/share/access-mode-filter";
 import {
   ACCESS_CODES_PAGE_SIZE,
   CARDS_WITHOUT_CODE_PAGE_SIZE,
@@ -20,6 +21,7 @@ export function useShareAccessCodeDashboard() {
   const [loadError, setLoadError] = useState("");
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [searchValue, setSearchValue] = useState("");
+  const [accessModeFilter, setAccessModeFilter] = useState<ShareAccessModeFilter>("all");
   const [pendingAction, setPendingAction] = useState("");
   const [itemsPage, setItemsPage] = useState(1);
   const [cardsWithoutCodePage, setCardsWithoutCodePage] = useState(1);
@@ -65,18 +67,22 @@ export function useShareAccessCodeDashboard() {
       return new Date(right.card.updatedAt).getTime() - new Date(left.card.updatedAt).getTime();
     });
 
-    if (!keyword) {
-      return sorted;
-    }
-
-    return sorted.filter((item) => [item.card.title, item.card.description, item.card.originalFileName, item.config.code].join(" ").toLowerCase().includes(keyword));
-  }, [dashboard, searchValue]);
+    return sorted.filter((item) => {
+      if (!matchesAccessModeFilter(item.card.accessMode, accessModeFilter)) {
+        return false;
+      }
+      if (!keyword) {
+        return true;
+      }
+      return [item.card.title, item.card.description, item.card.originalFileName, item.config.code].join(" ").toLowerCase().includes(keyword);
+    });
+  }, [accessModeFilter, dashboard, searchValue]);
 
   const availableCards = dashboard?.availableCards ?? [];
   const cardsWithoutCode = useMemo(() => {
     const configuredIds = new Set((dashboard?.items ?? []).map((item) => item.card.id));
-    return availableCards.filter((card) => !configuredIds.has(card.id));
-  }, [availableCards, dashboard?.items]);
+    return availableCards.filter((card) => !configuredIds.has(card.id) && matchesAccessModeFilter(card.accessMode, accessModeFilter));
+  }, [accessModeFilter, availableCards, dashboard?.items]);
 
   const cardsWithoutCodeTotalPages = useMemo(() => Math.max(1, Math.ceil(cardsWithoutCode.length / CARDS_WITHOUT_CODE_PAGE_SIZE)), [cardsWithoutCode.length]);
   const pagedCardsWithoutCode = useMemo(() => {
@@ -95,11 +101,11 @@ export function useShareAccessCodeDashboard() {
 
   useEffect(() => {
     setItemsPage(1);
-  }, [searchValue, dashboard]);
+  }, [searchValue, dashboard, accessModeFilter]);
 
   useEffect(() => {
     setCardsWithoutCodePage(1);
-  }, [dashboard]);
+  }, [dashboard, accessModeFilter]);
 
   useEffect(() => {
     setItemsPage((current) => Math.min(Math.max(current, 1), itemsTotalPages));
@@ -145,6 +151,7 @@ export function useShareAccessCodeDashboard() {
         description: item.card.description,
         visibility: "private",
         status: item.card.status,
+        accessMode: item.card.accessMode,
       });
       await loadDashboard();
       setFeedback({
@@ -173,6 +180,7 @@ export function useShareAccessCodeDashboard() {
           description: item.card.description,
           visibility: "public",
           status: "published",
+          accessMode: item.card.accessMode,
         });
       }
 
@@ -244,6 +252,8 @@ export function useShareAccessCodeDashboard() {
     feedback,
     searchValue,
     setSearchValue,
+    accessModeFilter,
+    setAccessModeFilter,
     pendingAction,
     itemsPage,
     setItemsPage,

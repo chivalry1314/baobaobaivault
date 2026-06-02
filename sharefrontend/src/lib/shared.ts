@@ -1,5 +1,6 @@
 export type ShareUserRole = "viewer" | "creator" | "manager";
 export type ShareReviewStatus = "unsubmitted" | "pending" | "approved" | "rejected";
+export type ShareCardAccessMode = "free" | "paid";
 
 export type ExternalSessionUser = {
   id: string;
@@ -42,6 +43,7 @@ export type PlatformCard = {
   description: string;
   visibility: "private" | "public";
   status: "draft" | "published" | "archived";
+  accessMode: ShareCardAccessMode;
   reviewStatus: ShareReviewStatus;
   reviewReason: string;
   submittedAt?: string | null;

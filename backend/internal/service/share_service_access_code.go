@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 
 	"github.com/baobaobai/baobaobaivault/internal/model"
 	"time"
@@ -28,8 +29,49 @@ func (s *ShareService) UpdateCardAccessCodeByOwner(ctx context.Context, input Sh
 	if err := s.ensureShareCreatorRole(ctx, input.OwnerID); err != nil {
 		return nil, err
 	}
-	if card.ReviewStatus != model.SharePlatformCardReviewStatusApproved {
-		return nil, ErrShareCardForbidden
+	nextAccessMode := normalizeShareCardAccessMode(input.AccessMode)
+	if !isValidShareCardAccessMode(input.AccessMode) {
+		return nil, ErrShareInvalidAccessMode
+	}
+	if strings.TrimSpace(input.Visibility) != "" && !isValidShareVisibility(input.Visibility) {
+		return nil, ErrShareInvalidVisibility
+	}
+	if strings.TrimSpace(input.Status) != "" && !isValidShareStatus(input.Status) {
+		return nil, ErrShareInvalidCardStatus
+	}
+
+	now := time.Now().UTC()
+	card.AccessMode = nextAccessMode
+	if strings.TrimSpace(input.Visibility) != "" {
+		card.Visibility = normalizeShareVisibility(input.Visibility)
+	}
+	if strings.TrimSpace(input.Status) != "" {
+		card.Status = strings.ToLower(strings.TrimSpace(input.Status))
+	}
+
+	if nextAccessMode == model.SharePlatformCardAccessModeFree {
+		card.AccessCode = ""
+		card.AccessCodeExpiresAt = nil
+		card.AccessCodeUsageLimit = 0
+		card.AccessCodeUsageCount = 0
+		card.UpdatedAt = now
+		if err := s.db.WithContext(ctx).
+			Model(&model.SharePlatformCard{}).
+			Where("id = ?", card.ID).
+			Updates(map[string]any{
+				"access_mode":              card.AccessMode,
+				"visibility":               card.Visibility,
+				"status":                   card.Status,
+				"access_code":              card.AccessCode,
+				"access_code_expires_at":   card.AccessCodeExpiresAt,
+				"access_code_usage_limit":  card.AccessCodeUsageLimit,
+				"access_code_usage_count":  card.AccessCodeUsageCount,
+				"updated_at":               card.UpdatedAt,
+			}).Error; err != nil {
+			return nil, err
+		}
+		config := buildShareCardAccessCodeConfig(card)
+		return &config, nil
 	}
 
 	normalizedCode := normalizeShareAccessCode(input.Code)
@@ -51,15 +93,25 @@ func (s *ShareService) UpdateCardAccessCodeByOwner(ctx context.Context, input Sh
 		return nil, ErrShareInvalidAccessRules
 	}
 
-	expiresAt := computeShareAccessCodeExpiry(input.ExpireDays)
-
 	card.AccessCode = normalizedCode
-	card.AccessCodeExpiresAt = expiresAt
+	card.AccessCodeExpiresAt = computeShareAccessCodeExpiry(input.ExpireDays)
 	card.AccessCodeUsageLimit = usageLimit
 	card.AccessCodeUsageCount = 0
-	card.UpdatedAt = time.Now().UTC()
+	card.UpdatedAt = now
 
-	if err := s.db.WithContext(ctx).Save(card).Error; err != nil {
+	if err := s.db.WithContext(ctx).
+		Model(&model.SharePlatformCard{}).
+		Where("id = ?", card.ID).
+		Updates(map[string]any{
+			"access_mode":              card.AccessMode,
+			"visibility":               card.Visibility,
+			"status":                   card.Status,
+			"access_code":              card.AccessCode,
+			"access_code_expires_at":   card.AccessCodeExpiresAt,
+			"access_code_usage_limit":  card.AccessCodeUsageLimit,
+			"access_code_usage_count":  card.AccessCodeUsageCount,
+			"updated_at":               card.UpdatedAt,
+		}).Error; err != nil {
 		return nil, err
 	}
 
@@ -82,5 +134,14 @@ func (s *ShareService) DeleteCardAccessCodeByOwner(ctx context.Context, ownerID,
 	card.AccessCodeUsageCount = 0
 	card.UpdatedAt = time.Now().UTC()
 
-	return s.db.WithContext(ctx).Save(card).Error
+	return s.db.WithContext(ctx).
+		Model(&model.SharePlatformCard{}).
+		Where("id = ?", card.ID).
+		Updates(map[string]any{
+			"access_code":             card.AccessCode,
+			"access_code_expires_at":  card.AccessCodeExpiresAt,
+			"access_code_usage_limit": card.AccessCodeUsageLimit,
+			"access_code_usage_count": card.AccessCodeUsageCount,
+			"updated_at":              card.UpdatedAt,
+		}).Error
 }

@@ -180,6 +180,9 @@ func (s *ShareService) CanDownloadCardAsset(ctx context.Context, cardID, viewerU
 		card.ReviewStatus != model.SharePlatformCardReviewStatusApproved {
 		return nil, nil, false, ErrShareCardForbidden
 	}
+	if normalizeShareCardAccessMode(card.AccessMode) == model.SharePlatformCardAccessModeFree {
+		return &card, asset, false, nil
+	}
 
 	switch deriveShareCardAccessStatus(&card, false) {
 	case ShareCardAccessStatusNone:
