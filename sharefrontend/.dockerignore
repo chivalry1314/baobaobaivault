@@ -1,0 +1,13 @@
+.git
+.gitignore
+.next
+node_modules
+.env
+.env.local
+.env.*.local
+.dev-err.log
+.dev-out.log
+README.md
+design
+__write_test.txt
+

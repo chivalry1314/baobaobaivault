@@ -10,3 +10,7 @@ config.local.yaml
 backend/storage/*
 sharefrontend/.dev-err.log
 sharefrontend/.dev-out.log
+data/*
+!data/.gitkeep
+deploy/backend/config.yaml
+deploy/nginx/default.conf

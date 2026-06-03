@@ -1,0 +1,81 @@
+server:
+  port: "8080"
+  read_timeout: 30
+  write_timeout: 30
+  mode: release
+  allow_public_bootstrap: false
+  auto_bootstrap_admin: false
+  admin_email: ""
+  admin_password: ""
+  admin_username: "admin"
+  admin_nickname: "Administrator"
+
+cors:
+  enabled: true
+  allow_origins:
+    - "https://share.example.com"
+  allow_methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+  allow_headers: ["Authorization", "Content-Type", "X-Requested-With", "X-Timestamp"]
+  expose_headers: ["Content-Disposition", "Content-Length", "ETag"]
+  allow_credentials: true
+  max_age: 86400
+
+database:
+  host: "postgres"
+  port: 5432
+  user: "vaultuser"
+  password: "change-this-postgres-password"
+  dbname: "baobaobaivault"
+  sslmode: "disable"
+  max_open_conns: 100
+  max_idle_conns: 10
+  conn_max_lifetime: 3600
+
+redis:
+  host: "redis"
+  port: 6379
+  password: "change-this-redis-password"
+  db: 0
+
+jwt:
+  secret: "change-this-jwt-secret"
+  expire_time: 24h
+  issuer: "baobaobaivault"
+
+storage:
+  default_provider: "local"
+  temp_dir: "/tmp/baobaobaivault"
+  max_file_size: 10737418240
+
+baidu:
+  enabled: false
+  api_key: ""
+  secret_key: ""
+  redirect_uri: "https://share.example.com/api/v1/connectors/baidu/callback"
+  scope: "basic,netdisk"
+  auth_url: "https://openapi.baidu.com/oauth/2.0/authorize"
+  auth_extra_params: {}
+  token_url: "https://openapi.baidu.com/oauth/2.0/token"
+  pan_api_base_url: "https://pan.baidu.com/rest/2.0"
+  pan_upload_url: "https://d.pcs.baidu.com/rest/2.0/pcs/superfile2"
+  default_path_prefix: "/apps/baobaobaiphone/backups"
+  state_secret: "change-this-state-secret"
+  token_encrypt_secret: "change-this-token-encrypt-secret"
+  http_timeout_seconds: 30
+
+webpush:
+  enabled: false
+  public_api_enabled: false
+  vapid_subject: "mailto:admin@example.com"
+  vapid_public_key: ""
+  vapid_private_key: ""
+  allow_vapid_auto_generate: false
+  default_ttl_seconds: 300
+  dispatch_api_key: ""
+  queue_concurrency: 20
+  queue_buffer: 1000
+  push_proxy_url: ""
+
+log:
+  level: "info"
+  format: "json"

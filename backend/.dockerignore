@@ -1,0 +1,7 @@
+.git
+.gitignore
+bin
+storage
+baobaobaivault-server
+config/config.yaml
+
