@@ -189,8 +189,8 @@ func setDefaults() {
 	viper.SetDefault("database.password", "postgres")
 	viper.SetDefault("database.dbname", "baobaobaivault")
 	viper.SetDefault("database.sslmode", "disable")
-	viper.SetDefault("database.max_open_conns", 100)
-	viper.SetDefault("database.max_idle_conns", 10)
+	viper.SetDefault("database.max_open_conns", 20)
+	viper.SetDefault("database.max_idle_conns", 5)
 	viper.SetDefault("database.conn_max_lifetime", 3600)
 
 	// Redis

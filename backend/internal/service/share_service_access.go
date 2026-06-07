@@ -55,10 +55,7 @@ func (s *ShareService) GetCardDetail(ctx context.Context, cardID, viewerUserID s
 		return nil, err
 	}
 
-	statsByCard, _, err := s.aggregateStatsByCard(ctx, []string{card.ID})
-	if err != nil {
-		return nil, err
-	}
+	statsByCard, _ := aggregateStatsFromCards([]model.SharePlatformCard{card})
 
 	return &ShareCardDetail{
 		Card:             toShareCardView(&card, assets),
@@ -225,7 +222,16 @@ func (s *ShareService) RecordDownload(ctx context.Context, cardID string, downlo
 				return ErrShareAccessCodeExhausted
 			}
 		}
-		return tx.Create(&entry).Error
+		if err := tx.Create(&entry).Error; err != nil {
+			return err
+		}
+
+		return tx.Model(&model.SharePlatformCard{}).
+			Where("id = ?", entry.CardID).
+			Updates(map[string]any{
+				"download_count":      gorm.Expr("download_count + 1"),
+				"last_downloaded_at": entry.DownloadedAt,
+			}).Error
 	})
 }
 

@@ -83,9 +83,9 @@ type SharePlatformCard struct {
 	CreatorExternalUserID string         `gorm:"type:uuid;not null;index:idx_share_platform_cards_creator_created,priority:1" json:"creator_external_user_id"`
 	Title                 string         `gorm:"type:varchar(200);not null" json:"title"`
 	Description           string         `gorm:"type:text;default:''" json:"description"`
-	Visibility            string         `gorm:"type:varchar(20);not null;default:'private';index" json:"visibility"`
-	Status                string         `gorm:"type:varchar(20);not null;default:'published';index" json:"status"`
-	ReviewStatus          string         `gorm:"type:varchar(20);not null;default:'unsubmitted';index" json:"review_status"`
+	Visibility            string         `gorm:"type:varchar(20);not null;default:'private';index;index:idx_share_platform_cards_discover,priority:1" json:"visibility"`
+	Status                string         `gorm:"type:varchar(20);not null;default:'published';index;index:idx_share_platform_cards_discover,priority:2" json:"status"`
+	ReviewStatus          string         `gorm:"type:varchar(20);not null;default:'unsubmitted';index;index:idx_share_platform_cards_discover,priority:3" json:"review_status"`
 	AccessMode            string         `gorm:"type:varchar(20);not null;default:'free';index" json:"access_mode"`
 	ReviewReason          string         `gorm:"type:text;default:''" json:"review_reason"`
 	ReviewerExternalUserID *string       `gorm:"type:uuid;index" json:"reviewer_external_user_id,omitempty"`
@@ -99,8 +99,10 @@ type SharePlatformCard struct {
 	OriginalFileName      string         `gorm:"type:varchar(255);not null" json:"original_file_name"`
 	MimeType              string         `gorm:"type:varchar(200);not null" json:"mime_type"`
 	Size                  int64          `gorm:"not null" json:"size"`
+	DownloadCount         int64          `gorm:"not null;default:0" json:"download_count"`
+	LastDownloadedAt      *time.Time     `json:"last_downloaded_at,omitempty"`
 	CreatedAt             time.Time      `gorm:"index:idx_share_platform_cards_creator_created,priority:2" json:"created_at"`
-	UpdatedAt             time.Time      `json:"updated_at"`
+	UpdatedAt             time.Time      `gorm:"index:idx_share_platform_cards_discover,priority:4" json:"updated_at"`
 	DeletedAt             gorm.DeletedAt `gorm:"index" json:"-"`
 
 	Creator *ShareExternalUser `gorm:"foreignKey:CreatorExternalUserID" json:"creator,omitempty"`

@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/baobaobai/baobaobaivault/internal/config"
@@ -9,18 +10,26 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	gormlogger "gorm.io/gorm/logger"
 )
 
 // NewPostgresDB creates and configures a PostgreSQL connection.
-func NewPostgresDB(cfg config.DatabaseConfig, log *zap.Logger) (*gorm.DB, error) {
+func NewPostgresDB(serverCfg config.ServerConfig, cfg config.DatabaseConfig, log *zap.Logger) (*gorm.DB, error) {
 	dsn := fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName, cfg.SSLMode,
 	)
 
+	logLevel := gormlogger.Warn
+	switch strings.ToLower(strings.TrimSpace(serverCfg.Mode)) {
+	case "debug":
+		logLevel = gormlogger.Info
+	case "test":
+		logLevel = gormlogger.Error
+	}
+
 	gormConfig := &gorm.Config{
-		Logger:      logger.Default.LogMode(logger.Info),
+		Logger:      gormlogger.Default.LogMode(logLevel),
 		PrepareStmt: true, // Work around pgx + gorm postgres migrator ColumnTypes issue ("insufficient arguments")
 	}
 
@@ -49,7 +58,7 @@ func NewPostgresDB(cfg config.DatabaseConfig, log *zap.Logger) (*gorm.DB, error)
 
 // AutoMigrate runs all schema migrations.
 func AutoMigrate(db *gorm.DB) error {
-	return db.AutoMigrate(
+	if err := db.AutoMigrate(
 		&model.Namespace{},
 		&model.User{},
 		&model.Role{},
@@ -67,7 +76,33 @@ func AutoMigrate(db *gorm.DB) error {
 		&model.SharePlatformCard{},
 		&model.SharePlatformCardAsset{},
 		&model.SharePlatformDownloadLog{},
-	)
+	); err != nil {
+		return err
+	}
+
+	return backfillShareCardDownloadStats(db)
+}
+
+func backfillShareCardDownloadStats(db *gorm.DB) error {
+	return db.Exec(`
+		UPDATE share_platform_cards AS cards
+		SET
+			download_count = stats.download_count,
+			last_downloaded_at = stats.last_downloaded_at
+		FROM (
+			SELECT
+				card_id,
+				COUNT(*) AS download_count,
+				MAX(downloaded_at) AS last_downloaded_at
+			FROM share_platform_download_logs
+			GROUP BY card_id
+		) AS stats
+		WHERE cards.id = stats.card_id
+		  AND (
+			cards.download_count IS DISTINCT FROM stats.download_count
+			OR cards.last_downloaded_at IS DISTINCT FROM stats.last_downloaded_at
+		  )
+	`).Error
 }
 
 // Close closes database connection.

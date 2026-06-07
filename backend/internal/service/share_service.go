@@ -409,10 +409,7 @@ func (s *ShareService) ListDashboardByUser(ctx context.Context, userID string) (
 		}
 	}
 
-	statsByCard, totalDownloads, err := s.aggregateStatsByCard(ctx, cardIDs)
-	if err != nil {
-		return nil, err
-	}
+	statsByCard, totalDownloads := aggregateStatsFromCards(cards)
 	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, cardIDs)
 	if err != nil {
 		return nil, err
@@ -462,10 +459,7 @@ func (s *ShareService) ListAccessCodeDashboardByUser(ctx context.Context, userID
 		cardIDs = append(cardIDs, card.ID)
 	}
 
-	statsByCard, _, err := s.aggregateStatsByCard(ctx, cardIDs)
-	if err != nil {
-		return nil, err
-	}
+	statsByCard, _ := aggregateStatsFromCards(cards)
 	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, cardIDs)
 	if err != nil {
 		return nil, err
@@ -524,46 +518,6 @@ func (s *ShareService) getCardByOwner(ctx context.Context, ownerID, cardID strin
 	return &card, nil
 }
 
-func (s *ShareService) aggregateStatsByCard(ctx context.Context, cardIDs []string) (map[string]ShareCardStats, int64, error) {
-	stats := make(map[string]ShareCardStats, len(cardIDs))
-	if len(cardIDs) == 0 {
-		return stats, 0, nil
-	}
-
-	type aggRow struct {
-		CardID           string     `gorm:"column:card_id"`
-		DownloadCount    int64      `gorm:"column:download_count"`
-		LastDownloadedAt *time.Time `gorm:"column:last_downloaded_at"`
-	}
-
-	rows := make([]aggRow, 0, len(cardIDs))
-	if err := s.db.WithContext(ctx).
-		Model(&model.SharePlatformDownloadLog{}).
-		Select("card_id, COUNT(*) AS download_count, MAX(downloaded_at) AS last_downloaded_at").
-		Where("card_id IN ?", cardIDs).
-		Group("card_id").
-		Scan(&rows).Error; err != nil {
-		return nil, 0, err
-	}
-
-	totalDownloads := int64(0)
-	for _, row := range rows {
-		stats[row.CardID] = ShareCardStats{
-			DownloadCount:    row.DownloadCount,
-			LastDownloadedAt: row.LastDownloadedAt,
-		}
-		totalDownloads += row.DownloadCount
-	}
-
-	for _, cardID := range cardIDs {
-		if _, exists := stats[cardID]; !exists {
-			stats[cardID] = ShareCardStats{}
-		}
-	}
-
-	return stats, totalDownloads, nil
-}
-
 func (s *ShareService) mapDiscoverCards(
 	ctx context.Context,
 	cards []model.SharePlatformCard,
@@ -589,10 +543,7 @@ func (s *ShareService) mapDiscoverCards(
 		creatorMap[creator.ID] = creator
 	}
 
-	statsByCard, _, err := s.aggregateStatsByCard(ctx, cardIDs)
-	if err != nil {
-		return nil, err
-	}
+	statsByCard, _ := aggregateStatsFromCards(cards)
 
 	items := make([]ShareDiscoverCardItem, 0, len(cards))
 	for _, card := range cards {
@@ -614,6 +565,19 @@ func (s *ShareService) mapDiscoverCards(
 	}
 
 	return items, nil
+}
+
+func aggregateStatsFromCards(cards []model.SharePlatformCard) (map[string]ShareCardStats, int64) {
+	stats := make(map[string]ShareCardStats, len(cards))
+	totalDownloads := int64(0)
+	for _, card := range cards {
+		stats[card.ID] = ShareCardStats{
+			DownloadCount:    card.DownloadCount,
+			LastDownloadedAt: card.LastDownloadedAt,
+		}
+		totalDownloads += card.DownloadCount
+	}
+	return stats, totalDownloads
 }
 
 func collectShareCardIDs(cards []model.SharePlatformCard) []string {

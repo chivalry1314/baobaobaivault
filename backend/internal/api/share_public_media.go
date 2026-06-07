@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"fmt"
+	"github.com/baobaobai/baobaobaivault/internal/model"
 	"github.com/baobaobai/baobaobaivault/internal/service"
 	"github.com/gin-gonic/gin"
 	"mime"
@@ -145,7 +146,7 @@ func (h *Handler) shareCardAssetPreview(c *gin.Context) {
 	c.Header("Content-Type", assetMimeType)
 	c.Header("Content-Length", strconv.FormatInt(stat.Size(), 10))
 	c.Header("Content-Disposition", inlineDisposition(asset.OriginalFileName))
-	c.Header("Cache-Control", "no-store")
+	c.Header("Cache-Control", sharePreviewCacheControl(card))
 	http.ServeContent(c.Writer, c.Request, asset.OriginalFileName, stat.ModTime(), file)
 }
 
@@ -180,7 +181,7 @@ func (h *Handler) shareCardCoverPreview(c *gin.Context) {
 	c.Header("Content-Type", mimeType)
 	c.Header("Content-Length", strconv.FormatInt(stat.Size(), 10))
 	c.Header("Content-Disposition", inlineDisposition(card.OriginalFileName))
-	c.Header("Cache-Control", "no-store")
+	c.Header("Cache-Control", sharePreviewCacheControl(card))
 	http.ServeContent(c.Writer, c.Request, card.OriginalFileName, stat.ModTime(), file)
 }
 
@@ -315,4 +316,16 @@ func stringPointerIfNotEmpty(value string) *string {
 		return nil
 	}
 	return &value
+}
+
+func sharePreviewCacheControl(card *model.SharePlatformCard) string {
+	if card == nil {
+		return "no-store"
+	}
+	if card.Visibility == model.SharePlatformCardVisibilityPublic &&
+		card.Status == model.SharePlatformCardStatusPublished &&
+		card.ReviewStatus == model.SharePlatformCardReviewStatusApproved {
+		return "public, max-age=300, stale-while-revalidate=86400"
+	}
+	return "private, no-store"
 }

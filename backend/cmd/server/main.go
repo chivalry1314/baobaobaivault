@@ -57,7 +57,7 @@ func main() {
 	defer logger.Sync()
 
 	// 初始化数据库
-	db, err := database.NewPostgresDB(cfg.Database, logger)
+	db, err := database.NewPostgresDB(cfg.Server, cfg.Database, logger)
 	if err != nil {
 		logger.Fatal("Failed to connect database", zap.Error(err))
 	}

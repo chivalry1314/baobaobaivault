@@ -35,7 +35,7 @@ Recommended traffic flow:
 
 Why this layout is recommended:
 
-- the frontend already rewrites `/api/share/*` to the backend
+- the frontend keeps a Next.js rewrite for local/dev use, while production Nginx can proxy `/api/share/*` directly to the backend to reduce one hop
 - in backend `release` mode, share auth cookies are marked `Secure`
 - production should therefore use HTTPS by default
 
@@ -319,8 +319,8 @@ database:
   password: "change-this-postgres-password"
   dbname: "baobaobaivault"
   sslmode: "disable"
-  max_open_conns: 100
-  max_idle_conns: 10
+  max_open_conns: 20
+  max_idle_conns: 5
   conn_max_lifetime: 3600
 
 redis:
@@ -421,6 +421,48 @@ server {
 
     client_max_body_size 1024m;
 
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 5;
+    gzip_min_length 1024;
+    gzip_types
+        text/plain
+        text/css
+        text/javascript
+        application/javascript
+        application/json
+        application/xml
+        application/rss+xml
+        image/svg+xml;
+
+    location /_next/static/ {
+        proxy_pass http://sharefrontend:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+        expires 7d;
+        add_header Cache-Control "public, max-age=604800, immutable";
+    }
+
+    location /api/share/ {
+        proxy_pass http://backend:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+    }
+
     location / {
         proxy_pass http://sharefrontend:3000;
         proxy_http_version 1.1;
@@ -432,7 +474,7 @@ server {
         proxy_set_header X-Forwarded-Port $server_port;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
-        proxy_connect_timeout 300s;
+        proxy_connect_timeout 60s;
         proxy_send_timeout 300s;
         proxy_read_timeout 300s;
     }
@@ -460,8 +502,9 @@ Notes:
 - extended proxy timeouts are included for slower requests
 - `/nginx-health` can be used as an Nginx health endpoint
 - `client_max_body_size 1024m` supports large file uploads
-- Nginx does not need a dedicated `/api/share` location here
-  - `sharefrontend` already rewrites those requests to the backend
+- Nginx should proxy `/api/share` directly to `backend` in production
+  - this avoids an extra hop through Next.js for browser API requests
+- `sharefrontend` still keeps the rewrite for local/dev and for direct app-to-backend requests inside the container network
 
 ## 9. Cloudflare HTTPS Setup
 

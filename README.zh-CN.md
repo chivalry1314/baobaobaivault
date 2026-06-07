@@ -35,7 +35,7 @@
 
 推荐原因：
 
-- 前端已经通过 Next.js rewrite 把 `/api/share/*` 转发到后端
+- 前端会保留 Next.js rewrite 以兼容本地开发，但生产环境建议由 Nginx 直接反代 `/api/share/*` 到后端，减少一跳转发
 - 后端 `release` 模式下分享登录 Cookie 会带 `Secure`
 - 因此生产环境应该默认启用 HTTPS
 
@@ -319,8 +319,8 @@ database:
   password: "change-this-postgres-password"
   dbname: "baobaobaivault"
   sslmode: "disable"
-  max_open_conns: 100
-  max_idle_conns: 10
+  max_open_conns: 20
+  max_idle_conns: 5
   conn_max_lifetime: 3600
 
 redis:
@@ -421,6 +421,48 @@ server {
 
     client_max_body_size 1024m;
 
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 5;
+    gzip_min_length 1024;
+    gzip_types
+        text/plain
+        text/css
+        text/javascript
+        application/javascript
+        application/json
+        application/xml
+        application/rss+xml
+        image/svg+xml;
+
+    location /_next/static/ {
+        proxy_pass http://sharefrontend:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+        expires 7d;
+        add_header Cache-Control "public, max-age=604800, immutable";
+    }
+
+    location /api/share/ {
+        proxy_pass http://backend:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+    }
+
     location / {
         proxy_pass http://sharefrontend:3000;
         proxy_http_version 1.1;
@@ -432,7 +474,7 @@ server {
         proxy_set_header X-Forwarded-Port $server_port;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
-        proxy_connect_timeout 300s;
+        proxy_connect_timeout 60s;
         proxy_send_timeout 300s;
         proxy_read_timeout 300s;
     }
@@ -460,8 +502,10 @@ server {
 - 已配置较长的代理超时，适合较慢请求
 - `/nginx-health` 可用于 Nginx 自身健康检查
 - `client_max_body_size 1024m` 用于支持较大文件上传
-- 这里不需要 Nginx 自己单独反代 `/api/share`
-  - 因为 `sharefrontend` 已经通过 Next.js rewrite 处理
+- 生产环境建议让 Nginx 直接反代 `/api/share` 到 `backend`
+  - 这样浏览器发起的 API 请求不会再额外绕过一次 Next.js
+- `sharefrontend` 仍然保留 rewrite
+  - 便于本地开发，也兼容容器内的前端到后端调用
 
 ## 9. Cloudflare HTTPS 配置
 
