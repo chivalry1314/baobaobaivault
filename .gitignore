@@ -14,3 +14,5 @@ data/*
 !data/.gitkeep
 deploy/backend/config.yaml
 deploy/nginx/default.conf
+deploy/nginx/ssl/*
+!deploy/nginx/ssl/.gitkeep
