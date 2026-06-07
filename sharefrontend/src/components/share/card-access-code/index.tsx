@@ -46,12 +46,6 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
     handleSubmit,
   } = useShareCardAccessCode({ cardId, isWizardFlow });
 
-  const footer = (
-    <footer className="relative z-10 px-6 pb-10 pt-12 text-center text-sm tracking-[0.08em] text-[color-mix(in_srgb,var(--brand)_28%,var(--foreground))]">
-      (c) 2026 CardShare
-    </footer>
-  );
-
   if (sessionChecking) {
     return (
       <div className="min-h-screen bg-[var(--background)] px-4 py-8 sm:px-6 sm:py-10">
@@ -67,7 +61,7 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
   }
 
   return (
-    <AppShell currentPath="/creator" footerSlot={footer}>
+    <AppShell currentPath="/creator">
       <div className="relative overflow-hidden bg-[linear-gradient(180deg,#f4fbff_0%,#f8fdff_48%,#f2faff_100%)]">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute left-[-10%] top-[10%] h-[28rem] w-[28rem] rounded-full bg-[rgba(176,232,249,0.38)] blur-[120px]" />
