@@ -13,10 +13,13 @@ const authText = {
   verificationExpiresPrefix: "\u6709\u6548\u671f\u7ea6 ",
   verificationExpiresSuffix: " \u5206\u949f",
   verificationPlaceholder: "\u8bf7\u8f93\u5165 6 \u4f4d\u9a8c\u8bc1\u7801",
+  verificationPlaceholderBeforeSend:
+    "\u70b9\u51fb\u201c\u53d1\u9001\u9a8c\u8bc1\u7801\u201d\u540e\uff0c\u518d\u5728\u8fd9\u91cc\u8f93\u5165 6 \u4f4d\u9a8c\u8bc1\u7801",
   nicknamePlaceholder: "2-40 \u4e2a\u5b57\u7b26",
   passwordPlaceholder: "\u8bf7\u8f93\u5165\u5bc6\u7801",
   processing: "\u5904\u7406\u4e2d...",
-  verifySubmit: "\u5b8c\u6210\u9a8c\u8bc1",
+  sendCodeSubmit: "\u53d1\u9001\u9a8c\u8bc1\u7801",
+  verifySubmit: "\u5b8c\u6210\u6ce8\u518c",
   registerSubmit: "\u7acb\u5373\u6ce8\u518c",
   loginSubmit: "\u767b\u5f55",
   hidePassword: "\u9690\u85cf\u5bc6\u7801",
@@ -27,7 +30,9 @@ const authText = {
   resendCooldownPrefix: "\u53ef\u5728 ",
   resendCooldownSuffix: " \u79d2\u540e\u91cd\u53d1",
   verificationEnabledHint:
-    "\u5f53\u524d\u5df2\u542f\u7528\u90ae\u7bb1\u9a8c\u8bc1\uff0c\u6ce8\u518c\u540e\u9700\u5148\u5b8c\u6210\u9a8c\u8bc1\u7801\u786e\u8ba4\u3002",
+    "\u5f53\u524d\u5df2\u542f\u7528\u90ae\u7bb1\u9a8c\u8bc1\uff0c\u8bf7\u5148\u586b\u5199\u6ce8\u518c\u4fe1\u606f\u5e76\u53d1\u9001\u9a8c\u8bc1\u7801\uff0c\u6536\u5230\u540e\u5728\u672c\u9875\u5b8c\u6210\u6ce8\u518c\u3002",
+  verificationCodeReadyHint:
+    "\u9a8c\u8bc1\u7801\u53d1\u9001\u540e\uff0c\u5728\u672c\u9875\u9762\u76f4\u63a5\u8f93\u5165\u5373\u53ef\u5b8c\u6210\u6ce8\u518c\u3002",
   verificationDisabledHint:
     "\u5f53\u524d\u672a\u542f\u7528\u90ae\u7bb1\u9a8c\u8bc1\uff0c\u6ce8\u518c\u6210\u529f\u540e\u4f1a\u76f4\u63a5\u767b\u5f55\u3002",
   registerHint:
@@ -45,6 +50,7 @@ function Field({
   type = "text",
   autoComplete,
   trailing,
+  readOnly = false,
 }: FieldProps) {
   return (
     <label className="block">
@@ -59,7 +65,10 @@ function Field({
           onChange={(event) => onChange(event.target.value)}
           autoComplete={autoComplete}
           placeholder={placeholder}
-          className="w-full rounded-2xl border-[3px] border-[var(--outline)] bg-[#f8f9fa] py-3 pl-12 pr-12 text-base font-bold text-[var(--foreground)] transition placeholder:text-[var(--text-subtle)] focus:bg-[#f0f4f8]"
+          readOnly={readOnly}
+          className={`w-full rounded-2xl border-[3px] border-[var(--outline)] py-3 pl-12 pr-12 text-base font-bold text-[var(--foreground)] transition placeholder:text-[var(--text-subtle)] ${
+            readOnly ? "bg-[#eef1f5] text-[var(--foreground)]/75" : "bg-[#f8f9fa] focus:bg-[#f0f4f8]"
+          }`}
           required
         />
         {trailing ? (
@@ -106,10 +115,15 @@ export function AuthFormCard(props: AuthFormCardProps) {
   } = props;
 
   const isVerifyStep = mode === "register" && registerStep === "verify";
+  const showRegisterFields = mode === "register";
+  const usesEmailVerification = mode === "register" && emailVerificationEnabled;
+  const showVerificationField = usesEmailVerification;
   const submitLabel = pending
     ? authText.processing
     : isVerifyStep
       ? authText.verifySubmit
+      : usesEmailVerification
+        ? authText.sendCodeSubmit
       : mode === "register"
         ? authText.registerSubmit
         : authText.loginSubmit;
@@ -168,84 +182,96 @@ export function AuthFormCard(props: AuthFormCardProps) {
             type="email"
             autoComplete="email"
             icon={<MailIcon className="h-5 w-5" />}
+            readOnly={isVerifyStep}
           />
 
-          {isVerifyStep ? (
+          {showRegisterFields ? (
+            <Field
+              label={authText.nickname}
+              placeholder={authText.nicknamePlaceholder}
+              value={nickname}
+              onChange={onNicknameChange}
+              type="text"
+              autoComplete="nickname"
+              icon={<UserIcon className="h-5 w-5" />}
+              readOnly={isVerifyStep}
+            />
+          ) : null}
+
+          <Field
+            label={authText.password}
+            placeholder={authText.passwordPlaceholder}
+            value={password}
+            onChange={onPasswordChange}
+            type={showPassword ? "text" : "password"}
+            autoComplete={mode === "register" ? "new-password" : "current-password"}
+            icon={<LockIcon className="h-5 w-5" />}
+            readOnly={isVerifyStep}
+            trailing={
+              <button
+                type="button"
+                onClick={onTogglePassword}
+                className="text-[var(--text-muted)] transition hover:text-[var(--foreground)]"
+                aria-label={showPassword ? authText.hidePassword : authText.showPassword}
+              >
+                {showPassword ? (
+                  <EyeOpenIcon className="h-5 w-5" />
+                ) : (
+                  <EyeClosedIcon className="h-5 w-5" />
+                )}
+              </button>
+            }
+          />
+
+          {showVerificationField ? (
             <>
               <div className="rounded-2xl border-[3px] border-[var(--outline)] bg-[#f8f9fa] px-4 py-3 text-sm font-bold text-[var(--foreground)]">
-                <p>
-                  {authText.verificationSentPrefix}
-                  {verificationEmail || email}
-                </p>
-                {verificationExpiresIn > 0 ? (
-                  <p className="mt-1 text-[var(--foreground)]/70">
-                    {authText.verificationExpiresPrefix}
-                    {Math.ceil(verificationExpiresIn / 60)}
-                    {authText.verificationExpiresSuffix}
-                  </p>
-                ) : null}
+                {isVerifyStep ? (
+                  <>
+                    <p>
+                      {authText.verificationSentPrefix}
+                      {verificationEmail || email}
+                    </p>
+                    {verificationExpiresIn > 0 ? (
+                      <p className="mt-1 text-[var(--foreground)]/70">
+                        {authText.verificationExpiresPrefix}
+                        {Math.ceil(verificationExpiresIn / 60)}
+                        {authText.verificationExpiresSuffix}
+                      </p>
+                    ) : null}
+                  </>
+                ) : (
+                  <p className="text-[var(--foreground)]/75">{authText.verificationCodeReadyHint}</p>
+                )}
               </div>
               <Field
                 label={authText.verificationCode}
-                placeholder={authText.verificationPlaceholder}
+                placeholder={
+                  isVerifyStep ? authText.verificationPlaceholder : authText.verificationPlaceholderBeforeSend
+                }
                 value={verificationCode}
                 onChange={onVerificationCodeChange}
                 type="text"
                 autoComplete="one-time-code"
                 icon={<ShieldIcon className="h-5 w-5" />}
+                readOnly={!isVerifyStep}
               />
-              <button
-                type="button"
-                onClick={onResendVerificationCode}
-                disabled={pending || resendPending || resendCooldownSeconds > 0}
-                className="w-full rounded-2xl border-[3px] border-[var(--outline)] bg-white px-4 py-3 text-sm font-black text-[var(--foreground)] transition hover:bg-[#f6f8fa] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {resendPending
-                  ? authText.resendPending
-                  : resendCooldownSeconds > 0
-                    ? `${authText.resendCooldownPrefix}${resendCooldownSeconds}${authText.resendCooldownSuffix}`
-                    : authText.resendCode}
-              </button>
-            </>
-          ) : (
-            <>
-              {mode === "register" ? (
-                <Field
-                  label={authText.nickname}
-                  placeholder={authText.nicknamePlaceholder}
-                  value={nickname}
-                  onChange={onNicknameChange}
-                  type="text"
-                  autoComplete="nickname"
-                  icon={<UserIcon className="h-5 w-5" />}
-                />
+              {isVerifyStep ? (
+                <button
+                  type="button"
+                  onClick={onResendVerificationCode}
+                  disabled={pending || resendPending || resendCooldownSeconds > 0}
+                  className="w-full rounded-2xl border-[3px] border-[var(--outline)] bg-white px-4 py-3 text-sm font-black text-[var(--foreground)] transition hover:bg-[#f6f8fa] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {resendPending
+                    ? authText.resendPending
+                    : resendCooldownSeconds > 0
+                      ? `${authText.resendCooldownPrefix}${resendCooldownSeconds}${authText.resendCooldownSuffix}`
+                      : authText.resendCode}
+                </button>
               ) : null}
-
-              <Field
-                label={authText.password}
-                placeholder={authText.passwordPlaceholder}
-                value={password}
-                onChange={onPasswordChange}
-                type={showPassword ? "text" : "password"}
-                autoComplete={mode === "register" ? "new-password" : "current-password"}
-                icon={<LockIcon className="h-5 w-5" />}
-                trailing={
-                  <button
-                    type="button"
-                    onClick={onTogglePassword}
-                    className="text-[var(--text-muted)] transition hover:text-[var(--foreground)]"
-                    aria-label={showPassword ? authText.hidePassword : authText.showPassword}
-                  >
-                    {showPassword ? (
-                      <EyeOpenIcon className="h-5 w-5" />
-                    ) : (
-                      <EyeClosedIcon className="h-5 w-5" />
-                    )}
-                  </button>
-                }
-              />
             </>
-          )}
+          ) : null}
 
           <button
             type="submit"

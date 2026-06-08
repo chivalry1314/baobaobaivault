@@ -12,6 +12,7 @@ export type FieldProps = {
   type?: "email" | "password" | "text";
   autoComplete?: string;
   trailing?: ReactNode;
+  readOnly?: boolean;
 };
 
 export type AuthFormCardProps = {
