@@ -113,6 +113,42 @@ func (h *Handler) shareChangePassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
+func (h *Handler) shareDeleteOwnAccount(c *gin.Context) {
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		jsonError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	var req struct {
+		OldPassword string `json:"oldPassword"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	if err := h.shareService.DeleteOwnExternalUser(c.Request.Context(), service.ShareSelfDeleteInput{
+		UserID:      user.ID,
+		OldPassword: req.OldPassword,
+	}); err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareUserNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareDeleteAuthFailed):
+			status = http.StatusUnauthorized
+		case errors.Is(err, service.ErrShareProtectedSuperAdmin):
+			status = http.StatusBadRequest
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	h.clearShareSessionCookie(c)
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
 func (h *Handler) shareCreateCard(c *gin.Context) {
 	user, err := h.requireShareUser(c)
 	if err != nil {

@@ -7,16 +7,26 @@ export function AuthPage() {
   const {
     sessionChecking,
     mode,
+    registerStep,
+    emailVerificationEnabled,
     email,
     nickname,
     password,
+    verificationCode,
+    verificationEmail,
+    verificationExpiresIn,
     showPassword,
     pending,
+    resendPending,
+    resendCooldownSeconds,
     error,
     switchMode,
+    backToRegister,
+    resendVerificationCode,
     setEmail,
     setNickname,
     setPassword,
+    setVerificationCode,
     setShowPassword,
     handleSubmit,
   } = useAuthPage();
@@ -35,17 +45,27 @@ export function AuthPage() {
       <AuthBackground />
       <AuthFormCard
         mode={mode}
+        registerStep={registerStep}
+        emailVerificationEnabled={emailVerificationEnabled}
         pending={pending}
+        resendPending={resendPending}
         error={error}
         email={email}
         nickname={nickname}
         password={password}
+        verificationCode={verificationCode}
+        verificationEmail={verificationEmail}
+        verificationExpiresIn={verificationExpiresIn}
+        resendCooldownSeconds={resendCooldownSeconds}
         showPassword={showPassword}
         onSwitchMode={switchMode}
         onEmailChange={setEmail}
         onNicknameChange={setNickname}
         onPasswordChange={setPassword}
+        onVerificationCodeChange={setVerificationCode}
         onTogglePassword={() => setShowPassword((value) => !value)}
+        onBackToRegister={backToRegister}
+        onResendVerificationCode={resendVerificationCode}
         onSubmit={handleSubmit}
       />
     </div>

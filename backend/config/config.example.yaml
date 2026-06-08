@@ -108,6 +108,21 @@ webpush:
   queue_buffer: 1000
   push_proxy_url: ""
 
+email:
+  enabled: false
+  from_name: "CardShare"
+  from_address: ""
+  smtp_host: "" # e.g. smtpdm.aliyun.com / smtp.qq.com / smtp.exmail.qq.com / smtp.feishu.cn / smtp.gmail.com
+  smtp_port: 587 # usually 587 for STARTTLS, 465 for SSL; Aliyun Direct Mail commonly uses 465 or 80
+  smtp_username: "" # usually the full sender email address
+  smtp_password: ""
+
+share_auth:
+  email_verification_enabled: false # true = registration requires email code verification
+  verification_code_ttl_seconds: 600 # 10 minutes
+  resend_interval_seconds: 60 # resend cooldown
+  max_verify_attempts: 5 # max incorrect code attempts before re-registering
+
 log:
   level: "info" # debug, info, warn, error
   format: "json" # json, console

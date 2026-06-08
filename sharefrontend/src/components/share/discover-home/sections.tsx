@@ -55,19 +55,38 @@ export function DiscoverChips(props: {
             key={chip}
             type="button"
             onClick={() => setActiveChip(chip)}
-            className="group shrink-0 cursor-pointer"
+            className={`group shrink-0 cursor-pointer rounded-[1.6rem] border-[3px] px-3 py-2 transition-all ${
+              active
+                ? "border-[var(--outline)] bg-white shadow-[0_8px_0_rgba(46,40,86,0.18)]"
+                : "border-transparent bg-transparent hover:border-[var(--outline)]/20 hover:bg-white/35"
+            }`}
           >
             <span className="flex flex-col items-center gap-2">
               <span
                 className={`flex h-12 w-12 items-center justify-center rounded-[1.1rem] border-[4px] border-[var(--outline)] xl:h-14 xl:w-14 ${
-                  active ? "bg-[#cdb4f3]" : CHIP_VISUALS[chip].className
+                  CHIP_VISUALS[chip].className
+                } ${
+                  active
+                    ? "shadow-[0_10px_18px_-12px_rgba(46,40,86,0.75)]"
+                    : "group-hover:-translate-y-0.5"
                 } transition-all group-hover:opacity-90`}
               >
                 <ChipIcon chip={chip} />
               </span>
-              <span className="text-sm font-extrabold text-[var(--foreground)] xl:text-base">
+              <span
+                className={`text-sm font-extrabold xl:text-base ${
+                  active ? "text-[var(--foreground)]" : "text-[var(--foreground)]/82"
+                }`}
+              >
                 {CHIP_LABELS[chip]}
               </span>
+              <span
+                className={`block rounded-full transition-all ${
+                  active
+                    ? "h-1.5 w-8 bg-[var(--brand-strong)]"
+                    : "h-1.5 w-3 bg-transparent group-hover:bg-[var(--foreground)]/18"
+                }`}
+              />
             </span>
           </button>
         );

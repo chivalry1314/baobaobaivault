@@ -1,4 +1,40 @@
-import type { FieldProps, AuthFormCardProps } from "@/components/share/auth/types";
+import type { AuthFormCardProps, FieldProps } from "@/components/share/auth/types";
+
+const authText = {
+  checking: "\u6b63\u5728\u68c0\u67e5\u767b\u5f55\u72b6\u6001...",
+  subtitle: "CardShare \u8d26\u53f7\u5165\u53e3",
+  login: "\u767b\u5f55",
+  register: "\u6ce8\u518c",
+  email: "\u90ae\u7bb1",
+  nickname: "\u6635\u79f0",
+  password: "\u5bc6\u7801",
+  verificationCode: "\u9a8c\u8bc1\u7801",
+  verificationSentPrefix: "\u9a8c\u8bc1\u7801\u5df2\u53d1\u9001\u81f3\uff1a",
+  verificationExpiresPrefix: "\u6709\u6548\u671f\u7ea6 ",
+  verificationExpiresSuffix: " \u5206\u949f",
+  verificationPlaceholder: "\u8bf7\u8f93\u5165 6 \u4f4d\u9a8c\u8bc1\u7801",
+  nicknamePlaceholder: "2-40 \u4e2a\u5b57\u7b26",
+  passwordPlaceholder: "\u8bf7\u8f93\u5165\u5bc6\u7801",
+  processing: "\u5904\u7406\u4e2d...",
+  verifySubmit: "\u5b8c\u6210\u9a8c\u8bc1",
+  registerSubmit: "\u7acb\u5373\u6ce8\u518c",
+  loginSubmit: "\u767b\u5f55",
+  hidePassword: "\u9690\u85cf\u5bc6\u7801",
+  showPassword: "\u663e\u793a\u5bc6\u7801",
+  backToRegister: "\u8fd4\u56de\u4fee\u6539\u6ce8\u518c\u4fe1\u606f",
+  resendCode: "\u91cd\u65b0\u53d1\u9001\u9a8c\u8bc1\u7801",
+  resendPending: "\u53d1\u9001\u4e2d...",
+  resendCooldownPrefix: "\u53ef\u5728 ",
+  resendCooldownSuffix: " \u79d2\u540e\u91cd\u53d1",
+  verificationEnabledHint:
+    "\u5f53\u524d\u5df2\u542f\u7528\u90ae\u7bb1\u9a8c\u8bc1\uff0c\u6ce8\u518c\u540e\u9700\u5148\u5b8c\u6210\u9a8c\u8bc1\u7801\u786e\u8ba4\u3002",
+  verificationDisabledHint:
+    "\u5f53\u524d\u672a\u542f\u7528\u90ae\u7bb1\u9a8c\u8bc1\uff0c\u6ce8\u518c\u6210\u529f\u540e\u4f1a\u76f4\u63a5\u767b\u5f55\u3002",
+  registerHint:
+    "\u6ce8\u518c\u6210\u529f\u540e\u4f1a\u81ea\u52a8\u767b\u5f55\uff1b\u5982\u679c\u540e\u7aef\u542f\u7528\u4e86\u90ae\u7bb1\u9a8c\u8bc1\uff0c\u4f1a\u5148\u5b8c\u6210\u9a8c\u8bc1\u7801\u786e\u8ba4\u3002",
+  loginHint: "\u6ca1\u6709\u8d26\u53f7\u7684\u8bdd\uff0c\u5207\u6362\u5230\u201c\u6ce8\u518c\u201d\u5c31\u53ef\u4ee5\u521b\u5efa\u65b0\u8d26\u53f7\u3002",
+  backHome: "\u8fd4\u56de\u9996\u9875",
+} as const;
 
 function Field({
   label,
@@ -37,7 +73,7 @@ function Field({
 export function AuthCheckingCard() {
   return (
     <section className="relative z-10 w-full max-w-md rounded-[2rem] border-[4px] border-[var(--outline)] bg-white p-8 text-center text-sm font-black text-[var(--foreground)] md:p-12">
-      正在检查登录状态...
+      {authText.checking}
     </section>
   );
 }
@@ -45,19 +81,38 @@ export function AuthCheckingCard() {
 export function AuthFormCard(props: AuthFormCardProps) {
   const {
     mode,
+    registerStep,
+    emailVerificationEnabled,
     pending,
+    resendPending,
     error,
     email,
     nickname,
     password,
+    verificationCode,
+    verificationEmail,
+    verificationExpiresIn,
+    resendCooldownSeconds,
     showPassword,
     onSwitchMode,
     onEmailChange,
     onNicknameChange,
     onPasswordChange,
+    onVerificationCodeChange,
     onTogglePassword,
+    onBackToRegister,
+    onResendVerificationCode,
     onSubmit,
   } = props;
+
+  const isVerifyStep = mode === "register" && registerStep === "verify";
+  const submitLabel = pending
+    ? authText.processing
+    : isVerifyStep
+      ? authText.verifySubmit
+      : mode === "register"
+        ? authText.registerSubmit
+        : authText.loginSubmit;
 
   return (
     <section className="relative z-10 w-full max-w-md overflow-hidden rounded-[2rem] border-[4px] border-[var(--outline)] bg-white p-8 md:p-12">
@@ -70,7 +125,7 @@ export function AuthFormCard(props: AuthFormCardProps) {
             <div className="h-10 w-10 rounded-lg border-[3px] border-[var(--outline)] bg-[linear-gradient(135deg,#cdb4f3_0%,#a2d2fb_100%)]" />
           </div>
           <h1 className="text-4xl font-black tracking-tight text-[var(--foreground)]">Dreamy</h1>
-          <p className="text-sm font-extrabold text-[var(--foreground)]/80">CardShare 账号入口</p>
+          <p className="text-sm font-extrabold text-[var(--foreground)]/80">{authText.subtitle}</p>
         </div>
 
         <div className="mb-6 grid grid-cols-2 gap-2 rounded-2xl border-[3px] border-[var(--outline)] bg-[#f6f8fa] p-1.5">
@@ -83,7 +138,7 @@ export function AuthFormCard(props: AuthFormCardProps) {
                 : "text-[var(--foreground)]/70 hover:text-[var(--foreground)]"
             }`}
           >
-            登录
+            {authText.login}
           </button>
           <button
             type="button"
@@ -94,7 +149,7 @@ export function AuthFormCard(props: AuthFormCardProps) {
                 : "text-[var(--foreground)]/70 hover:text-[var(--foreground)]"
             }`}
           >
-            注册
+            {authText.register}
           </button>
         </div>
 
@@ -106,7 +161,7 @@ export function AuthFormCard(props: AuthFormCardProps) {
 
         <form className="space-y-5" onSubmit={onSubmit}>
           <Field
-            label="邮箱"
+            label={authText.email}
             placeholder="you@example.com"
             value={email}
             onChange={onEmailChange}
@@ -115,61 +170,115 @@ export function AuthFormCard(props: AuthFormCardProps) {
             icon={<MailIcon className="h-5 w-5" />}
           />
 
-          {mode === "register" ? (
-            <Field
-              label="昵称"
-              placeholder="2-40 个字符"
-              value={nickname}
-              onChange={onNicknameChange}
-              type="text"
-              autoComplete="nickname"
-              icon={<UserIcon className="h-5 w-5" />}
-            />
-          ) : null}
-
-          <Field
-            label="密码"
-            placeholder="请输入密码"
-            value={password}
-            onChange={onPasswordChange}
-            type={showPassword ? "text" : "password"}
-            autoComplete={mode === "register" ? "new-password" : "current-password"}
-            icon={<LockIcon className="h-5 w-5" />}
-            trailing={
+          {isVerifyStep ? (
+            <>
+              <div className="rounded-2xl border-[3px] border-[var(--outline)] bg-[#f8f9fa] px-4 py-3 text-sm font-bold text-[var(--foreground)]">
+                <p>
+                  {authText.verificationSentPrefix}
+                  {verificationEmail || email}
+                </p>
+                {verificationExpiresIn > 0 ? (
+                  <p className="mt-1 text-[var(--foreground)]/70">
+                    {authText.verificationExpiresPrefix}
+                    {Math.ceil(verificationExpiresIn / 60)}
+                    {authText.verificationExpiresSuffix}
+                  </p>
+                ) : null}
+              </div>
+              <Field
+                label={authText.verificationCode}
+                placeholder={authText.verificationPlaceholder}
+                value={verificationCode}
+                onChange={onVerificationCodeChange}
+                type="text"
+                autoComplete="one-time-code"
+                icon={<ShieldIcon className="h-5 w-5" />}
+              />
               <button
                 type="button"
-                onClick={onTogglePassword}
-                className="text-[var(--text-muted)] transition hover:text-[var(--foreground)]"
-                aria-label={showPassword ? "隐藏密码" : "显示密码"}
+                onClick={onResendVerificationCode}
+                disabled={pending || resendPending || resendCooldownSeconds > 0}
+                className="w-full rounded-2xl border-[3px] border-[var(--outline)] bg-white px-4 py-3 text-sm font-black text-[var(--foreground)] transition hover:bg-[#f6f8fa] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {showPassword ? (
-                  <EyeOpenIcon className="h-5 w-5" />
-                ) : (
-                  <EyeClosedIcon className="h-5 w-5" />
-                )}
+                {resendPending
+                  ? authText.resendPending
+                  : resendCooldownSeconds > 0
+                    ? `${authText.resendCooldownPrefix}${resendCooldownSeconds}${authText.resendCooldownSuffix}`
+                    : authText.resendCode}
               </button>
-            }
-          />
+            </>
+          ) : (
+            <>
+              {mode === "register" ? (
+                <Field
+                  label={authText.nickname}
+                  placeholder={authText.nicknamePlaceholder}
+                  value={nickname}
+                  onChange={onNicknameChange}
+                  type="text"
+                  autoComplete="nickname"
+                  icon={<UserIcon className="h-5 w-5" />}
+                />
+              ) : null}
+
+              <Field
+                label={authText.password}
+                placeholder={authText.passwordPlaceholder}
+                value={password}
+                onChange={onPasswordChange}
+                type={showPassword ? "text" : "password"}
+                autoComplete={mode === "register" ? "new-password" : "current-password"}
+                icon={<LockIcon className="h-5 w-5" />}
+                trailing={
+                  <button
+                    type="button"
+                    onClick={onTogglePassword}
+                    className="text-[var(--text-muted)] transition hover:text-[var(--foreground)]"
+                    aria-label={showPassword ? authText.hidePassword : authText.showPassword}
+                  >
+                    {showPassword ? (
+                      <EyeOpenIcon className="h-5 w-5" />
+                    ) : (
+                      <EyeClosedIcon className="h-5 w-5" />
+                    )}
+                  </button>
+                }
+              />
+            </>
+          )}
 
           <button
             type="submit"
             disabled={pending}
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-[3px] border-[var(--outline)] bg-[var(--button-primary)] px-5 py-3.5 text-lg font-black text-[var(--foreground)] transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {pending ? "处理中..." : mode === "register" ? "立即注册" : "登录"}
+            {submitLabel}
             <ArrowRightIcon className="h-5 w-5" />
           </button>
         </form>
 
-        <p className="mt-4 text-center text-xs font-bold text-[var(--foreground)]/65">
-          {mode === "register"
-            ? "注册成功后会自动登录，并默认成为创作者角色。"
-            : "没有账号？切换到“注册”即可创建新账号。"}
-        </p>
+        {isVerifyStep ? (
+          <button
+            type="button"
+            onClick={onBackToRegister}
+            disabled={pending}
+            className="mt-4 w-full text-center text-sm font-bold text-[var(--foreground)]/70 transition hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {authText.backToRegister}
+          </button>
+        ) : (
+          <p className="mt-4 text-center text-xs font-bold text-[var(--foreground)]/65">
+            {mode === "register"
+              ? emailVerificationEnabled
+                ? authText.verificationEnabledHint
+                : authText.verificationDisabledHint
+              : authText.loginHint}
+          </p>
+        )}
 
         <div className="mt-6 flex items-center justify-center gap-4 text-sm font-bold text-[var(--foreground)]/70">
           <a href="/" className="transition hover:text-[var(--foreground)] hover:underline">
-            返回首页
+            {authText.backHome}
           </a>
         </div>
       </div>
@@ -224,6 +333,17 @@ function LockIcon({ className = "h-4 w-4" }: { className?: string }) {
     <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
       <path
         d="M12 1.5a4.5 4.5 0 0 0-4.5 4.5v2.25h-.75A2.25 2.25 0 0 0 4.5 10.5v9A2.25 2.25 0 0 0 6.75 21h10.5a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-.75V6A4.5 4.5 0 0 0 12 1.5Zm-3 6.75V6a3 3 0 1 1 6 0v2.25H9Zm3 3a1.5 1.5 0 0 1 .75 2.8V16.5h-1.5v-2.45a1.5 1.5 0 0 1 .75-2.8Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function ShieldIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <path
+        d="M12 2.25c2.6 2.02 5.47 3.08 8.63 3.18v5.45c0 5.1-3.18 8.94-8.63 10.87-5.45-1.93-8.63-5.77-8.63-10.87V5.43C6.53 5.33 9.4 4.27 12 2.25Zm0 2c-2.1 1.4-4.46 2.23-7.13 2.5v4.13c0 4.18 2.48 7.26 7.13 9.05 4.65-1.79 7.13-4.87 7.13-9.05V6.75c-2.67-.27-5.03-1.1-7.13-2.5Zm-.75 4.5h1.5v4.5h-1.5v-4.5Zm0 6h1.5v1.5h-1.5v-1.5Z"
         fill="currentColor"
       />
     </svg>

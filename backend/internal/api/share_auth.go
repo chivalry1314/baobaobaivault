@@ -7,10 +7,13 @@ import (
 	"errors"
 	"github.com/baobaobai/baobaobaivault/internal/service"
 	"github.com/gin-gonic/gin"
+	"net/mail"
 	"net/http"
 	"strings"
 	"time"
 )
+
+const shareSMTPTestCooldown = 60 * time.Second
 
 func (h *Handler) shareRegister(c *gin.Context) {
 	var req struct {
@@ -23,18 +26,185 @@ func (h *Handler) shareRegister(c *gin.Context) {
 		return
 	}
 
-	user, err := h.shareService.RegisterExternalUser(c.Request.Context(), req.Email, req.Nickname, req.Password)
+	result, err := h.shareService.RegisterExternalUser(c.Request.Context(), req.Email, req.Nickname, req.Password)
 	if err != nil {
 		status := http.StatusBadRequest
-		if errors.Is(err, service.ErrShareEmailExists) {
+		switch {
+		case errors.Is(err, service.ErrShareEmailExists):
 			status = http.StatusConflict
+		case errors.Is(err, service.ErrShareVerificationTooSoon):
+			status = http.StatusTooManyRequests
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	if result.User != nil {
+		h.setShareSessionCookie(c, result.User.ID)
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"ok":                   true,
+		"user":                 result.User,
+		"verificationRequired": result.VerificationRequired,
+		"email":                result.Email,
+		"expiresIn":            result.ExpiresInSeconds,
+	})
+}
+
+func (h *Handler) shareRegisterVerify(c *gin.Context) {
+	var req struct {
+		Email string `json:"email"`
+		Code  string `json:"code"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	user, err := h.shareService.VerifyExternalUserRegistration(c.Request.Context(), req.Email, req.Code)
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareEmailExists):
+			status = http.StatusConflict
+		case errors.Is(err, service.ErrShareVerificationTooMany):
+			status = http.StatusTooManyRequests
+		case errors.Is(err, service.ErrShareVerificationRequired),
+			errors.Is(err, service.ErrShareEmailNotVerified):
+			status = http.StatusForbidden
 		}
 		c.JSON(status, gin.H{"error": err.Error()})
 		return
 	}
 
 	h.setShareSessionCookie(c, user.ID)
-	c.JSON(http.StatusCreated, gin.H{"ok": true, "user": user})
+	c.JSON(http.StatusOK, gin.H{"ok": true, "user": user})
+}
+
+func (h *Handler) shareRegisterResend(c *gin.Context) {
+	var req struct {
+		Email string `json:"email"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	expiresIn, err := h.shareService.ResendExternalUserRegistrationVerification(c.Request.Context(), req.Email)
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareVerificationTooSoon):
+			status = http.StatusTooManyRequests
+		case errors.Is(err, service.ErrShareVerificationRequired):
+			status = http.StatusForbidden
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":        true,
+		"email":     strings.TrimSpace(req.Email),
+		"expiresIn": expiresIn,
+	})
+}
+
+func (h *Handler) shareAuthConfig(c *gin.Context) {
+	cfg := h.shareService.GetShareAuthConfig()
+	c.JSON(http.StatusOK, gin.H{"ok": true, "config": cfg})
+}
+
+func (h *Handler) shareEmailHealth(c *gin.Context) {
+	health := h.shareService.GetShareEmailHealth()
+	c.JSON(http.StatusOK, gin.H{"ok": true, "health": health})
+}
+
+func (h *Handler) shareSendSMTPTest(c *gin.Context) {
+	var req struct {
+		TargetEmail string `json:"targetEmail"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+	if user.Role != "manager" {
+		c.JSON(http.StatusForbidden, gin.H{"error": service.ErrShareForbiddenRole.Error()})
+		return
+	}
+
+	targetEmail := strings.TrimSpace(req.TargetEmail)
+	if targetEmail == "" {
+		targetEmail = strings.TrimSpace(h.cfg.Server.AdminEmail)
+	}
+	if targetEmail == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "server admin email is not configured"})
+		return
+	}
+	targetEmail = strings.ToLower(targetEmail)
+	if _, err := mail.ParseAddress(targetEmail); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid email"})
+		return
+	}
+	if retryAfter, blocked := h.shareSMTPTestRetryAfter(user.ID); blocked {
+		c.JSON(http.StatusTooManyRequests, gin.H{
+			"error":      "smtp test requested too frequently",
+			"retryAfter": int(retryAfter.Seconds()),
+		})
+		return
+	}
+
+	emailService := service.NewEmailService(h.cfg.Email)
+	if err := emailService.SendTestEmail(targetEmail); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	h.markShareSMTPTestSent(user.ID)
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":         true,
+		"targetEmail": targetEmail,
+	})
+}
+
+func (h *Handler) shareSMTPTestRetryAfter(userID string) (time.Duration, bool) {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return 0, false
+	}
+
+	now := time.Now().UTC()
+	h.shareSMTPTestMu.Lock()
+	defer h.shareSMTPTestMu.Unlock()
+
+	lastSentAt, ok := h.shareSMTPTestAt[userID]
+	if !ok {
+		return 0, false
+	}
+	retryAfter := shareSMTPTestCooldown - now.Sub(lastSentAt)
+	if retryAfter <= 0 {
+		delete(h.shareSMTPTestAt, userID)
+		return 0, false
+	}
+	return retryAfter, true
+}
+
+func (h *Handler) markShareSMTPTestSent(userID string) {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return
+	}
+
+	h.shareSMTPTestMu.Lock()
+	h.shareSMTPTestAt[userID] = time.Now().UTC()
+	h.shareSMTPTestMu.Unlock()
 }
 
 func (h *Handler) shareContinue(c *gin.Context) {
@@ -57,6 +227,8 @@ func (h *Handler) shareContinue(c *gin.Context) {
 			status = http.StatusUnauthorized
 		case errors.Is(err, service.ErrShareEmailExists):
 			status = http.StatusConflict
+		case errors.Is(err, service.ErrShareVerificationRequired), errors.Is(err, service.ErrShareEmailNotVerified):
+			status = http.StatusForbidden
 		}
 		c.JSON(status, gin.H{"error": err.Error()})
 		return
@@ -83,7 +255,10 @@ func (h *Handler) shareLogin(c *gin.Context) {
 	user, err := h.shareService.AuthenticateExternalUser(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
 		status := http.StatusUnauthorized
-		if !errors.Is(err, service.ErrShareAuthFailed) {
+		switch {
+		case errors.Is(err, service.ErrShareEmailNotVerified):
+			status = http.StatusForbidden
+		case !errors.Is(err, service.ErrShareAuthFailed):
 			status = http.StatusInternalServerError
 		}
 		c.JSON(status, gin.H{"error": err.Error()})

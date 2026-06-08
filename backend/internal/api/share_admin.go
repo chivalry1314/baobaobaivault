@@ -116,6 +116,74 @@ func (h *Handler) shareAdminUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"users": users})
 }
 
+func (h *Handler) shareAdminAuthSettings(c *gin.Context) {
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		jsonError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	settings, err := h.shareService.GetShareAuthSettings(c.Request.Context(), user.ID)
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareForbiddenRole):
+			status = http.StatusForbidden
+		case errors.Is(err, service.ErrShareUserNotFound):
+			status = http.StatusNotFound
+		default:
+			status = http.StatusInternalServerError
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"settings": settings})
+}
+
+func (h *Handler) shareAdminUpdateAuthSettings(c *gin.Context) {
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		jsonError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	var req struct {
+		EmailVerificationEnabled  bool `json:"emailVerificationEnabled"`
+		VerificationCodeTTLSeconds int  `json:"verificationCodeTTLSeconds"`
+		ResendIntervalSeconds     int  `json:"resendIntervalSeconds"`
+		MaxVerifyAttempts         int  `json:"maxVerifyAttempts"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	settings, err := h.shareService.UpdateShareAuthSettings(c.Request.Context(), service.ShareUpdateAuthSettingsInput{
+		OperatorID:                user.ID,
+		EmailVerificationEnabled:  req.EmailVerificationEnabled,
+		VerificationCodeTTLSeconds: req.VerificationCodeTTLSeconds,
+		ResendIntervalSeconds:     req.ResendIntervalSeconds,
+		MaxVerifyAttempts:         req.MaxVerifyAttempts,
+	})
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareForbiddenRole),
+			errors.Is(err, service.ErrShareSuperAdminRequired):
+			status = http.StatusForbidden
+		case errors.Is(err, service.ErrShareUserNotFound):
+			status = http.StatusNotFound
+		default:
+			status = http.StatusBadRequest
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"settings": settings})
+}
+
 func (h *Handler) shareAdminUpdateUserRole(c *gin.Context) {
 	user, err := h.requireShareUser(c)
 	if err != nil {
@@ -150,4 +218,36 @@ func (h *Handler) shareAdminUpdateUserRole(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"user": updated})
+}
+
+func (h *Handler) shareAdminDeleteUser(c *gin.Context) {
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		jsonError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	err = h.shareService.DeleteUserForManage(c.Request.Context(), service.ShareDeleteUserInput{
+		OperatorID: user.ID,
+		UserID:     c.Param("userId"),
+	})
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareForbiddenRole):
+			status = http.StatusForbidden
+		case errors.Is(err, service.ErrShareUserNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareSelfDelete),
+			errors.Is(err, service.ErrShareLastManagerDelete),
+			errors.Is(err, service.ErrShareProtectedSuperAdmin):
+			status = http.StatusBadRequest
+		default:
+			status = http.StatusInternalServerError
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
 }

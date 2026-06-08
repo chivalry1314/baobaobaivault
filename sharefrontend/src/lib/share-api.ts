@@ -12,9 +12,16 @@
   DiscoverCardsPagination,
   ExternalSessionUser,
   PlatformCard,
+  RegisterResendResponse,
+  RegisterResponse,
+  RegisterVerifyResponse,
   ReviewDashboardResponse,
+  ShareAuthConfigResponse,
+  ShareAuthSettingsResponse,
+  ShareEmailHealthResponse,
   SessionResponse,
   ShareCardAccessMode,
+  ShareSMTPTestResponse,
   ShareUserRole,
   ShareUserRoleManageItem,
 } from "@/lib/shared";
@@ -27,10 +34,18 @@ const shareApiErrorMessages: Record<string, string> = {
   "invalid email or password": "邮箱或密码不正确",
   "invalid request body": "请求参数不正确",
   "email already registered": "该邮箱已注册",
+  "email not verified": "该邮箱尚未完成邮箱验证",
   "nickname must be between 2 and 40 characters": "昵称长度需要在 2 到 40 个字符之间",
+  "verification code expired": "验证码已过期，请重新获取",
+  "invalid verification code": "验证码不正确",
+  "verification required": "请先完成邮箱验证",
+  "too many verification attempts": "验证码输入次数过多，请重新获取",
+  "verification requested too frequently": "验证码发送过于频繁，请稍后再试",
+  "smtp test requested too frequently": "测试邮件发送过于频繁，请稍后再试",
   "bio must be at most 100 characters": "个人简介不能超过 100 个字符",
   "phone format is invalid": "手机号格式不正确",
   "current password is incorrect": "当前密码不正确",
+  "account self deleted": "账号已注销",
   "invalid image data": "图片数据不正确，请重新上传",
   "image exceeds 5mb": "图片大小不能超过 5MB",
   "invalid access code": "提取码不正确",
@@ -39,8 +54,14 @@ const shareApiErrorMessages: Record<string, string> = {
   "access code expired": "当前提取码已过期",
   "access code exhausted": "当前提取码已达到使用上限",
   "manager role required": "需要管理员权限",
+  "configured super admin required": "只有系统初始化超级管理员可以修改",
   "manager or creator role required": "需要创作者或管理员权限",
   "invalid user role": "用户角色不正确",
+  "invalid verification code ttl": "验证码有效期需要在 300 到 1800 秒之间",
+  "invalid resend interval": "重发间隔需要在 30 到 300 秒之间",
+  "invalid max verify attempts": "最大验证次数需要在 3 到 10 次之间",
+  "resend interval must be shorter than verification code ttl": "重发间隔必须小于验证码有效期",
+  "email verification requires email service configuration": "开启邮箱验证前请先完成 SMTP 配置",
   "cannot downgrade your own role": "不能降低自己的管理员权限",
   "invalid card content slot": "分类槽位不正确",
   "invalid card access mode": "卡片状态不正确",
@@ -51,6 +72,9 @@ const shareApiErrorMessages: Record<string, string> = {
   "card not found": "卡片不存在",
   "card access denied": "没有该卡片权限",
   "user not found": "用户不存在",
+  "cannot delete your own account": "不能注销自己的账号",
+  "cannot delete the last manager account": "至少需要保留一个管理员账号",
+  "cannot delete configured super admin account": "系统初始化超级管理员不能注销",
   "authentication required": "请先登录",
 };
 
@@ -111,7 +135,49 @@ export const shareApi = {
   },
 
   register(input: { email: string; nickname: string; password: string }) {
-    return request<AuthResponse>(`${API_ROOT}/auth/register`, {
+    return request<RegisterResponse>(`${API_ROOT}/auth/register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  verifyRegisterCode(input: { email: string; code: string }) {
+    return request<RegisterVerifyResponse>(`${API_ROOT}/auth/register/verify`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  resendRegisterCode(input: { email: string }) {
+    return request<RegisterResendResponse>(`${API_ROOT}/auth/register/resend`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  authConfig() {
+    return request<ShareAuthConfigResponse>(`${API_ROOT}/auth/config`, {
+      cache: "no-store",
+    });
+  },
+
+  emailHealth() {
+    return request<ShareEmailHealthResponse>(`${API_ROOT}/auth/email-health`, {
+      cache: "no-store",
+    });
+  },
+
+  sendSMTPTestEmail(input: { targetEmail: string }) {
+    return request<ShareSMTPTestResponse>(`${API_ROOT}/auth/email-health/test`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -164,6 +230,16 @@ export const shareApi = {
   }) {
     return request<{ ok: true }>(`${API_ROOT}/me/password`, {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  deleteOwnAccount(input: { oldPassword: string }) {
+    return request<{ ok: true }>(`${API_ROOT}/me/account`, {
+      method: "DELETE",
       headers: {
         "Content-Type": "application/json",
       },
@@ -340,6 +416,27 @@ export const shareApi = {
     );
   },
 
+  adminAuthSettings() {
+    return request<ShareAuthSettingsResponse>(`${API_ROOT}/me/admin/auth-settings`, {
+      cache: "no-store",
+    });
+  },
+
+  updateAdminAuthSettings(input: {
+    emailVerificationEnabled: boolean;
+    verificationCodeTTLSeconds: number;
+    resendIntervalSeconds: number;
+    maxVerifyAttempts: number;
+  }) {
+    return request<ShareAuthSettingsResponse>(`${API_ROOT}/me/admin/auth-settings`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
   updateUserRole(userId: string, role: ShareUserRole) {
     return request<{ user: ExternalSessionUser }>(`${API_ROOT}/me/admin/users/${encodeURIComponent(userId)}/role`, {
       method: "PATCH",
@@ -347,6 +444,12 @@ export const shareApi = {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ role }),
+    });
+  },
+
+  deleteAdminUser(userId: string) {
+    return request<{ ok: true }>(`${API_ROOT}/me/admin/users/${encodeURIComponent(userId)}`, {
+      method: "DELETE",
     });
   },
 

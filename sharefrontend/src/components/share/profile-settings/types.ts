@@ -6,7 +6,7 @@ export type SettingsDraft = {
   phone: string;
 };
 
-export type SecurityModal = "password" | "phone" | null;
+export type SecurityModal = "password" | "phone" | "delete_account" | null;
 
 export type PasswordDraft = {
   oldPassword: string;

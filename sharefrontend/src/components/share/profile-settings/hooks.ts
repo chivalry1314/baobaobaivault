@@ -1,9 +1,18 @@
-﻿import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useRouter } from "next/navigation";
 
-import { createDraft, readFileAsDataUrl, validateImage } from "@/components/share/profile-settings/helpers";
-import type { PasswordDraft, SecurityModal, SettingsDraft } from "@/components/share/profile-settings/types";
+import {
+  createDraft,
+  readFileAsDataUrl,
+  validateImage,
+} from "@/components/share/profile-settings/helpers";
+import type {
+  PasswordDraft,
+  SecurityModal,
+  SettingsDraft,
+} from "@/components/share/profile-settings/types";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
-import type { ExternalSessionUser, ShareUserRole, ShareUserRoleManageItem } from "@/lib/shared";
+import type { ExternalSessionUser } from "@/lib/shared";
 
 type UseShareProfileSettingsArgs = {
   user: ExternalSessionUser;
@@ -16,23 +25,36 @@ const initialPasswordDraft: PasswordDraft = {
   confirmPassword: "",
 };
 
-export function useShareProfileSettings({ user, onSaved }: UseShareProfileSettingsArgs) {
-  const userKey = useMemo(() => [user.id, user.nickname, user.bio, user.avatar, user.coverImage, user.phone].join("|"), [user.avatar, user.bio, user.coverImage, user.id, user.nickname, user.phone]);
+export function useShareProfileSettings({
+  user,
+  onSaved,
+}: UseShareProfileSettingsArgs) {
+  const router = useRouter();
+  const userKey = useMemo(
+    () =>
+      [
+        user.id,
+        user.nickname,
+        user.bio,
+        user.avatar,
+        user.coverImage,
+        user.phone,
+      ].join("|"),
+    [user.avatar, user.bio, user.coverImage, user.id, user.nickname, user.phone],
+  );
 
   const [draft, setDraft] = useState<SettingsDraft>(() => createDraft(user));
   const [savePending, setSavePending] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState("");
-  const [roleUsers, setRoleUsers] = useState<ShareUserRoleManageItem[]>([]);
-  const [roleLoadPending, setRoleLoadPending] = useState(false);
-  const [roleLoadError, setRoleLoadError] = useState("");
-  const [roleUpdatePendingByUser, setRoleUpdatePendingByUser] = useState<Record<string, boolean>>({});
 
   const [securityModal, setSecurityModal] = useState<SecurityModal>(null);
   const [modalPending, setModalPending] = useState(false);
   const [modalError, setModalError] = useState("");
   const [phoneValue, setPhoneValue] = useState(user.phone);
-  const [passwordDraft, setPasswordDraft] = useState<PasswordDraft>(initialPasswordDraft);
+  const [passwordDraft, setPasswordDraft] =
+    useState<PasswordDraft>(initialPasswordDraft);
+  const [deletePassword, setDeletePassword] = useState("");
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -44,32 +66,10 @@ export function useShareProfileSettings({ user, onSaved }: UseShareProfileSettin
     return () => window.clearTimeout(timer);
   }, [user, userKey]);
 
-  const loadRoleUsers = useCallback(async () => {
-    if (user.role !== "manager") {
-      setRoleUsers([]);
-      setRoleLoadPending(false);
-      setRoleLoadError("");
-      return;
-    }
-
-    setRoleLoadPending(true);
-    setRoleLoadError("");
-
-    try {
-      const payload = await shareApi.adminUsers();
-      setRoleUsers(payload.users);
-    } catch (error) {
-      setRoleLoadError(getShareErrorMessage(error, "加载用户列表失败，请稍后重试"));
-    } finally {
-      setRoleLoadPending(false);
-    }
-  }, [user.role]);
-
-  useEffect(() => {
-    void loadRoleUsers();
-  }, [loadRoleUsers]);
-
-  async function handleImageChange(event: ChangeEvent<HTMLInputElement>, target: "avatar" | "coverImage") {
+  async function handleImageChange(
+    event: ChangeEvent<HTMLInputElement>,
+    target: "avatar" | "coverImage",
+  ) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) {
@@ -126,6 +126,7 @@ export function useShareProfileSettings({ user, onSaved }: UseShareProfileSettin
     setModalError("");
     setPasswordDraft(initialPasswordDraft);
     setPhoneValue(user.phone);
+    setDeletePassword("");
   }
 
   async function handleChangePassword() {
@@ -187,42 +188,30 @@ export function useShareProfileSettings({ user, onSaved }: UseShareProfileSettin
     }
   }
 
-  async function handleUpdateRole(targetUser: ShareUserRoleManageItem, nextRole: ShareUserRole) {
-    if (targetUser.role === nextRole || roleUpdatePendingByUser[targetUser.id]) {
-      return;
-    }
-    if (targetUser.id === user.id && nextRole !== "manager") {
-      setRoleLoadError("不能将自己的角色降级为非管理员");
+  async function handleDeleteAccount() {
+    if (!deletePassword.trim()) {
+      setModalError("请输入当前密码以确认注销");
       return;
     }
 
-    setRoleUpdatePendingByUser((current) => ({ ...current, [targetUser.id]: true }));
-    setRoleLoadError("");
+    const confirmed = window.confirm(
+      "确认注销当前账号吗？注销后你将立即退出登录，原邮箱可以重新注册，但会作为全新账号。",
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setModalPending(true);
+    setModalError("");
 
     try {
-      const payload = await shareApi.updateUserRole(targetUser.id, nextRole);
-      setRoleUsers((current) =>
-        current.map((item) =>
-          item.id === targetUser.id
-            ? {
-                ...item,
-                role: payload.user.role,
-              }
-            : item,
-        ),
-      );
-      setSaveSuccess("用户角色已更新");
-      if (targetUser.id === user.id) {
-        onSaved(payload.user);
-      }
+      await shareApi.deleteOwnAccount({ oldPassword: deletePassword });
+      await shareApi.logout().catch(() => null);
+      router.push("/");
+      router.refresh();
     } catch (error) {
-      setRoleLoadError(getShareErrorMessage(error, "更新用户角色失败，请稍后重试"));
-    } finally {
-      setRoleUpdatePendingByUser((current) => {
-        const next = { ...current };
-        delete next[targetUser.id];
-        return next;
-      });
+      setModalError(getShareErrorMessage(error, "注销账号失败，请稍后重试"));
+      setModalPending(false);
     }
   }
 
@@ -234,10 +223,6 @@ export function useShareProfileSettings({ user, onSaved }: UseShareProfileSettin
     saveSuccess,
     setSaveError,
     setSaveSuccess,
-    roleUsers,
-    roleLoadPending,
-    roleLoadError,
-    roleUpdatePendingByUser,
     securityModal,
     setSecurityModal,
     modalPending,
@@ -247,12 +232,14 @@ export function useShareProfileSettings({ user, onSaved }: UseShareProfileSettin
     setPhoneValue,
     passwordDraft,
     setPasswordDraft,
+    deletePassword,
+    setDeletePassword,
     handleImageChange,
     handleSaveProfile,
     handleReset,
     closeSecurityModal,
     handleChangePassword,
     handleSavePhone,
-    handleUpdateRole,
+    handleDeleteAccount,
   };
 }

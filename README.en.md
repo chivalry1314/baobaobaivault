@@ -747,3 +747,5 @@ Common cause:
 - [deploy/backend/config.public.example.yaml](./deploy/backend/config.public.example.yaml)
 - [deploy/nginx/default.public.conf](./deploy/nginx/default.public.conf)
 - [.github/workflows/publish-images.yml](./.github/workflows/publish-images.yml)
+- [Share Auth Email Verification Guide](./backend/config/SHARE_AUTH_EMAIL_DEPLOY.md)
+- [Share Auth Email Verification Guide (Chinese)](./backend/config/SHARE_AUTH_EMAIL_DEPLOY_ZH.md)

@@ -746,5 +746,7 @@ docker compose logs -f
 - [docker-compose.public.yml](./docker-compose.public.yml)
 - [.env.public.example](./.env.public.example)
 - [deploy/backend/config.public.example.yaml](./deploy/backend/config.public.example.yaml)
+- [Share 邮箱验证码部署说明（中文）](./backend/config/SHARE_AUTH_EMAIL_DEPLOY_ZH.md)
+- [Share Email Verification Guide (English)](./backend/config/SHARE_AUTH_EMAIL_DEPLOY.md)
 - [deploy/nginx/default.public.conf](./deploy/nginx/default.public.conf)
 - [.github/workflows/publish-images.yml](./.github/workflows/publish-images.yml)

@@ -2,6 +2,7 @@ import type { DashboardCard, ExternalSessionUser, PlatformCard } from "@/lib/sha
 
 export const CARDS_PAGE_SIZE = 9;
 export const HISTORY_PAGE_SIZE = 8;
+export const USER_PAGE_SIZE = 10;
 
 export function formatDate(value: string | null | undefined) {
   if (!value) {

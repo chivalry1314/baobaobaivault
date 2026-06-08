@@ -100,6 +100,71 @@ export type AuthResponse = {
   user: ExternalSessionUser;
 };
 
+export type RegisterResponse = {
+  ok: true;
+  user?: ExternalSessionUser;
+  verificationRequired: boolean;
+  email?: string;
+  expiresIn?: number;
+};
+
+export type RegisterVerifyResponse = {
+  ok: true;
+  user: ExternalSessionUser;
+};
+
+export type RegisterResendResponse = {
+  ok: true;
+  email: string;
+  expiresIn: number;
+};
+
+export type ShareAuthConfig = {
+  emailVerificationEnabled: boolean;
+  verificationCodeTTLSeconds: number;
+  resendIntervalSeconds: number;
+};
+
+export type ShareAuthSettings = {
+  emailVerificationEnabled: boolean;
+  verificationCodeTTLSeconds: number;
+  resendIntervalSeconds: number;
+  maxVerifyAttempts: number;
+  canUpdate: boolean;
+};
+
+export type ShareAuthConfigResponse = {
+  ok: true;
+  config: ShareAuthConfig;
+};
+
+export type ShareAuthSettingsResponse = {
+  ok: true;
+  settings: ShareAuthSettings;
+};
+
+export type ShareEmailHealth = {
+  enabled: boolean;
+  emailVerificationEnabled: boolean;
+  fromAddress: string;
+  smtpHost: string;
+  smtpPort: number;
+};
+
+export type ShareEmailHealthResponse = {
+  ok: true;
+  health: ShareEmailHealth;
+};
+
+export type ShareSMTPTestResponse = {
+  ok: true;
+  targetEmail: string;
+};
+
+export type ShareSMTPTestRequest = {
+  targetEmail: string;
+};
+
 export type DashboardCard = {
   card: PlatformCard;
   stats: CardStats;

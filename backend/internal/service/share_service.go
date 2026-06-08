@@ -13,8 +13,10 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/baobaobai/baobaobaivault/internal/config"
 	"github.com/baobaobai/baobaobaivault/internal/model"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -34,6 +36,12 @@ var (
 
 	ErrShareInvalidEmail         = errors.New("invalid email")
 	ErrShareEmailExists          = errors.New("email already registered")
+	ErrShareEmailNotVerified     = errors.New("email not verified")
+	ErrShareVerificationExpired  = errors.New("verification code expired")
+	ErrShareVerificationInvalid  = errors.New("invalid verification code")
+	ErrShareVerificationRequired = errors.New("verification required")
+	ErrShareVerificationTooMany  = errors.New("too many verification attempts")
+	ErrShareVerificationTooSoon  = errors.New("verification requested too frequently")
 	ErrShareWeakPassword         = errors.New("password must be at least 6 characters")
 	ErrShareInvalidProfile       = errors.New("nickname must be between 2 and 40 characters")
 	ErrShareInvalidBio           = errors.New("bio must be at most 100 characters")
@@ -62,9 +70,19 @@ var (
 	ErrShareInvalidCardSlot      = errors.New("invalid card content slot")
 	ErrShareInvalidUserRole      = errors.New("invalid user role")
 	ErrShareSelfRoleDowngrade    = errors.New("cannot downgrade your own role")
+	ErrShareSelfDelete           = errors.New("cannot delete your own account")
+	ErrShareLastManagerDelete    = errors.New("cannot delete the last manager account")
+	ErrShareProtectedSuperAdmin  = errors.New("cannot delete configured super admin account")
+	ErrShareSuperAdminRequired   = errors.New("configured super admin required")
+	ErrShareDeleteAuthFailed     = errors.New("current password is incorrect")
 	ErrShareCardAssetRequired    = errors.New("card must keep at least one category file")
 	ErrShareInvalidReviewStatus  = errors.New("invalid review status")
 	ErrShareReviewReasonRequired = errors.New("review reason is required")
+	ErrShareInvalidVerificationCodeTTL = errors.New("invalid verification code ttl")
+	ErrShareInvalidResendInterval = errors.New("invalid resend interval")
+	ErrShareInvalidMaxVerifyAttempts = errors.New("invalid max verify attempts")
+	ErrShareAuthConfigConflict = errors.New("resend interval must be shorter than verification code ttl")
+	ErrShareEmailVerificationRequiresEmail = errors.New("email verification requires email service configuration")
 )
 
 type ShareService struct {
@@ -72,9 +90,19 @@ type ShareService struct {
 	logger            *zap.Logger
 	fileRoot          string
 	managerEmailAllow map[string]struct{}
+	shareAuthCfgMu    sync.RWMutex
+	shareAuthCfg      config.ShareAuthConfig
+	emailService      *EmailService
 }
 
-func NewShareService(db *gorm.DB, logger *zap.Logger, fileRoot string, managerEmails ...string) *ShareService {
+func NewShareService(
+	db *gorm.DB,
+	logger *zap.Logger,
+	fileRoot string,
+	shareAuthCfg config.ShareAuthConfig,
+	emailService *EmailService,
+	managerEmails ...string,
+) *ShareService {
 	if strings.TrimSpace(fileRoot) == "" {
 		fileRoot = filepath.Join("storage", "share", "files")
 	}
@@ -86,12 +114,16 @@ func NewShareService(db *gorm.DB, logger *zap.Logger, fileRoot string, managerEm
 		}
 		allow[normalized] = struct{}{}
 	}
-	return &ShareService{
+	service := &ShareService{
 		db:                db,
 		logger:            logger,
 		fileRoot:          fileRoot,
 		managerEmailAllow: allow,
+		shareAuthCfg:      shareAuthCfg,
+		emailService:      emailService,
 	}
+	service.loadShareAuthConfigFromDB()
+	return service
 }
 
 type ShareSessionUser struct {
@@ -105,6 +137,43 @@ type ShareSessionUser struct {
 	Phone      string    `json:"phone"`
 	Role       string    `json:"role"`
 	CreatedAt  time.Time `json:"createdAt"`
+}
+
+type ShareRegistrationResult struct {
+	User                 *ShareSessionUser `json:"user,omitempty"`
+	VerificationRequired bool              `json:"verificationRequired"`
+	Email                string            `json:"email,omitempty"`
+	ExpiresInSeconds     int               `json:"expiresIn,omitempty"`
+}
+
+type ShareAuthConfigView struct {
+	EmailVerificationEnabled  bool `json:"emailVerificationEnabled"`
+	VerificationCodeTTLSeconds int `json:"verificationCodeTTLSeconds"`
+	ResendIntervalSeconds     int  `json:"resendIntervalSeconds"`
+}
+
+type ShareAuthSettingsView struct {
+	EmailVerificationEnabled  bool `json:"emailVerificationEnabled"`
+	VerificationCodeTTLSeconds int `json:"verificationCodeTTLSeconds"`
+	ResendIntervalSeconds     int  `json:"resendIntervalSeconds"`
+	MaxVerifyAttempts         int  `json:"maxVerifyAttempts"`
+	CanUpdate                 bool `json:"canUpdate"`
+}
+
+type ShareUpdateAuthSettingsInput struct {
+	OperatorID                string
+	EmailVerificationEnabled  bool
+	VerificationCodeTTLSeconds int
+	ResendIntervalSeconds     int
+	MaxVerifyAttempts         int
+}
+
+type ShareEmailHealthView struct {
+	Enabled bool `json:"enabled"`
+	EmailVerificationEnabled bool `json:"emailVerificationEnabled"`
+	FromAddress string `json:"fromAddress"`
+	SMTPHost string `json:"smtpHost"`
+	SMTPPort int `json:"smtpPort"`
 }
 
 type ShareCardAssetView struct {
@@ -288,6 +357,16 @@ type ShareUpdateUserRoleInput struct {
 	OperatorID string
 	UserID     string
 	Role       string
+}
+
+type ShareDeleteUserInput struct {
+	OperatorID string
+	UserID     string
+}
+
+type ShareSelfDeleteInput struct {
+	UserID      string
+	OldPassword string
 }
 
 type ShareCardAccessCodeConfig struct {

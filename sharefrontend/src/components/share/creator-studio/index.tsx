@@ -11,17 +11,27 @@ import {
   Avatar,
   CreatorCard,
   CreatorStudioIcons,
+  EmailVerificationSettingsPanel,
   EmptyState,
   HistoryItem,
+  InfoPanel,
   SidebarButton,
   TabButton,
+  UserManagementPanel,
 } from "@/components/share/creator-studio/sections";
 import { PaginationControls } from "@/components/share/pagination-controls/index";
 import { ShareProfileSettings } from "@/components/share/profile-settings";
 import { UnifiedFooter } from "@/components/share/unified-footer/index";
 
-const { CardIcon, HomeIcon, KeyIcon, PlusIcon, ReviewIcon, SettingsIcon } =
-  CreatorStudioIcons;
+const {
+  CardIcon,
+  HomeIcon,
+  KeyIcon,
+  PlusIcon,
+  ReviewIcon,
+  SettingsIcon,
+  UsersIcon,
+} = CreatorStudioIcons;
 
 export function CreatorStudio() {
   const {
@@ -38,19 +48,43 @@ export function CreatorStudio() {
     setCardsPage,
     historyPage,
     setHistoryPage,
+    userPage,
+    setUserPage,
     cards,
     displayName,
     accountLabel,
+    emailVerificationEnabled,
+    authSettings,
+    authSettingsDraft,
+    authSettingsPending,
+    authSettingsMessage,
+    emailHealth,
+    smtpTestPending,
+    smtpTestMessage,
+    smtpTestTargetEmail,
+    setSMTPTestTargetEmail,
+    updateAuthSettingsDraft,
+    roleUsers,
+    pagedRoleUsers,
+    roleLoadPending,
+    roleLoadError,
+    roleUpdatePendingByUser,
+    roleDeletePendingByUser,
     heroStats,
     historyItems,
     cardsTotalPages,
     historyTotalPages,
+    userTotalPages,
     pagedCards,
     pagedHistoryItems,
     heroSurfaceStyle,
     handleProfileSaved,
     openCreatePanel,
     handleReload,
+    handleSaveAuthSettings,
+    handleSMTPTest,
+    handleUpdateRole,
+    handleDeleteUser,
     handleLogout,
   } = useCreatorStudio();
 
@@ -67,6 +101,8 @@ export function CreatorStudio() {
   if (!currentUser) {
     return <AuthRedirect nextPath="/creator" />;
   }
+
+  const isManager = currentUser.role === "manager";
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-[linear-gradient(180deg,#f4fbff_0%,#f9fdff_45%,#f2faff_100%)]">
@@ -96,10 +132,7 @@ export function CreatorStudio() {
               </div>
 
               <div className="mt-10 space-y-3">
-                <SidebarButton
-                  href="/"
-                  icon={<HomeIcon className="h-5 w-5" />}
-                >
+                <SidebarButton href="/" icon={<HomeIcon className="h-5 w-5" />}>
                   返回首页
                 </SidebarButton>
                 <SidebarButton
@@ -115,12 +148,30 @@ export function CreatorStudio() {
                 >
                   提取码管理
                 </SidebarButton>
-                {currentUser.role === "manager" ? (
+                {isManager ? (
                   <SidebarButton
                     href="/creator/reviews"
                     icon={<ReviewIcon className="h-5 w-5" />}
                   >
                     审核中心
+                  </SidebarButton>
+                ) : null}
+                {isManager ? (
+                  <SidebarButton
+                    active={activeSection === "system_settings"}
+                    onClick={() => setActiveSection("system_settings")}
+                    icon={<KeyIcon className="h-5 w-5" />}
+                  >
+                    系统设置
+                  </SidebarButton>
+                ) : null}
+                {isManager ? (
+                  <SidebarButton
+                    active={activeSection === "user_management"}
+                    onClick={() => setActiveSection("user_management")}
+                    icon={<UsersIcon className="h-5 w-5" />}
+                  >
+                    用户管理
                   </SidebarButton>
                 ) : null}
                 <SidebarButton
@@ -340,8 +391,60 @@ export function CreatorStudio() {
                 </div>
               </section>
             </>
+          ) : activeSection === "system_settings" ? (
+            <InfoPanel
+              title="系统设置"
+              description="这里放的是站点级配置状态，不属于某个用户的个人资料。当前提供邮箱验证与发信状态查看，以及 SMTP 测试能力。"
+            >
+              <EmailVerificationSettingsPanel
+                emailVerificationEnabled={emailVerificationEnabled}
+                authSettings={authSettings}
+                authSettingsDraft={authSettingsDraft}
+                authSettingsPending={authSettingsPending}
+                authSettingsMessage={authSettingsMessage}
+                emailHealth={emailHealth}
+                smtpTestPending={smtpTestPending}
+                smtpTestMessage={smtpTestMessage}
+                smtpTestTargetEmail={smtpTestTargetEmail}
+                setSMTPTestTargetEmail={setSMTPTestTargetEmail}
+                onAuthSettingsChange={updateAuthSettingsDraft}
+                onSaveAuthSettings={() => void handleSaveAuthSettings()}
+                onSMTPTest={() => void handleSMTPTest()}
+              />
+            </InfoPanel>
+          ) : activeSection === "user_management" ? (
+            <InfoPanel
+              title="用户管理"
+              description="这里用于管理站点用户角色。管理员可以调整浏览者、创作者和管理员权限。"
+            >
+              <UserManagementPanel
+                currentUserId={currentUser.id}
+                roleUsers={pagedRoleUsers}
+                totalUsers={roleUsers.length}
+                roleLoadPending={roleLoadPending}
+                roleLoadError={roleLoadError}
+                roleUpdatePendingByUser={roleUpdatePendingByUser}
+                roleDeletePendingByUser={roleDeletePendingByUser}
+                onUpdateRole={handleUpdateRole}
+                onDeleteUser={handleDeleteUser}
+                paginationSlot={
+                  <PaginationControls
+                    page={userPage}
+                    totalPages={userTotalPages}
+                    onPageChange={(nextPage) =>
+                      setUserPage(
+                        Math.min(Math.max(nextPage, 1), userTotalPages),
+                      )
+                    }
+                  />
+                }
+              />
+            </InfoPanel>
           ) : (
-            <ShareProfileSettings user={currentUser} onSaved={handleProfileSaved} />
+            <ShareProfileSettings
+              user={currentUser}
+              onSaved={handleProfileSaved}
+            />
           )}
         </main>
       </div>

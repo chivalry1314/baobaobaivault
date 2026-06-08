@@ -8,15 +8,17 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Cors     CorsConfig     `mapstructure:"cors"`
-	Database DatabaseConfig `mapstructure:"database"`
-	Redis    RedisConfig    `mapstructure:"redis"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
-	Storage  StorageConfig  `mapstructure:"storage"`
-	Baidu    BaiduConfig    `mapstructure:"baidu"`
-	WebPush  WebPushConfig  `mapstructure:"webpush"`
-	Log      LogConfig      `mapstructure:"log"`
+	Server    ServerConfig    `mapstructure:"server"`
+	Cors      CorsConfig      `mapstructure:"cors"`
+	Database  DatabaseConfig  `mapstructure:"database"`
+	Redis     RedisConfig     `mapstructure:"redis"`
+	JWT       JWTConfig       `mapstructure:"jwt"`
+	Storage   StorageConfig   `mapstructure:"storage"`
+	Baidu     BaiduConfig     `mapstructure:"baidu"`
+	WebPush   WebPushConfig   `mapstructure:"webpush"`
+	Email     EmailConfig     `mapstructure:"email"`
+	ShareAuth ShareAuthConfig `mapstructure:"share_auth"`
+	Log       LogConfig       `mapstructure:"log"`
 }
 
 type ServerConfig struct {
@@ -83,6 +85,23 @@ type StorageConfig struct {
 	DefaultProvider string `mapstructure:"default_provider"`
 	TempDir         string `mapstructure:"temp_dir"`
 	MaxFileSize     int64  `mapstructure:"max_file_size"` // bytes
+}
+
+type EmailConfig struct {
+	Enabled     bool   `mapstructure:"enabled"`
+	FromName    string `mapstructure:"from_name"`
+	FromAddress string `mapstructure:"from_address"`
+	SMTPHost    string `mapstructure:"smtp_host"`
+	SMTPPort    int    `mapstructure:"smtp_port"`
+	SMTPUsername string `mapstructure:"smtp_username"`
+	SMTPPassword string `mapstructure:"smtp_password"`
+}
+
+type ShareAuthConfig struct {
+	EmailVerificationEnabled bool `mapstructure:"email_verification_enabled"`
+	VerificationCodeTTLSeconds int `mapstructure:"verification_code_ttl_seconds"`
+	ResendIntervalSeconds int `mapstructure:"resend_interval_seconds"`
+	MaxVerifyAttempts int `mapstructure:"max_verify_attempts"`
 }
 
 type BaiduConfig struct {
@@ -225,6 +244,21 @@ func setDefaults() {
 	viper.SetDefault("baidu.token_encrypt_secret", "")
 	viper.SetDefault("baidu.http_timeout_seconds", 30)
 
+	// Email
+	viper.SetDefault("email.enabled", false)
+	viper.SetDefault("email.from_name", "CardShare")
+	viper.SetDefault("email.from_address", "")
+	viper.SetDefault("email.smtp_host", "")
+	viper.SetDefault("email.smtp_port", 587)
+	viper.SetDefault("email.smtp_username", "")
+	viper.SetDefault("email.smtp_password", "")
+
+	// Share auth
+	viper.SetDefault("share_auth.email_verification_enabled", false)
+	viper.SetDefault("share_auth.verification_code_ttl_seconds", 600)
+	viper.SetDefault("share_auth.resend_interval_seconds", 60)
+	viper.SetDefault("share_auth.max_verify_attempts", 5)
+
 	// Web Push (optional)
 	viper.SetDefault("webpush.enabled", false)
 	viper.SetDefault("webpush.public_api_enabled", false)
@@ -244,6 +278,31 @@ func setDefaults() {
 }
 
 func (c *Config) validate() error {
+	if c.ShareAuth.VerificationCodeTTLSeconds <= 0 {
+		c.ShareAuth.VerificationCodeTTLSeconds = 600
+	}
+	if c.ShareAuth.ResendIntervalSeconds <= 0 {
+		c.ShareAuth.ResendIntervalSeconds = 60
+	}
+	if c.ShareAuth.MaxVerifyAttempts <= 0 {
+		c.ShareAuth.MaxVerifyAttempts = 5
+	}
+	if c.ShareAuth.EmailVerificationEnabled {
+		if !c.Email.Enabled {
+			return fmt.Errorf("share_auth.email_verification_enabled requires email.enabled = true")
+		}
+		if c.Email.SMTPHost == "" || c.Email.SMTPPort <= 0 || c.Email.FromAddress == "" {
+			return fmt.Errorf("email verification requires email.smtp_host, email.smtp_port, and email.from_address")
+		}
+	}
+	if c.Email.Enabled {
+		if c.Email.FromName == "" {
+			c.Email.FromName = "CardShare"
+		}
+		if c.Email.SMTPPort <= 0 {
+			c.Email.SMTPPort = 587
+		}
+	}
 	if !c.WebPush.Enabled {
 		return nil
 	}

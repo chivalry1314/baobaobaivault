@@ -73,10 +73,19 @@ func AutoMigrate(db *gorm.DB) error {
 		&model.WebPushSubscription{},
 		&model.WebPushEvent{},
 		&model.ShareExternalUser{},
+		&model.ShareEmailVerification{},
+		&model.ShareAuthSettings{},
 		&model.SharePlatformCard{},
 		&model.SharePlatformCardAsset{},
 		&model.SharePlatformDownloadLog{},
 	); err != nil {
+		return err
+	}
+
+	if err := backfillLegacyShareUserEmailVerified(db); err != nil {
+		return err
+	}
+	if err := cleanupLegacyShareEmailVerifications(db); err != nil {
 		return err
 	}
 
@@ -102,6 +111,24 @@ func backfillShareCardDownloadStats(db *gorm.DB) error {
 			cards.download_count IS DISTINCT FROM stats.download_count
 			OR cards.last_downloaded_at IS DISTINCT FROM stats.last_downloaded_at
 		  )
+	`).Error
+}
+
+func backfillLegacyShareUserEmailVerified(db *gorm.DB) error {
+	return db.Exec(`
+		UPDATE share_external_users
+		SET
+			email_verified = TRUE,
+			email_verified_at = COALESCE(email_verified_at, created_at, NOW())
+		WHERE COALESCE(email_verified, FALSE) = FALSE
+	`).Error
+}
+
+func cleanupLegacyShareEmailVerifications(db *gorm.DB) error {
+	return db.Exec(`
+		DELETE FROM share_email_verifications
+		WHERE expires_at < NOW()
+		   OR (consumed_at IS NOT NULL AND consumed_at < NOW() - INTERVAL '7 days')
 	`).Error
 }
 

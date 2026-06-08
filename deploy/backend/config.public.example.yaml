@@ -76,6 +76,21 @@ webpush:
   queue_buffer: 1000
   push_proxy_url: ""
 
+email:
+  enabled: false
+  from_name: "CardShare"
+  from_address: "noreply@example.com" # should match your verified sender
+  smtp_host: "smtp.example.com" # e.g. smtpdm.aliyun.com / smtp.exmail.qq.com
+  smtp_port: 587 # 587 STARTTLS / 465 SSL; Aliyun Direct Mail often uses 465
+  smtp_username: "noreply@example.com"
+  smtp_password: "change-this-smtp-password"
+
+share_auth:
+  email_verification_enabled: false
+  verification_code_ttl_seconds: 600
+  resend_interval_seconds: 60
+  max_verify_attempts: 5
+
 log:
   level: "info"
   format: "json"

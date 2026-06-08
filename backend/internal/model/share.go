@@ -39,6 +39,8 @@ type ShareExternalUser struct {
 	Email       string         `gorm:"type:varchar(120);not null;uniqueIndex" json:"email"`
 	Username    string         `gorm:"type:varchar(40);not null;uniqueIndex" json:"username"`
 	Password    string         `gorm:"type:varchar(255);not null" json:"-"`
+	EmailVerified bool         `gorm:"not null;default:false" json:"email_verified"`
+	EmailVerifiedAt *time.Time `json:"email_verified_at,omitempty"`
 	Nickname    string         `gorm:"type:varchar(80);not null" json:"nickname"`
 	Avatar      string         `gorm:"type:text;default:''" json:"avatar"`
 	Bio         string         `gorm:"type:text;default:''" json:"bio"`
@@ -142,4 +144,37 @@ type SharePlatformDownloadLog struct {
 
 func (SharePlatformDownloadLog) TableName() string {
 	return "share_platform_download_logs"
+}
+
+type ShareEmailVerification struct {
+	ID            string         `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	Email         string         `gorm:"type:varchar(120);not null;index:idx_share_email_verifications_email_purpose,priority:1" json:"email"`
+	Purpose       string         `gorm:"type:varchar(40);not null;index:idx_share_email_verifications_email_purpose,priority:2" json:"purpose"`
+	Nickname      string         `gorm:"type:varchar(80);not null" json:"nickname"`
+	PasswordHash  string         `gorm:"type:varchar(255);not null" json:"-"`
+	CodeHash      string         `gorm:"type:varchar(255);not null" json:"-"`
+	ExpiresAt     time.Time      `gorm:"index" json:"expires_at"`
+	AttemptCount  int            `gorm:"not null;default:0" json:"attempt_count"`
+	ConsumedAt    *time.Time     `json:"consumed_at,omitempty"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+func (ShareEmailVerification) TableName() string {
+	return "share_email_verifications"
+}
+
+type ShareAuthSettings struct {
+	Singleton                 string    `gorm:"type:varchar(32);primaryKey" json:"singleton"`
+	EmailVerificationEnabled  bool      `gorm:"not null;default:false" json:"email_verification_enabled"`
+	VerificationCodeTTLSeconds int      `gorm:"not null;default:600" json:"verification_code_ttl_seconds"`
+	ResendIntervalSeconds     int       `gorm:"not null;default:60" json:"resend_interval_seconds"`
+	MaxVerifyAttempts         int       `gorm:"not null;default:5" json:"max_verify_attempts"`
+	CreatedAt                 time.Time `json:"created_at"`
+	UpdatedAt                 time.Time `json:"updated_at"`
+}
+
+func (ShareAuthSettings) TableName() string {
+	return "share_auth_settings"
 }

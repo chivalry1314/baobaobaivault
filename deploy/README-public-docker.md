@@ -11,3 +11,8 @@ Core deployment files:
 - [.env.public.example](../.env.public.example)
 - [deploy/backend/config.public.example.yaml](./backend/config.public.example.yaml)
 - [deploy/nginx/default.public.conf](./nginx/default.public.conf)
+
+Email verification docs:
+
+- [English Guide](../backend/config/SHARE_AUTH_EMAIL_DEPLOY.md)
+- [中文说明](../backend/config/SHARE_AUTH_EMAIL_DEPLOY_ZH.md)

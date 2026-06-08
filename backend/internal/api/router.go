@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"sync"
 	"strings"
 	"time"
 
@@ -41,6 +42,8 @@ type Handler struct {
 	baiduService     *service.BaiduConnectorService
 	registry         *storage.Registry
 	shareService     *service.ShareService
+	shareSMTPTestMu  sync.Mutex
+	shareSMTPTestAt  map[string]time.Time
 
 	webPushRepo    *webpushsvc.Repository
 	webPushQueue   *webpushsvc.Queue
@@ -58,6 +61,7 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, logger *zap
 	}
 
 	registry := storage.NewRegistry()
+	emailService := service.NewEmailService(cfg.Email)
 	h := &Handler{
 		cfg:              cfg,
 		db:               db,
@@ -69,7 +73,8 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, logger *zap
 		storageService:   service.NewStorageService(db, logger, registry),
 		baiduService:     service.NewBaiduConnectorService(db, logger, cfg.Baidu, cfg.JWT.Secret),
 		registry:         registry,
-		shareService:     service.NewShareService(db, logger, filepath.Join("storage", "share", "files"), cfg.Server.AdminEmail),
+		shareService:     service.NewShareService(db, logger, filepath.Join("storage", "share", "files"), cfg.ShareAuth, emailService, cfg.Server.AdminEmail),
+		shareSMTPTestAt:  make(map[string]time.Time),
 	}
 
 	if _, err := h.roleService.EnsureDefaultAdminRole(context.Background()); err != nil {
