@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AuthRedirect } from "@/components/share/auth-redirect";
+import { SystemBackLink } from "@/components/share/system-back-link";
 import { PaginationControls } from "@/components/share/pagination-controls/index";
 import { useShareSession } from "@/components/share/session-provider";
 import { SystemWorkspace } from "@/components/share/system-shell/index";
@@ -331,12 +332,11 @@ function ShareSystemNamespaceFormPage(props: { mode: "create" | "edit"; namespac
       {actionError ? <ErrorNotice message={actionError} /> : null}
       {successMessage ? <SuccessNotice message={successMessage} /> : null}
 
+      <SystemBackLink href="/system/namespaces" label="返回列表" />
+
       <section className="dream-panel max-w-3xl px-6 py-6 sm:px-8">
-        <div className="flex items-center justify-between gap-4 border-b border-[rgba(220,173,187,0.35)] pb-4">
+        <div className="border-b border-[rgba(220,173,187,0.35)] pb-4">
           <h2 className="text-xl font-black text-[var(--foreground)]">{mode === "edit" ? "命名空间表单" : "新增表单"}</h2>
-          <Link href="/system/namespaces" className="btn-subtle inline-flex rounded-full px-4 py-2 text-sm font-black">
-            返回列表
-          </Link>
         </div>
 
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
@@ -405,9 +405,6 @@ function ShareSystemNamespaceFormPage(props: { mode: "create" | "edit"; namespac
             >
               {saving ? (mode === "edit" ? "保存中..." : "创建中...") : mode === "edit" ? "保存命名空间" : "创建命名空间"}
             </button>
-            <Link href="/system/namespaces" className="btn-subtle inline-flex rounded-full px-6 py-3 text-sm font-black">
-              返回列表
-            </Link>
           </div>
         </form>
       </section>

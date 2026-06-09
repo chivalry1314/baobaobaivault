@@ -50,6 +50,16 @@ func (s *EmailService) SendVerificationCode(email, code string, ttlMinutes int) 
 	return s.sendEmail(email, subject, plainBody, htmlBody)
 }
 
+func (s *EmailService) SendPasswordResetCode(email, code string, ttlMinutes int) error {
+	if !s.Enabled() {
+		return fmt.Errorf("email service is disabled")
+	}
+
+	subject := "CardShare 密码重置验证码"
+	plainBody, htmlBody := buildPasswordResetEmailBody(s.safeFromName(), email, code, ttlMinutes)
+	return s.sendEmail(email, subject, plainBody, htmlBody)
+}
+
 func (s *EmailService) SendTestEmail(toAddress string) error {
 	if !s.Enabled() {
 		return fmt.Errorf("email service is disabled")
@@ -127,7 +137,7 @@ func buildVerificationEmailBody(fromName, email, code string, ttlMinutes int) (s
         <div style="padding:28px 32px;background:linear-gradient(135deg,#d9eefb 0%%,#f9fdfd 55%%,#fdeef6 100%%);border-bottom:1px solid rgba(148,163,184,0.18);">
           <div style="display:inline-block;padding:8px 14px;border-radius:999px;background:#ffffff;border:1px solid #cfe0ef;font-size:12px;font-weight:700;color:#4b5563;">CardShare 安全验证</div>
           <h1 style="margin:18px 0 8px;font-size:28px;line-height:1.2;color:#0f172a;">邮箱验证码</h1>
-          <p style="margin:0;font-size:14px;line-height:1.7;color:#475569;">您正在为 <strong>%s</strong> 完成注册验证，请在有效期内使用下面的验证码。</p>
+          <p style="margin:0;font-size:14px;line-height:1.7;color:#475569;">您正在为 <strong>%s</strong> 完成注册验证，请在有效期内使用下方验证码。</p>
         </div>
         <div style="padding:32px;">
           <div style="margin-bottom:22px;padding:22px;border-radius:24px;background:#ffffff;border:1px solid #d7e4ef;text-align:center;">
@@ -136,7 +146,53 @@ func buildVerificationEmailBody(fromName, email, code string, ttlMinutes int) (s
           </div>
           <div style="margin-bottom:18px;padding:18px 20px;border-radius:20px;background:#f8fbfe;border:1px solid #e2eaf2;">
             <p style="margin:0 0 8px;font-size:14px;line-height:1.7;color:#334155;"><strong>有效时间：</strong>%d 分钟</p>
-            <p style="margin:0;font-size:14px;line-height:1.7;color:#334155;"><strong>验证邮箱：</strong>%s</p>
+            <p style="margin:0;font-size:14px;line-height:1.7;color:#334155;"><strong>注册邮箱：</strong>%s</p>
+          </div>
+          <p style="margin:0;font-size:14px;line-height:1.8;color:#64748b;">如果这不是您的操作，请直接忽略这封邮件。为了保护账号安全，请不要将验证码透露给任何人。</p>
+        </div>
+        <div style="padding:18px 32px 28px;font-size:12px;line-height:1.8;color:#94a3b8;">
+          <div>%s</div>
+          <div>这是一封系统自动发送的邮件，请勿直接回复。</div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>`, safeFromName, safeCode, ttlMinutes, safeEmail, safeFromName)
+
+	return plainBody, htmlBody
+}
+
+func buildPasswordResetEmailBody(fromName, email, code string, ttlMinutes int) (string, string) {
+	safeFromName := html.EscapeString(strings.TrimSpace(fromName))
+	safeEmail := html.EscapeString(strings.TrimSpace(email))
+	safeCode := html.EscapeString(strings.TrimSpace(code))
+
+	plainBody := fmt.Sprintf(
+		"您好，\r\n\r\n您正在重置 %s 的密码。\r\n\r\n本次验证码：%s\r\n有效时间：%d 分钟\r\n重置邮箱：%s\r\n\r\n如果这不是您的操作，请忽略这封邮件。\r\n",
+		fromName,
+		code,
+		ttlMinutes,
+		email,
+	)
+
+	htmlBody := fmt.Sprintf(`<!DOCTYPE html>
+<html lang="zh-CN">
+  <body style="margin:0;padding:0;background:#f4f8fb;font-family:'Microsoft YaHei',sans-serif;color:#1f2937;">
+    <div style="max-width:640px;margin:0 auto;padding:32px 20px;">
+      <div style="background:linear-gradient(135deg,#ffffff 0%%,#eef7ff 100%%);border:1px solid #dbe7f3;border-radius:28px;overflow:hidden;box-shadow:0 24px 60px rgba(31,41,55,0.08);">
+        <div style="padding:28px 32px;background:linear-gradient(135deg,#fef3c7 0%%,#f9fdfd 55%%,#dbeafe 100%%);border-bottom:1px solid rgba(148,163,184,0.18);">
+          <div style="display:inline-block;padding:8px 14px;border-radius:999px;background:#ffffff;border:1px solid #cfe0ef;font-size:12px;font-weight:700;color:#4b5563;">CardShare 安全验证</div>
+          <h1 style="margin:18px 0 8px;font-size:28px;line-height:1.2;color:#0f172a;">密码重置验证码</h1>
+          <p style="margin:0;font-size:14px;line-height:1.7;color:#475569;">您正在为 <strong>%s</strong> 重置密码，请在有效期内使用下方验证码完成操作。</p>
+        </div>
+        <div style="padding:32px;">
+          <div style="margin-bottom:22px;padding:22px;border-radius:24px;background:#ffffff;border:1px solid #d7e4ef;text-align:center;">
+            <div style="font-size:13px;letter-spacing:0.08em;color:#64748b;text-transform:uppercase;">Reset Code</div>
+            <div style="margin-top:14px;font-size:40px;line-height:1;font-weight:800;letter-spacing:0.22em;color:#0f172a;">%s</div>
+          </div>
+          <div style="margin-bottom:18px;padding:18px 20px;border-radius:20px;background:#f8fbfe;border:1px solid #e2eaf2;">
+            <p style="margin:0 0 8px;font-size:14px;line-height:1.7;color:#334155;"><strong>有效时间：</strong>%d 分钟</p>
+            <p style="margin:0;font-size:14px;line-height:1.7;color:#334155;"><strong>重置邮箱：</strong>%s</p>
           </div>
           <p style="margin:0;font-size:14px;line-height:1.8;color:#64748b;">如果这不是您的操作，请直接忽略这封邮件。为了保护账号安全，请不要将验证码透露给任何人。</p>
         </div>
@@ -157,7 +213,7 @@ func buildSMTPTestEmailBody(fromName, email string) (string, string) {
 	safeEmail := html.EscapeString(strings.TrimSpace(email))
 
 	plainBody := fmt.Sprintf(
-		"您好，\r\n\r\n这是一封来自 %s 的 SMTP 测试邮件。\r\n\r\n如果您收到这封邮件，说明当前后端的发信配置已经可以正常投递到：%s\r\n",
+		"您好，\r\n\r\n这是一封来自 %s 的 SMTP 测试邮件。\r\n\r\n如果您收到了这封邮件，说明当前后端发信配置已经可以正常投递到：%s\r\n",
 		fromName,
 		email,
 	)
@@ -175,7 +231,7 @@ func buildSMTPTestEmailBody(fromName, email string) (string, string) {
         <div style="padding:32px;">
           <div style="padding:18px 20px;border-radius:20px;background:#f8fbfe;border:1px solid #e2eaf2;">
             <p style="margin:0 0 8px;font-size:14px;line-height:1.7;color:#334155;"><strong>测试目标邮箱：</strong>%s</p>
-            <p style="margin:0;font-size:14px;line-height:1.7;color:#334155;"><strong>结果：</strong>如果您收到这封邮件，说明 SMTP 主机、端口、账号与授权信息均已基本可用。</p>
+            <p style="margin:0;font-size:14px;line-height:1.7;color:#334155;"><strong>结果：</strong>如果您收到了这封邮件，说明 SMTP 主机、端口、账号与授权信息均已基本可用。</p>
           </div>
         </div>
       </div>

@@ -24,8 +24,10 @@ export function ShareSystemUsersPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [actionError, setActionError] = useState("");
+  const [actionNotice, setActionNotice] = useState("");
   const [updatePendingByUser, setUpdatePendingByUser] = useState<Record<string, boolean>>({});
   const [deletePendingByUser, setDeletePendingByUser] = useState<Record<string, boolean>>({});
+  const [resetPendingByUser, setResetPendingByUser] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!user?.isConfiguredSuperAdmin) {
@@ -73,6 +75,7 @@ export function ShareSystemUsersPage() {
     }
 
     setActionError("");
+    setActionNotice("");
     setUpdatePendingByUser((current) => ({ ...current, [targetUser.id]: true }));
 
     try {
@@ -106,6 +109,7 @@ export function ShareSystemUsersPage() {
     }
 
     setActionError("");
+    setActionNotice("");
     setDeletePendingByUser((current) => ({ ...current, [targetUser.id]: true }));
 
     try {
@@ -115,6 +119,49 @@ export function ShareSystemUsersPage() {
       setActionError(getShareErrorMessage(error, "注销用户失败，请稍后重试。"));
     } finally {
       setDeletePendingByUser((current) => {
+        const next = { ...current };
+        delete next[targetUser.id];
+        return next;
+      });
+    }
+  }
+
+  async function handleResetPassword(targetUser: ShareUserRoleManageItem) {
+    if (!user || targetUser.id === user.id || resetPendingByUser[targetUser.id]) {
+      return;
+    }
+
+    const displayName = targetUser.nickname.trim() || targetUser.username.trim() || targetUser.email;
+    const confirmed = window.confirm(`确认要为用户“${displayName}”重置密码吗？系统会生成一个新的随机密码。`);
+    if (!confirmed) {
+      return;
+    }
+
+    setActionError("");
+    setActionNotice("");
+    setResetPendingByUser((current) => ({ ...current, [targetUser.id]: true }));
+
+    try {
+      const response = await shareApi.resetSystemUserPassword(targetUser.id);
+      let copied = false;
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(response.newPassword);
+          copied = true;
+        } catch {
+          copied = false;
+        }
+      }
+
+      setActionNotice(
+        copied
+          ? `已重置“${displayName}”的密码，新密码已复制到剪贴板：${response.newPassword}`
+          : `已重置“${displayName}”的密码，请立即复制并发给用户：${response.newPassword}`,
+      );
+    } catch (error) {
+      setActionError(getShareErrorMessage(error, "重置用户密码失败，请稍后重试。"));
+    } finally {
+      setResetPendingByUser((current) => {
         const next = { ...current };
         delete next[targetUser.id];
         return next;
@@ -157,6 +204,7 @@ export function ShareSystemUsersPage() {
     >
       {loadError ? <ErrorNotice message={loadError} /> : null}
       {actionError ? <ErrorNotice message={actionError} /> : null}
+      {actionNotice ? <SuccessNotice message={actionNotice} /> : null}
 
       <section className="dream-panel px-6 py-6 sm:px-8">
         <div className="flex flex-col gap-4 border-b border-[rgba(220,173,187,0.35)] pb-4">
@@ -212,7 +260,9 @@ export function ShareSystemUsersPage() {
               const displayName = item.nickname.trim() || item.username.trim() || item.email;
               const updating = Boolean(updatePendingByUser[item.id]);
               const deleting = Boolean(deletePendingByUser[item.id]);
+              const resetting = Boolean(resetPendingByUser[item.id]);
               const isSelf = item.id === user.id;
+              const actionPending = updating || deleting || resetting;
 
               return (
                 <div key={item.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -225,6 +275,11 @@ export function ShareSystemUsersPage() {
                       <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[var(--foreground)]/72">
                         {roleLabel(item.role)}
                       </span>
+                      {item.forcePasswordChange ? (
+                        <span className="rounded-full border border-[#f3c8ad] bg-[#fff4ec] px-3 py-1 text-xs font-black text-[#9a3412]">
+                          下次登录需改密
+                        </span>
+                      ) : null}
                     </div>
                     <p className="mt-1 truncate text-xs text-[var(--foreground)]/58">{item.email}</p>
                     <p className="mt-1 text-xs font-bold text-[var(--foreground)]/52">
@@ -233,26 +288,36 @@ export function ShareSystemUsersPage() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    <RoleChip active={item.role === "viewer"} disabled={updating || deleting || isSelf} onClick={() => void handleUpdateRole(item, "viewer")}>
+                    <RoleChip active={item.role === "viewer"} disabled={actionPending || isSelf} onClick={() => void handleUpdateRole(item, "viewer")}>
                       浏览者
                     </RoleChip>
-                    <RoleChip active={item.role === "creator"} disabled={updating || deleting || isSelf} onClick={() => void handleUpdateRole(item, "creator")}>
+                    <RoleChip active={item.role === "creator"} disabled={actionPending || isSelf} onClick={() => void handleUpdateRole(item, "creator")}>
                       创作者
                     </RoleChip>
-                    <RoleChip active={item.role === "manager"} disabled={updating || deleting} onClick={() => void handleUpdateRole(item, "manager")}>
+                    <RoleChip active={item.role === "manager"} disabled={actionPending} onClick={() => void handleUpdateRole(item, "manager")}>
                       管理员
                     </RoleChip>
                     {!isSelf ? (
-                      <button
-                        type="button"
-                        disabled={updating || deleting}
-                        onClick={() => void handleDeleteUser(item)}
-                        className="rounded-full border border-[#ef9a9a] bg-[#fff2f1] px-3.5 py-2 text-xs font-black text-[#b42318] transition hover:bg-[#ffe5e3] disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {deleting ? "注销中..." : "注销用户"}
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          disabled={actionPending}
+                          onClick={() => void handleResetPassword(item)}
+                          className="rounded-full border border-[rgba(120,77,255,0.18)] bg-[rgba(120,77,255,0.08)] px-3.5 py-2 text-xs font-black text-[var(--foreground)] transition hover:bg-[rgba(120,77,255,0.14)] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {resetting ? "重置中..." : "重置密码"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={actionPending}
+                          onClick={() => void handleDeleteUser(item)}
+                          className="rounded-full border border-[#ef9a9a] bg-[#fff2f1] px-3.5 py-2 text-xs font-black text-[#b42318] transition hover:bg-[#ffe5e3] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {deleting ? "注销中..." : "注销用户"}
+                        </button>
+                      </>
                     ) : (
-                      <span className="text-xs font-bold text-[var(--foreground)]/55">本人不可降级或注销</span>
+                      <span className="text-xs font-bold text-[var(--foreground)]/55">本人不可降级、重置或注销</span>
                     )}
                     {updating ? <span className="text-xs font-bold text-[var(--foreground)]/55">更新中...</span> : null}
                   </div>
@@ -315,4 +380,8 @@ function SystemForbiddenPage({ currentPath }: { currentPath: string }) {
 
 function ErrorNotice({ message }: { message: string }) {
   return <p className="dream-panel-soft border-[#f3c8ad] bg-[#fff4ec] px-5 py-4 text-sm font-bold text-[#9a3412]">{message}</p>;
+}
+
+function SuccessNotice({ message }: { message: string }) {
+  return <p className="dream-panel-soft border-[#b7dfc8] bg-[#effaf3] px-5 py-4 text-sm font-bold text-[#166534]">{message}</p>;
 }

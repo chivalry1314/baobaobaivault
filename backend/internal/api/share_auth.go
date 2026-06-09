@@ -111,6 +111,95 @@ func (h *Handler) shareRegisterResend(c *gin.Context) {
 	})
 }
 
+func (h *Handler) sharePasswordResetRequest(c *gin.Context) {
+	var req struct {
+		Email string `json:"email"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	expiresIn, err := h.shareService.RequestExternalUserPasswordReset(c.Request.Context(), req.Email)
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareUserNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareVerificationTooSoon):
+			status = http.StatusTooManyRequests
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":                 true,
+		"email":              strings.TrimSpace(req.Email),
+		"verificationRequired": true,
+		"expiresIn":          expiresIn,
+	})
+}
+
+func (h *Handler) sharePasswordResetResend(c *gin.Context) {
+	var req struct {
+		Email string `json:"email"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	expiresIn, err := h.shareService.ResendExternalUserPasswordResetVerification(c.Request.Context(), req.Email)
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareResetPasswordNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareVerificationTooSoon):
+			status = http.StatusTooManyRequests
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":        true,
+		"email":     strings.TrimSpace(req.Email),
+		"expiresIn": expiresIn,
+	})
+}
+
+func (h *Handler) sharePasswordResetComplete(c *gin.Context) {
+	var req struct {
+		Email       string `json:"email"`
+		Code        string `json:"code"`
+		NewPassword string `json:"newPassword"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	if err := h.shareService.CompleteExternalUserPasswordReset(c.Request.Context(), req.Email, req.Code, req.NewPassword); err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareResetPasswordNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareVerificationExpired):
+			status = http.StatusGone
+		case errors.Is(err, service.ErrShareVerificationTooMany):
+			status = http.StatusTooManyRequests
+		case errors.Is(err, service.ErrShareVerificationInvalid), errors.Is(err, service.ErrShareWeakPassword):
+			status = http.StatusBadRequest
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
 func (h *Handler) shareAuthConfig(c *gin.Context) {
 	cfg := h.shareService.GetShareAuthConfig()
 	c.JSON(http.StatusOK, gin.H{"ok": true, "config": cfg})

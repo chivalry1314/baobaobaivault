@@ -15,6 +15,9 @@
   RegisterResendResponse,
   RegisterResponse,
   RegisterVerifyResponse,
+  PasswordResetCompleteResponse,
+  PasswordResetRequestResponse,
+  PasswordResetResendResponse,
   ReviewDashboardResponse,
   ShareAuthConfigResponse,
   ShareAccessKeyItem,
@@ -24,6 +27,7 @@
   ShareMediaStorageSettingsResponse,
   SessionResponse,
   ShareCardAccessMode,
+  ShareMediaStorageMigrationRunResponse,
   ShareSMTPTestResponse,
   ShareNamespace,
   ShareObjectVersion,
@@ -40,6 +44,7 @@
   ShareUserRole,
   ShareUserRoleManageItem,
   ShareUsersManageResponse,
+  ShareAdminResetPasswordResponse,
 } from "@/lib/shared";
 
 const API_ROOT = "/api/share";
@@ -74,6 +79,8 @@ const shareApiErrorMessages: Record<string, string> = {
   "namespace_id and key are required": "命名空间和对象 Key 不能为空",
   "namespace id is required": "命名空间不能为空",
   "cover_namespace_id and asset_namespace_id are required": "启用对象存储时，封面和附件命名空间都必须配置",
+  "share media storage mode must be object_storage": "只有切换到对象存储模式后，才能迁移历史本地文件",
+  "object storage service is unavailable": "后端对象存储服务当前不可用，请检查服务配置",
   "namespace not found": "所选命名空间不存在或已被删除",
   "name is required": "名称不能为空",
   "provider is required": "存储类型不能为空",
@@ -119,6 +126,7 @@ const shareApiErrorMessages: Record<string, string> = {
   "invalid max verify attempts": "最大验证次数需要在 3 到 10 次之间",
   "resend interval must be shorter than verification code ttl": "重发间隔必须小于验证码有效期",
   "email verification requires email service configuration": "开启邮箱验证前请先完成 SMTP 配置",
+  "admin password reset unavailable": "当前未开启邮箱验证，请联系管理员重置密码",
   "cannot downgrade your own role": "不能降低自己的管理员权限",
   "invalid card content slot": "分类槽位不正确",
   "invalid card access mode": "卡片状态不正确",
@@ -237,6 +245,36 @@ export const shareApi = {
 
   resendRegisterCode(input: { email: string }) {
     return request<RegisterResendResponse>(`${API_ROOT}/auth/register/resend`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  requestPasswordReset(input: { email: string }) {
+    return request<PasswordResetRequestResponse>(`${API_ROOT}/auth/password-reset/request`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  resendPasswordResetCode(input: { email: string }) {
+    return request<PasswordResetResendResponse>(`${API_ROOT}/auth/password-reset/resend`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  completePasswordReset(input: { email: string; code: string; newPassword: string }) {
+    return request<PasswordResetCompleteResponse>(`${API_ROOT}/auth/password-reset/complete`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1022,6 +1060,15 @@ export const shareApi = {
     });
   },
 
+  resetSystemUserPassword(userId: string) {
+    return request<ShareAdminResetPasswordResponse>(
+      `${API_ROOT}/me/system/users/${encodeURIComponent(userId)}/reset-password`,
+      {
+        method: "POST",
+      },
+    );
+  },
+
   systemAuthSettings() {
     return request<ShareAuthSettingsResponse>(`${API_ROOT}/me/system/auth-settings`, {
       cache: "no-store",
@@ -1067,6 +1114,20 @@ export const shareApi = {
   }) {
     return request<ShareMediaStorageSettingsResponse>(`${API_ROOT}/me/system/media-storage`, {
       method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  runSystemMediaStorageMigration(input: {
+    batchSize: number;
+    deleteLocal: boolean;
+    includeMissing: boolean;
+  }) {
+    return request<ShareMediaStorageMigrationRunResponse>(`${API_ROOT}/me/system/media-storage/migrate`, {
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
       },

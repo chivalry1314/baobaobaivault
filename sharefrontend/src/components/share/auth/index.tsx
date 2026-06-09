@@ -8,10 +8,12 @@ export function AuthPage() {
     sessionChecking,
     mode,
     registerStep,
+    resetStep,
     emailVerificationEnabled,
     email,
     nickname,
     password,
+    newPassword,
     verificationCode,
     verificationEmail,
     verificationExpiresIn,
@@ -22,10 +24,12 @@ export function AuthPage() {
     error,
     switchMode,
     backToRegister,
+    backToLogin,
     resendVerificationCode,
     setEmail,
     setNickname,
     setPassword,
+    setNewPassword,
     setVerificationCode,
     setShowPassword,
     handleSubmit,
@@ -46,6 +50,7 @@ export function AuthPage() {
       <AuthFormCard
         mode={mode}
         registerStep={registerStep}
+        resetStep={resetStep}
         emailVerificationEnabled={emailVerificationEnabled}
         pending={pending}
         resendPending={resendPending}
@@ -53,6 +58,7 @@ export function AuthPage() {
         email={email}
         nickname={nickname}
         password={password}
+        newPassword={newPassword}
         verificationCode={verificationCode}
         verificationEmail={verificationEmail}
         verificationExpiresIn={verificationExpiresIn}
@@ -62,10 +68,15 @@ export function AuthPage() {
         onEmailChange={setEmail}
         onNicknameChange={setNickname}
         onPasswordChange={setPassword}
+        onNewPasswordChange={setNewPassword}
         onVerificationCodeChange={setVerificationCode}
         onTogglePassword={() => setShowPassword((value) => !value)}
         onBackToRegister={backToRegister}
+        onBackToLogin={backToLogin}
         onResendVerificationCode={resendVerificationCode}
+        onForgotPassword={() => {
+          switchMode("reset");
+        }}
         onSubmit={handleSubmit}
       />
     </div>

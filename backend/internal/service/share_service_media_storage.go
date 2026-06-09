@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/baobaobai/baobaobaivault/internal/model"
@@ -102,6 +103,31 @@ func (s *ShareService) GetShareMediaStorageSettings(ctx context.Context, operato
 	return &cfg, nil
 }
 
+func (s *ShareService) GetShareMediaStorageMigrationPlan(ctx context.Context, operatorID string) (*ShareMediaStorageMigrationPlanView, error) {
+	if err := s.ensureShareManagerRole(ctx, operatorID); err != nil {
+		return nil, err
+	}
+
+	cfg := s.currentShareMediaStorageSettings()
+	summary, err := s.collectShareMediaMigrationSummary(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ShareMediaStorageMigrationPlanView{
+		StorageMode:          cfg.StorageMode,
+		LocalFallbackEnabled: cfg.LocalFallbackEnabled,
+		CoverNamespaceID:     cfg.CoverNamespaceID,
+		AssetNamespaceID:     cfg.AssetNamespaceID,
+		CanMigrate: s.isConfiguredShareSuperAdminUserID(ctx, operatorID) &&
+			cfg.StorageMode == model.ShareMediaStorageModeObjectStorage &&
+			cfg.CoverNamespaceID != "" &&
+			cfg.AssetNamespaceID != "" &&
+			s.storageService != nil,
+		Summary:              summary,
+	}, nil
+}
+
 func (s *ShareService) UpdateShareMediaStorageSettings(ctx context.Context, input ShareUpdateMediaStorageSettingsInput) (*ShareMediaStorageSettingsView, error) {
 	operatorID := strings.TrimSpace(input.OperatorID)
 	if operatorID == "" {
@@ -150,6 +176,127 @@ func (s *ShareService) UpdateShareMediaStorageSettings(ctx context.Context, inpu
 	return &next, nil
 }
 
+func (s *ShareService) RunShareMediaStorageMigration(ctx context.Context, input ShareMediaStorageMigrationRunInput) (*ShareMediaStorageMigrationRunResult, error) {
+	operatorID := strings.TrimSpace(input.OperatorID)
+	if operatorID == "" {
+		return nil, ErrShareUserNotFound
+	}
+	if err := s.ensureConfiguredShareSuperAdminByUserID(ctx, operatorID); err != nil {
+		return nil, err
+	}
+
+	cfg := s.currentShareMediaStorageSettings()
+	if cfg.StorageMode != model.ShareMediaStorageModeObjectStorage {
+		return nil, errors.New("share media storage mode must be object_storage")
+	}
+	if s.storageService == nil {
+		return nil, errors.New("object storage service is unavailable")
+	}
+	if cfg.CoverNamespaceID == "" || cfg.AssetNamespaceID == "" {
+		return nil, errors.New("cover_namespace_id and asset_namespace_id are required")
+	}
+
+	batchSize := input.BatchSize
+	if batchSize <= 0 {
+		batchSize = 20
+	}
+	if batchSize > 200 {
+		batchSize = 200
+	}
+
+	items, err := s.loadShareMediaMigrationItems(ctx, batchSize)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &ShareMediaStorageMigrationRunResult{
+		DeleteLocal: input.DeleteLocal,
+		Messages:    []string{},
+	}
+
+	for _, item := range items {
+		result.Processed++
+		if strings.TrimSpace(item.StoredFileName) == "" {
+			result.Skipped++
+			result.Messages = append(result.Messages, fmt.Sprintf("%s %s 没有本地文件名，已跳过", item.KindLabel, item.ResourceID))
+			continue
+		}
+
+		path := s.getStoredFilePath(item.CreatorID, item.StoredFileName)
+		file, err := os.Open(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				result.Skipped++
+				if input.IncludeMissing {
+					result.Messages = append(result.Messages, fmt.Sprintf("%s %s 的本地文件不存在：%s", item.KindLabel, item.ResourceID, item.StoredFileName))
+				}
+				continue
+			}
+			result.Failed++
+			result.Messages = append(result.Messages, fmt.Sprintf("%s %s 打开本地文件失败：%v", item.KindLabel, item.ResourceID, err))
+			continue
+		}
+
+		stored, migrateErr := func() (*shareStoredMediaResult, error) {
+			defer file.Close()
+			if item.Kind == shareMediaMigrationKindCover {
+				return s.storeCardMediaToObjectStorage(
+					ctx,
+					cfg.CoverNamespaceID,
+					s.buildCardCoverObjectKey(item.CreatorID, item.CardID),
+					item.OriginalFileName,
+					item.MimeType,
+					file,
+					item.Size,
+				)
+			}
+			return s.storeCardMediaToObjectStorage(
+				ctx,
+				cfg.AssetNamespaceID,
+				s.buildCardAssetObjectKey(item.CreatorID, item.CardID, item.Slot),
+				item.OriginalFileName,
+				item.MimeType,
+				file,
+				item.Size,
+			)
+		}()
+		if migrateErr != nil {
+			result.Failed++
+			result.Messages = append(result.Messages, fmt.Sprintf("%s %s 上传到对象存储失败：%v", item.KindLabel, item.ResourceID, migrateErr))
+			continue
+		}
+
+		if err := s.persistShareMediaMigrationResult(ctx, item, stored, input.DeleteLocal); err != nil {
+			_ = s.deleteCardStoredMedia(ctx, item.CreatorID, stored.StorageBackend, stored.StorageNamespaceID, stored.StorageObjectKey, stored.StoredFileName)
+			result.Failed++
+			result.Messages = append(result.Messages, fmt.Sprintf("%s %s 更新数据库失败：%v", item.KindLabel, item.ResourceID, err))
+			continue
+		}
+
+		if input.DeleteLocal {
+			if err := s.removeStoredFile(item.CreatorID, item.StoredFileName); err != nil {
+				result.Messages = append(result.Messages, fmt.Sprintf("%s %s 已迁移，但删除本地文件失败：%v", item.KindLabel, item.ResourceID, err))
+			}
+		}
+
+		result.Succeeded++
+	}
+
+	summary, err := s.collectShareMediaMigrationSummary(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result.Summary = summary
+	result.HasMore = summary.TotalPending > 0
+
+	if len(result.Messages) > 30 {
+		result.Messages = result.Messages[:30]
+		result.Messages = append(result.Messages, "消息过多，已截断显示前 30 条。")
+	}
+
+	return result, nil
+}
+
 func (s *ShareService) ensureShareNamespaceExists(ctx context.Context, namespaceID string) error {
 	namespaceID = strings.TrimSpace(namespaceID)
 	if namespaceID == "" {
@@ -164,6 +311,227 @@ func (s *ShareService) ensureShareNamespaceExists(ctx context.Context, namespace
 		return errors.New("namespace not found")
 	}
 	return nil
+}
+
+const (
+	shareMediaMigrationKindCover = "cover"
+	shareMediaMigrationKindAsset = "asset"
+)
+
+type shareMediaMigrationItem struct {
+	Kind             string
+	KindLabel        string
+	ResourceID       string
+	CardID           string
+	CreatorID        string
+	Slot             string
+	StoredFileName   string
+	OriginalFileName string
+	MimeType         string
+	Size             int64
+}
+
+func (s *ShareService) collectShareMediaMigrationSummary(ctx context.Context) (ShareMediaStorageMigrationSummary, error) {
+	summary := ShareMediaStorageMigrationSummary{}
+
+	var cards []model.SharePlatformCard
+	if err := s.db.WithContext(ctx).
+		Select("id", "creator_external_user_id", "storage_backend", "stored_file_name").
+		Where("storage_backend = ? AND stored_file_name <> ''", model.ShareMediaStorageModeLocal).
+		Find(&cards).Error; err != nil {
+		return summary, err
+	}
+	for _, card := range cards {
+		if _, err := os.Stat(s.getStoredFilePath(card.CreatorExternalUserID, card.StoredFileName)); err == nil {
+			summary.CoversPending++
+		} else if os.IsNotExist(err) {
+			summary.CoversMissing++
+		} else {
+			return summary, err
+		}
+	}
+
+	var assets []model.SharePlatformCardAsset
+	if err := s.db.WithContext(ctx).
+		Select("id", "card_id", "storage_backend", "stored_file_name").
+		Where("storage_backend = ? AND stored_file_name <> ''", model.ShareMediaStorageModeLocal).
+		Find(&assets).Error; err != nil {
+		return summary, err
+	}
+	if len(assets) > 0 {
+		cardCreators := make(map[string]string, len(assets))
+		cardIDs := make([]string, 0, len(assets))
+		seen := make(map[string]struct{}, len(assets))
+		for _, asset := range assets {
+			if _, ok := seen[asset.CardID]; ok {
+				continue
+			}
+			seen[asset.CardID] = struct{}{}
+			cardIDs = append(cardIDs, asset.CardID)
+		}
+
+		var assetCards []model.SharePlatformCard
+		if err := s.db.WithContext(ctx).
+			Select("id", "creator_external_user_id").
+			Where("id IN ?", cardIDs).
+			Find(&assetCards).Error; err != nil {
+			return summary, err
+		}
+		for _, card := range assetCards {
+			cardCreators[card.ID] = card.CreatorExternalUserID
+		}
+
+		for _, asset := range assets {
+			creatorID := cardCreators[asset.CardID]
+			if creatorID == "" {
+				summary.AssetsMissing++
+				continue
+			}
+			if _, err := os.Stat(s.getStoredFilePath(creatorID, asset.StoredFileName)); err == nil {
+				summary.AssetsPending++
+			} else if os.IsNotExist(err) {
+				summary.AssetsMissing++
+			} else {
+				return summary, err
+			}
+		}
+	}
+
+	summary.TotalPending = summary.CoversPending + summary.AssetsPending
+	summary.TotalMissing = summary.CoversMissing + summary.AssetsMissing
+	return summary, nil
+}
+
+func (s *ShareService) loadShareMediaMigrationItems(ctx context.Context, batchSize int) ([]shareMediaMigrationItem, error) {
+	items := make([]shareMediaMigrationItem, 0, batchSize)
+
+	var cards []model.SharePlatformCard
+	if err := s.db.WithContext(ctx).
+		Select("id", "creator_external_user_id", "stored_file_name", "original_file_name", "mime_type", "size", "updated_at").
+		Where("storage_backend = ? AND stored_file_name <> ''", model.ShareMediaStorageModeLocal).
+		Order("updated_at ASC, created_at ASC").
+		Limit(batchSize).
+		Find(&cards).Error; err != nil {
+		return nil, err
+	}
+
+	for _, card := range cards {
+		items = append(items, shareMediaMigrationItem{
+			Kind:             shareMediaMigrationKindCover,
+			KindLabel:        "封面",
+			ResourceID:       card.ID,
+			CardID:           card.ID,
+			CreatorID:        card.CreatorExternalUserID,
+			StoredFileName:   card.StoredFileName,
+			OriginalFileName: card.OriginalFileName,
+			MimeType:         card.MimeType,
+			Size:             card.Size,
+		})
+		if len(items) >= batchSize {
+			return items, nil
+		}
+	}
+
+	remaining := batchSize - len(items)
+	if remaining <= 0 {
+		return items, nil
+	}
+
+	var assets []model.SharePlatformCardAsset
+	if err := s.db.WithContext(ctx).
+		Select("id", "card_id", "slot", "stored_file_name", "original_file_name", "mime_type", "size", "updated_at").
+		Where("storage_backend = ? AND stored_file_name <> ''", model.ShareMediaStorageModeLocal).
+		Order("updated_at ASC, created_at ASC").
+		Limit(remaining * 2).
+		Find(&assets).Error; err != nil {
+		return nil, err
+	}
+	if len(assets) == 0 {
+		return items, nil
+	}
+
+	cardIDs := make([]string, 0, len(assets))
+	cardSeen := make(map[string]struct{}, len(assets))
+	for _, asset := range assets {
+		if _, ok := cardSeen[asset.CardID]; ok {
+			continue
+		}
+		cardSeen[asset.CardID] = struct{}{}
+		cardIDs = append(cardIDs, asset.CardID)
+	}
+
+	var assetCards []model.SharePlatformCard
+	if err := s.db.WithContext(ctx).
+		Select("id", "creator_external_user_id").
+		Where("id IN ?", cardIDs).
+		Find(&assetCards).Error; err != nil {
+		return nil, err
+	}
+	cardCreators := make(map[string]string, len(assetCards))
+	for _, card := range assetCards {
+		cardCreators[card.ID] = card.CreatorExternalUserID
+	}
+
+	sort.SliceStable(assets, func(i, j int) bool {
+		if assets[i].CardID == assets[j].CardID {
+			return assets[i].Slot < assets[j].Slot
+		}
+		return assets[i].CardID < assets[j].CardID
+	})
+
+	for _, asset := range assets {
+		creatorID := cardCreators[asset.CardID]
+		if creatorID == "" {
+			continue
+		}
+		items = append(items, shareMediaMigrationItem{
+			Kind:             shareMediaMigrationKindAsset,
+			KindLabel:        "附件",
+			ResourceID:       asset.ID,
+			CardID:           asset.CardID,
+			CreatorID:        creatorID,
+			Slot:             asset.Slot,
+			StoredFileName:   asset.StoredFileName,
+			OriginalFileName: asset.OriginalFileName,
+			MimeType:         asset.MimeType,
+			Size:             asset.Size,
+		})
+		if len(items) >= batchSize {
+			break
+		}
+	}
+
+	return items, nil
+}
+
+func (s *ShareService) persistShareMediaMigrationResult(ctx context.Context, item shareMediaMigrationItem, stored *shareStoredMediaResult, clearLocal bool) error {
+	storedFileName := item.StoredFileName
+	if clearLocal {
+		storedFileName = stored.StoredFileName
+	}
+
+	updates := map[string]any{
+		"storage_backend":      stored.StorageBackend,
+		"storage_namespace_id": normalizeOptionalID(stored.StorageNamespaceID),
+		"storage_object_key":   stored.StorageObjectKey,
+		"storage_version_id":   stored.StorageVersionID,
+		"stored_file_name":     storedFileName,
+	}
+
+	switch item.Kind {
+	case shareMediaMigrationKindCover:
+		return s.db.WithContext(ctx).
+			Model(&model.SharePlatformCard{}).
+			Where("id = ?", item.CardID).
+			Updates(updates).Error
+	case shareMediaMigrationKindAsset:
+		return s.db.WithContext(ctx).
+			Model(&model.SharePlatformCardAsset{}).
+			Where("id = ?", item.ResourceID).
+			Updates(updates).Error
+	default:
+		return errors.New("invalid migration item kind")
+	}
 }
 
 func (s *ShareService) buildCardCoverObjectKey(creatorID, cardID string) string {
@@ -313,7 +681,9 @@ func (s *ShareService) deleteCardStoredMedia(
 		namespaceID := strings.TrimSpace(derefString(storageNamespaceID))
 		key := strings.TrimSpace(storageObjectKey)
 		if namespaceID != "" && key != "" {
-			return s.storageService.DeleteObject(ctx, namespaceID, key)
+			if err := s.storageService.DeleteObject(ctx, namespaceID, key); err != nil {
+				return err
+			}
 		}
 	}
 

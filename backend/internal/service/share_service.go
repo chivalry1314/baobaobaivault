@@ -42,6 +42,8 @@ var (
 	ErrShareVerificationRequired = errors.New("verification required")
 	ErrShareVerificationTooMany  = errors.New("too many verification attempts")
 	ErrShareVerificationTooSoon  = errors.New("verification requested too frequently")
+	ErrShareResetPasswordTooSoon = errors.New("password reset requested too frequently")
+	ErrShareResetPasswordNotFound = errors.New("password reset request not found")
 	ErrShareWeakPassword         = errors.New("password must be at least 6 characters")
 	ErrShareInvalidProfile       = errors.New("nickname must be between 2 and 40 characters")
 	ErrShareInvalidBio           = errors.New("bio must be at most 100 characters")
@@ -75,6 +77,8 @@ var (
 	ErrShareProtectedSuperAdmin  = errors.New("cannot delete configured super admin account")
 	ErrShareSuperAdminRequired   = errors.New("configured super admin required")
 	ErrShareDeleteAuthFailed     = errors.New("current password is incorrect")
+	ErrSharePasswordResetFailed   = errors.New("password reset failed")
+	ErrShareAdminResetUnavailable = errors.New("admin password reset unavailable")
 	ErrShareCardAssetRequired    = errors.New("card must keep at least one category file")
 	ErrShareInvalidReviewStatus  = errors.New("invalid review status")
 	ErrShareReviewReasonRequired = errors.New("review reason is required")
@@ -144,6 +148,7 @@ type ShareSessionUser struct {
 	Phone      string    `json:"phone"`
 	Role       string    `json:"role"`
 	IsConfiguredSuperAdmin bool `json:"isConfiguredSuperAdmin"`
+	ForcePasswordChange bool `json:"forcePasswordChange"`
 	CreatedAt  time.Time `json:"createdAt"`
 }
 
@@ -152,6 +157,18 @@ type ShareRegistrationResult struct {
 	VerificationRequired bool              `json:"verificationRequired"`
 	Email                string            `json:"email,omitempty"`
 	ExpiresInSeconds     int               `json:"expiresIn,omitempty"`
+}
+
+type SharePasswordResetRequestResult struct {
+	Email            string `json:"email"`
+	VerificationRequired bool `json:"verificationRequired"`
+	ExpiresInSeconds int    `json:"expiresIn"`
+}
+
+type SharePasswordResetVerifyResult struct {
+	Email            string `json:"email"`
+	VerificationRequired bool `json:"verificationRequired"`
+	ExpiresInSeconds int    `json:"expiresIn"`
 }
 
 type ShareAuthConfigView struct {
@@ -174,6 +191,42 @@ type ShareMediaStorageSettingsView struct {
 	CoverNamespaceID     string `json:"coverNamespaceID"`
 	AssetNamespaceID     string `json:"assetNamespaceID"`
 	CanUpdate            bool   `json:"canUpdate"`
+}
+
+type ShareMediaStorageMigrationSummary struct {
+	CoversPending int64 `json:"coversPending"`
+	AssetsPending int64 `json:"assetsPending"`
+	TotalPending  int64 `json:"totalPending"`
+	CoversMissing int64 `json:"coversMissing"`
+	AssetsMissing int64 `json:"assetsMissing"`
+	TotalMissing  int64 `json:"totalMissing"`
+}
+
+type ShareMediaStorageMigrationPlanView struct {
+	StorageMode          string                            `json:"storageMode"`
+	LocalFallbackEnabled bool                              `json:"localFallbackEnabled"`
+	CoverNamespaceID     string                            `json:"coverNamespaceID"`
+	AssetNamespaceID     string                            `json:"assetNamespaceID"`
+	CanMigrate           bool                              `json:"canMigrate"`
+	Summary              ShareMediaStorageMigrationSummary `json:"summary"`
+}
+
+type ShareMediaStorageMigrationRunInput struct {
+	OperatorID     string
+	BatchSize      int
+	DeleteLocal    bool
+	IncludeMissing bool
+}
+
+type ShareMediaStorageMigrationRunResult struct {
+	Processed      int                             `json:"processed"`
+	Succeeded      int                             `json:"succeeded"`
+	Skipped        int                             `json:"skipped"`
+	Failed         int                             `json:"failed"`
+	DeleteLocal    bool                            `json:"deleteLocal"`
+	HasMore        bool                            `json:"hasMore"`
+	Messages       []string                        `json:"messages"`
+	Summary        ShareMediaStorageMigrationSummary `json:"summary"`
 }
 
 type ShareUpdateMediaStorageSettingsInput struct {
@@ -374,6 +427,7 @@ type ShareUserRoleManageItem struct {
 	Nickname  string    `json:"nickname"`
 	Role      string    `json:"role"`
 	Status    string    `json:"status"`
+	ForcePasswordChange bool `json:"forcePasswordChange"`
 	CreatedAt time.Time `json:"createdAt"`
 }
 
@@ -394,6 +448,15 @@ type ShareUpdateUserRoleInput struct {
 type ShareDeleteUserInput struct {
 	OperatorID string
 	UserID     string
+}
+
+type ShareAdminResetUserPasswordInput struct {
+	OperatorID string
+	UserID     string
+}
+
+type ShareAdminResetUserPasswordResult struct {
+	NewPassword string `json:"newPassword"`
 }
 
 type ShareSelfDeleteInput struct {
@@ -1197,6 +1260,7 @@ func toShareSessionUser(user *model.ShareExternalUser) ShareSessionUser {
 		Phone:      strings.TrimSpace(user.Phone),
 		Role:       normalizeShareExternalUserRole(user.Role),
 		IsConfiguredSuperAdmin: false,
+		ForcePasswordChange: user.ForcePasswordChange,
 		CreatedAt:  user.CreatedAt,
 	}
 }

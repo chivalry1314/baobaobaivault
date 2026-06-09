@@ -13,6 +13,7 @@ export type ExternalSessionUser = {
   phone: string;
   role: ShareUserRole;
   isConfiguredSuperAdmin: boolean;
+  forcePasswordChange: boolean;
   createdAt: string;
 };
 
@@ -23,12 +24,18 @@ export type ShareUserRoleManageItem = {
   nickname: string;
   role: ShareUserRole;
   status: string;
+  forcePasswordChange: boolean;
   createdAt: string;
 };
 
 export type ShareUsersManageResponse = {
   users: ShareUserRoleManageItem[];
   pagination: SharePagination;
+};
+
+export type ShareAdminResetPasswordResponse = {
+  ok: true;
+  newPassword: string;
 };
 
 export type ShareSystemRolesResponse = {
@@ -130,6 +137,23 @@ export type RegisterResendResponse = {
   expiresIn: number;
 };
 
+export type PasswordResetRequestResponse = {
+  ok: true;
+  email: string;
+  verificationRequired: boolean;
+  expiresIn: number;
+};
+
+export type PasswordResetResendResponse = {
+  ok: true;
+  email: string;
+  expiresIn: number;
+};
+
+export type PasswordResetCompleteResponse = {
+  ok: true;
+};
+
 export type ShareAuthConfig = {
   emailVerificationEnabled: boolean;
   verificationCodeTTLSeconds: number;
@@ -152,6 +176,35 @@ export type ShareMediaStorageSettings = {
   canUpdate: boolean;
 };
 
+export type ShareMediaStorageMigrationSummary = {
+  coversPending: number;
+  assetsPending: number;
+  totalPending: number;
+  coversMissing: number;
+  assetsMissing: number;
+  totalMissing: number;
+};
+
+export type ShareMediaStorageMigrationPlan = {
+  storageMode: "local" | "object_storage";
+  localFallbackEnabled: boolean;
+  coverNamespaceID: string;
+  assetNamespaceID: string;
+  canMigrate: boolean;
+  summary: ShareMediaStorageMigrationSummary;
+};
+
+export type ShareMediaStorageMigrationRunResult = {
+  processed: number;
+  succeeded: number;
+  skipped: number;
+  failed: number;
+  deleteLocal: boolean;
+  hasMore: boolean;
+  messages: string[];
+  summary: ShareMediaStorageMigrationSummary;
+};
+
 export type ShareAuthConfigResponse = {
   ok: true;
   config: ShareAuthConfig;
@@ -165,6 +218,14 @@ export type ShareAuthSettingsResponse = {
 export type ShareMediaStorageSettingsResponse = {
   ok: true;
   settings: ShareMediaStorageSettings;
+  migration: ShareMediaStorageMigrationPlan;
+};
+
+export type ShareMediaStorageMigrationRunResponse = {
+  ok: true;
+  settings: ShareMediaStorageSettings;
+  migration: ShareMediaStorageMigrationPlan;
+  result: ShareMediaStorageMigrationRunResult;
 };
 
 export type ShareEmailHealth = {

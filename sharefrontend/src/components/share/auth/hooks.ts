@@ -3,18 +3,20 @@ import { useEffect, useState, type FormEvent } from "react";
 
 import { getSafeRedirectPath } from "@/components/share/auth/helpers";
 import { useShareSession } from "@/components/share/session-provider";
-import type { AuthMode, RegisterStep } from "@/components/share/auth/types";
+import type { AuthMode, RegisterStep, ResetStep } from "@/components/share/auth/types";
 import { ShareApiError, getShareErrorMessage, shareApi } from "@/lib/share-api";
 
 const authMessages = {
   emailRequired: "\u8bf7\u8f93\u5165\u90ae\u7bb1",
   nicknameRequired: "\u8bf7\u8f93\u5165\u6635\u79f0",
   passwordRequired: "\u8bf7\u8f93\u5165\u5bc6\u7801",
+  newPasswordRequired: "\u8bf7\u8f93\u5165\u65b0\u5bc6\u7801",
   verificationCodeRequired: "\u8bf7\u8f93\u5165\u9a8c\u8bc1\u7801",
   resendFallback: "\u6682\u65f6\u65e0\u6cd5\u91cd\u65b0\u53d1\u9001\u9a8c\u8bc1\u7801\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5",
   registerFallback: "\u6682\u65f6\u65e0\u6cd5\u6ce8\u518c\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5",
   verifyFallback: "\u6682\u65f6\u65e0\u6cd5\u5b8c\u6210\u90ae\u7bb1\u9a8c\u8bc1\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5",
   loginFallback: "\u6682\u65f6\u65e0\u6cd5\u767b\u5f55\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5",
+  resetFallback: "\u6682\u65f6\u65e0\u6cd5\u627e\u56de\u5bc6\u7801\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5",
 } as const;
 
 export function useAuthPage() {
@@ -24,11 +26,13 @@ export function useAuthPage() {
 
   const [mode, setMode] = useState<AuthMode>("login");
   const [registerStep, setRegisterStep] = useState<RegisterStep>("form");
+  const [resetStep, setResetStep] = useState<ResetStep>("request");
   const [emailVerificationEnabled, setEmailVerificationEnabled] = useState(false);
   const [resendIntervalSeconds, setResendIntervalSeconds] = useState(60);
   const [email, setEmail] = useState("");
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationEmail, setVerificationEmail] = useState("");
   const [verificationExpiresIn, setVerificationExpiresIn] = useState(0);
@@ -91,12 +95,21 @@ export function useAuthPage() {
     setVerificationExpiresIn(0);
   }
 
+  function resetPasswordFlow() {
+    setResetStep("request");
+    setVerificationCode("");
+    setVerificationEmail("");
+    setVerificationExpiresIn(0);
+    setNewPassword("");
+  }
+
   function switchMode(nextMode: AuthMode) {
     if (pending) {
       return;
     }
     setMode(nextMode);
     resetRegisterFlow();
+    resetPasswordFlow();
     setError("");
   }
 
@@ -106,6 +119,15 @@ export function useAuthPage() {
     }
     setRegisterStep("form");
     setVerificationCode("");
+    setError("");
+  }
+
+  function backToLogin() {
+    if (pending) {
+      return;
+    }
+    setMode("login");
+    resetPasswordFlow();
     setError("");
   }
 
@@ -119,7 +141,10 @@ export function useAuthPage() {
     setError("");
 
     try {
-      const response = await shareApi.resendRegisterCode({ email: resendEmail });
+      const response =
+        mode === "reset"
+          ? await shareApi.resendPasswordResetCode({ email: resendEmail })
+          : await shareApi.resendRegisterCode({ email: resendEmail });
       setVerificationEmail(response.email || resendEmail);
       setVerificationExpiresIn(response.expiresIn ?? 0);
       setResendCooldownSeconds(resendIntervalSeconds);
@@ -136,10 +161,16 @@ export function useAuthPage() {
     const trimmedEmail = email.trim();
     const trimmedPassword = password.trim();
     const trimmedNickname = nickname.trim();
+    const trimmedNewPassword = newPassword.trim();
     const trimmedVerificationCode = verificationCode.trim();
 
     if (!trimmedEmail) {
       setError(authMessages.emailRequired);
+      return;
+    }
+
+    if (mode === "reset" && resetStep === "verify" && !trimmedNewPassword) {
+      setError(authMessages.newPasswordRequired);
       return;
     }
 
@@ -148,12 +179,12 @@ export function useAuthPage() {
       return;
     }
 
-    if (mode === "register" && registerStep === "verify") {
+    if ((mode === "register" && registerStep === "verify") || (mode === "reset" && resetStep === "verify")) {
       if (!trimmedVerificationCode) {
         setError(authMessages.verificationCodeRequired);
         return;
       }
-    } else if (!trimmedPassword) {
+    } else if (mode !== "reset" && !trimmedPassword) {
       setError(authMessages.passwordRequired);
       return;
     }
@@ -194,6 +225,30 @@ export function useAuthPage() {
         }
       }
 
+      if (mode === "reset") {
+        if (resetStep === "request") {
+          const requestResponse = await shareApi.requestPasswordReset({ email: trimmedEmail });
+          setVerificationEmail(requestResponse.email ?? trimmedEmail);
+          setVerificationExpiresIn(requestResponse.expiresIn ?? 0);
+          setResetStep("verify");
+          setVerificationCode("");
+          setResendCooldownSeconds(resendIntervalSeconds);
+          return;
+        }
+
+        await shareApi.completePasswordReset({
+          email: verificationEmail || trimmedEmail,
+          code: trimmedVerificationCode,
+          newPassword: trimmedNewPassword,
+        });
+
+        setMode("login");
+        resetPasswordFlow();
+        setPassword("");
+        setError("");
+        return;
+      }
+
       const loginResponse = await shareApi.login({
         email: trimmedEmail,
         password: trimmedPassword,
@@ -206,6 +261,10 @@ export function useAuthPage() {
           ? registerStep === "verify"
             ? authMessages.verifyFallback
             : authMessages.registerFallback
+          : mode === "reset"
+            ? resetStep === "verify"
+              ? authMessages.resetFallback
+              : authMessages.resetFallback
           : authMessages.loginFallback;
       if (
         mode === "register" &&
@@ -219,6 +278,18 @@ export function useAuthPage() {
         setVerificationCode("");
         setResendCooldownSeconds(0);
       }
+      if (mode === "reset" && resetStep === "verify" && submitError instanceof ShareApiError) {
+        if (
+          submitError.status === 410 ||
+          submitError.status === 404 ||
+          submitError.message.toLowerCase().includes("expired") ||
+          submitError.message.toLowerCase().includes("too many")
+        ) {
+          setResetStep("request");
+          setVerificationCode("");
+          setResendCooldownSeconds(0);
+        }
+      }
       setError(getShareErrorMessage(submitError, fallback));
     } finally {
       setPending(false);
@@ -229,10 +300,12 @@ export function useAuthPage() {
     sessionChecking,
     mode,
     registerStep,
+    resetStep,
     emailVerificationEnabled,
     email,
     nickname,
     password,
+    newPassword,
     verificationCode,
     verificationEmail,
     verificationExpiresIn,
@@ -243,10 +316,13 @@ export function useAuthPage() {
     error,
     switchMode,
     backToRegister,
+    backToLogin,
     resendVerificationCode,
+    setResetStep,
     setEmail,
     setNickname,
     setPassword,
+    setNewPassword,
     setVerificationCode,
     setShowPassword,
     handleSubmit,

@@ -51,6 +51,7 @@ type ShareExternalUser struct {
 	Phone       string         `gorm:"type:varchar(30);default:''" json:"phone"`
 	Role        string         `gorm:"type:varchar(20);not null;default:'viewer';index" json:"role"`
 	Status      string         `gorm:"type:varchar(20);not null;default:'active'" json:"status"`
+	ForcePasswordChange bool    `gorm:"not null;default:false" json:"force_password_change"`
 	LastLoginAt *time.Time     `json:"last_login_at,omitempty"`
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`

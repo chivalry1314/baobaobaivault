@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AuthRedirect } from "@/components/share/auth-redirect";
+import { SystemBackLink } from "@/components/share/system-back-link";
 import { PaginationControls } from "@/components/share/pagination-controls/index";
 import { useShareSession } from "@/components/share/session-provider";
 import { SystemWorkspace } from "@/components/share/system-shell/index";
@@ -336,12 +337,11 @@ function ShareSystemStorageFormPage(props: { mode: "create" | "edit"; storageCon
       {actionError ? <ErrorNotice message={actionError} /> : null}
       {successMessage ? <SuccessNotice message={successMessage} /> : null}
 
+      <SystemBackLink href="/system/storage" label="返回列表" />
+
       <section className="dream-panel max-w-3xl px-6 py-6 sm:px-8">
-        <div className="flex items-center justify-between gap-4 border-b border-[rgba(220,173,187,0.35)] pb-4">
+        <div className="border-b border-[rgba(220,173,187,0.35)] pb-4">
           <h2 className="text-xl font-black text-[var(--foreground)]">{mode === "create" ? "配置表单" : "编辑表单"}</h2>
-          <Link href="/system/storage" className="btn-subtle inline-flex rounded-full px-4 py-2 text-sm font-black">
-            返回列表
-          </Link>
         </div>
 
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
@@ -434,9 +434,6 @@ function ShareSystemStorageFormPage(props: { mode: "create" | "edit"; storageCon
             >
               {saving ? (mode === "create" ? "创建中..." : "保存中...") : mode === "create" ? "创建存储配置" : "保存修改"}
             </button>
-            <Link href="/system/storage" className="btn-subtle inline-flex rounded-full px-6 py-3 text-sm font-black">
-              返回列表
-            </Link>
           </div>
         </form>
       </section>

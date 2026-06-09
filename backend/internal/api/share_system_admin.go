@@ -115,6 +115,37 @@ func (h *Handler) shareSystemDeleteUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
+func (h *Handler) shareSystemResetUserPassword(c *gin.Context) {
+	user, ok := h.requireConfiguredShareSuperAdmin(c)
+	if !ok {
+		return
+	}
+
+	result, err := h.shareService.AdminResetExternalUserPassword(c.Request.Context(), service.ShareAdminResetUserPasswordInput{
+		OperatorID: user.ID,
+		UserID:     c.Param("userId"),
+	})
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareForbiddenRole),
+			errors.Is(err, service.ErrShareSuperAdminRequired):
+			status = http.StatusForbidden
+		case errors.Is(err, service.ErrShareUserNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareProtectedSuperAdmin):
+			status = http.StatusBadRequest
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":          true,
+		"newPassword": result.NewPassword,
+	})
+}
+
 func (h *Handler) shareSystemAuthSettings(c *gin.Context) {
 	user, ok := h.requireConfiguredShareSuperAdmin(c)
 	if !ok {
@@ -162,7 +193,16 @@ func (h *Handler) shareSystemMediaStorageSettings(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"settings": settings})
+	migration, err := h.shareService.GetShareMediaStorageMigrationPlan(c.Request.Context(), user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"settings":  settings,
+		"migration": migration,
+	})
 }
 
 func (h *Handler) shareSystemUpdateMediaStorageSettings(c *gin.Context) {
@@ -202,7 +242,72 @@ func (h *Handler) shareSystemUpdateMediaStorageSettings(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"settings": settings})
+	migration, err := h.shareService.GetShareMediaStorageMigrationPlan(c.Request.Context(), user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"settings":  settings,
+		"migration": migration,
+	})
+}
+
+func (h *Handler) shareSystemRunMediaStorageMigration(c *gin.Context) {
+	user, ok := h.requireConfiguredShareSuperAdmin(c)
+	if !ok {
+		return
+	}
+
+	var req struct {
+		BatchSize      int  `json:"batchSize"`
+		DeleteLocal    bool `json:"deleteLocal"`
+		IncludeMissing bool `json:"includeMissing"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	result, err := h.shareService.RunShareMediaStorageMigration(c.Request.Context(), service.ShareMediaStorageMigrationRunInput{
+		OperatorID:     user.ID,
+		BatchSize:      req.BatchSize,
+		DeleteLocal:    req.DeleteLocal,
+		IncludeMissing: req.IncludeMissing,
+	})
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareForbiddenRole),
+			errors.Is(err, service.ErrShareSuperAdminRequired):
+			status = http.StatusForbidden
+		case errors.Is(err, service.ErrShareUserNotFound):
+			status = http.StatusNotFound
+		default:
+			status = http.StatusBadRequest
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	settings, err := h.shareService.GetShareMediaStorageSettings(c.Request.Context(), user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	migration, err := h.shareService.GetShareMediaStorageMigrationPlan(c.Request.Context(), user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"settings":  settings,
+		"migration": migration,
+		"result":    result,
+	})
 }
 
 func (h *Handler) shareSystemUpdateAuthSettings(c *gin.Context) {

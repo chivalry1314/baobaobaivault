@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AuthRedirect } from "@/components/share/auth-redirect";
+import { SystemBackLink } from "@/components/share/system-back-link";
 import { PaginationControls } from "@/components/share/pagination-controls/index";
 import { useShareSession } from "@/components/share/session-provider";
 import { SystemWorkspace } from "@/components/share/system-shell/index";
@@ -195,12 +196,11 @@ export function ShareSystemRoleCreatePage() {
       title="新增角色"
       description="统一后的 share 用户体系目前只保留内建角色，不再支持在这里新增旧 RBAC 自定义角色。"
     >
+      <SystemBackLink href="/system/roles" label="返回角色页" />
+
       <section className="dream-panel max-w-3xl px-6 py-6 sm:px-8">
-        <div className="flex items-center justify-between gap-4 border-b border-[rgba(220,173,187,0.35)] pb-4">
+        <div className="border-b border-[rgba(220,173,187,0.35)] pb-4">
           <h2 className="text-xl font-black text-[var(--foreground)]">角色已统一</h2>
-          <Link href="/system/roles" className="btn-subtle inline-flex rounded-full px-4 py-2 text-sm font-black">
-            返回角色页
-          </Link>
         </div>
         <p className="mt-6 text-sm font-bold leading-7 text-[var(--foreground)]/68">
           当前系统已经按 sharefrontend 的真实用户体系统一为浏览者、创作者、管理员三种内建角色。用户角色调整请前往用户管理页面处理。
@@ -208,9 +208,6 @@ export function ShareSystemRoleCreatePage() {
         <div className="mt-6 flex flex-wrap gap-3">
           <Link href="/system/users" className="btn-primary inline-flex rounded-full px-6 py-3 text-sm font-black">
             去用户管理
-          </Link>
-          <Link href="/system/roles" className="btn-subtle inline-flex rounded-full px-6 py-3 text-sm font-black">
-            返回角色页
           </Link>
         </div>
       </section>
@@ -225,12 +222,11 @@ export function ShareSystemRoleEditPage() {
       title="编辑角色"
       description="统一后的 share 用户体系目前只保留内建角色，不再支持编辑旧 RBAC 自定义角色。"
     >
+      <SystemBackLink href="/system/roles" label="返回角色页" />
+
       <section className="dream-panel max-w-3xl px-6 py-6 sm:px-8">
-        <div className="flex items-center justify-between gap-4 border-b border-[rgba(220,173,187,0.35)] pb-4">
+        <div className="border-b border-[rgba(220,173,187,0.35)] pb-4">
           <h2 className="text-xl font-black text-[var(--foreground)]">角色已统一</h2>
-          <Link href="/system/roles" className="btn-subtle inline-flex rounded-full px-4 py-2 text-sm font-black">
-            返回角色页
-          </Link>
         </div>
         <p className="mt-6 text-sm font-bold leading-7 text-[var(--foreground)]/68">
           这里展示的角色是系统内建角色，实际变更请在用户管理页面直接调整用户的角色。
@@ -238,9 +234,6 @@ export function ShareSystemRoleEditPage() {
         <div className="mt-6 flex flex-wrap gap-3">
           <Link href="/system/users" className="btn-primary inline-flex rounded-full px-6 py-3 text-sm font-black">
             去用户管理
-          </Link>
-          <Link href="/system/roles" className="btn-subtle inline-flex rounded-full px-6 py-3 text-sm font-black">
-            返回角色页
           </Link>
         </div>
       </section>

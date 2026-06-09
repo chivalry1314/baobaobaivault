@@ -21,6 +21,7 @@ import (
 )
 
 const shareEmailVerificationPurposeRegister = "register"
+const shareEmailVerificationPurposeResetPassword = "reset_password"
 const shareEmailVerificationRetention = 7 * 24 * time.Hour
 const shareAuthSettingsSingleton = "default"
 
@@ -237,6 +238,159 @@ func (s *ShareService) ResendExternalUserRegistrationVerification(ctx context.Co
 	return s.createOrRefreshEmailVerificationFromHash(ctx, email, verification.Nickname, passwordHash)
 }
 
+func (s *ShareService) RequestExternalUserPasswordReset(ctx context.Context, emailRaw string) (int, error) {
+	if err := s.cleanupShareEmailVerifications(ctx); err != nil {
+		return 0, err
+	}
+	if !s.currentShareAuthConfig().EmailVerificationEnabled {
+		return 0, ErrShareAdminResetUnavailable
+	}
+
+	email, err := normalizeShareExternalEmail(emailRaw)
+	if err != nil {
+		return 0, err
+	}
+
+	var user model.ShareExternalUser
+	if err := s.db.WithContext(ctx).First(&user, "email = ?", email).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return 0, ErrShareUserNotFound
+		}
+		return 0, err
+	}
+	if user.Status != model.ShareExternalUserStatusActive {
+		return 0, ErrShareUserNotFound
+	}
+
+	return s.createOrRefreshPasswordResetVerification(ctx, email, user.NormalizedDisplayName(), user.Password)
+}
+
+func (s *ShareService) ResendExternalUserPasswordResetVerification(ctx context.Context, emailRaw string) (int, error) {
+	if err := s.cleanupShareEmailVerifications(ctx); err != nil {
+		return 0, err
+	}
+	if !s.currentShareAuthConfig().EmailVerificationEnabled {
+		return 0, ErrShareAdminResetUnavailable
+	}
+
+	email, err := normalizeShareExternalEmail(emailRaw)
+	if err != nil {
+		return 0, err
+	}
+
+	var verification model.ShareEmailVerification
+	if err := s.db.WithContext(ctx).
+		Where("email = ? AND purpose = ? AND consumed_at IS NULL", email, shareEmailVerificationPurposeResetPassword).
+		Order("created_at DESC").
+		First(&verification).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return 0, ErrShareResetPasswordNotFound
+		}
+		return 0, err
+	}
+
+	passwordHash := strings.TrimSpace(verification.PasswordHash)
+	if !isBcryptHash(passwordHash) {
+		var user model.ShareExternalUser
+		if err := s.db.WithContext(ctx).First(&user, "email = ?", email).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return 0, ErrShareResetPasswordNotFound
+			}
+			return 0, err
+		}
+		passwordHash = user.Password
+	}
+
+	nickname := strings.TrimSpace(verification.Nickname)
+	if nickname == "" {
+		nickname = defaultShareNicknameFromEmail(email)
+	}
+
+	return s.createOrRefreshPasswordResetVerification(ctx, email, nickname, passwordHash)
+}
+
+func (s *ShareService) CompleteExternalUserPasswordReset(ctx context.Context, emailRaw, codeRaw, newPasswordRaw string) error {
+	if err := s.cleanupShareEmailVerifications(ctx); err != nil {
+		return err
+	}
+	if !s.currentShareAuthConfig().EmailVerificationEnabled {
+		return ErrShareAdminResetUnavailable
+	}
+
+	email, err := normalizeShareExternalEmail(emailRaw)
+	if err != nil {
+		return err
+	}
+	code := normalizeVerificationCode(codeRaw)
+	if code == "" {
+		return ErrShareVerificationInvalid
+	}
+	newPassword := strings.TrimSpace(newPasswordRaw)
+	if len(newPassword) < 6 {
+		return ErrShareWeakPassword
+	}
+
+	now := time.Now().UTC()
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var verification model.ShareEmailVerification
+		if err := tx.
+			Where("email = ? AND purpose = ? AND consumed_at IS NULL", email, shareEmailVerificationPurposeResetPassword).
+			Order("created_at DESC").
+			First(&verification).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrShareResetPasswordNotFound
+			}
+			return err
+		}
+
+		if verification.ExpiresAt.Before(now) {
+			return ErrShareVerificationExpired
+		}
+		cfg := s.currentShareAuthConfig()
+		if verification.AttemptCount >= cfg.MaxVerifyAttempts {
+			return ErrShareVerificationTooMany
+		}
+		if !checkVerificationCodeHash(code, verification.CodeHash) {
+			if err := tx.Model(&model.ShareEmailVerification{}).
+				Where("id = ?", verification.ID).
+				Update("attempt_count", gorm.Expr("attempt_count + 1")).Error; err != nil {
+				return err
+			}
+			return ErrShareVerificationInvalid
+		}
+
+		var user model.ShareExternalUser
+		if err := tx.First(&user, "email = ?", email).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrShareUserNotFound
+			}
+			return err
+		}
+		if user.Status != model.ShareExternalUserStatusActive {
+			return ErrShareUserNotFound
+		}
+		if err := user.SetPassword(newPassword); err != nil {
+			return err
+		}
+		if err := tx.Model(&model.ShareExternalUser{}).
+			Where("id = ?", user.ID).
+			Updates(map[string]any{
+				"password":              user.Password,
+				"force_password_change": false,
+			}).Error; err != nil {
+			return err
+		}
+
+		consumedAt := now
+		return tx.Model(&model.ShareEmailVerification{}).
+			Where("id = ?", verification.ID).
+			Updates(map[string]any{
+				"consumed_at": consumedAt,
+				"updated_at":  consumedAt,
+			}).Error
+	})
+}
+
 func (s *ShareService) ContinueExternalUser(ctx context.Context, emailRaw, passwordRaw string) (*ShareSessionUser, bool, error) {
 	email, err := normalizeShareExternalEmail(emailRaw)
 	if err != nil {
@@ -433,6 +587,7 @@ func (s *ShareService) ListUsersForRoleManage(ctx context.Context, input ShareLi
 			Nickname:  row.NormalizedDisplayName(),
 			Role:      normalizeShareExternalUserRole(row.Role),
 			Status:    strings.TrimSpace(row.Status),
+			ForcePasswordChange: row.ForcePasswordChange,
 			CreatedAt: row.CreatedAt,
 		})
 	}
@@ -614,6 +769,69 @@ func (s *ShareService) DeleteOwnExternalUser(ctx context.Context, input ShareSel
 	})
 }
 
+func (s *ShareService) AdminResetExternalUserPassword(ctx context.Context, input ShareAdminResetUserPasswordInput) (*ShareAdminResetUserPasswordResult, error) {
+	operatorID := strings.TrimSpace(input.OperatorID)
+	targetUserID := strings.TrimSpace(input.UserID)
+	if operatorID == "" || targetUserID == "" {
+		return nil, ErrShareUserNotFound
+	}
+	if err := s.ensureConfiguredShareSuperAdminByUserID(ctx, operatorID); err != nil {
+		return nil, err
+	}
+
+	newPassword := generateReadableRandomPassword(12)
+	if len(newPassword) < 6 {
+		return nil, ErrSharePasswordResetFailed
+	}
+
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var user model.ShareExternalUser
+		if err := tx.First(&user, "id = ?", targetUserID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrShareUserNotFound
+			}
+			return err
+		}
+		if s.isConfiguredShareSuperAdminEmail(user.Email) {
+			return ErrShareProtectedSuperAdmin
+		}
+		if err := user.SetPassword(newPassword); err != nil {
+			return err
+		}
+		return tx.Model(&model.ShareExternalUser{}).
+			Where("id = ?", user.ID).
+			Updates(map[string]any{
+				"password":              user.Password,
+				"force_password_change": true,
+			}).Error
+	}); err != nil {
+		return nil, err
+	}
+
+	return &ShareAdminResetUserPasswordResult{NewPassword: newPassword}, nil
+}
+
+func generateReadableRandomPassword(length int) string {
+	if length < 6 {
+		length = 6
+	}
+
+	const charset = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
+	var builder strings.Builder
+	builder.Grow(length)
+
+	maxIndex := big.NewInt(int64(len(charset)))
+	for builder.Len() < length {
+		value, err := rand.Int(rand.Reader, maxIndex)
+		if err != nil {
+			return ""
+		}
+		builder.WriteByte(charset[value.Int64()])
+	}
+
+	return builder.String()
+}
+
 func (s *ShareService) softDeleteExternalUserTx(tx *gorm.DB, user *model.ShareExternalUser, reviewReason string) error {
 	if tx == nil || user == nil {
 		return ErrShareUserNotFound
@@ -691,7 +909,10 @@ func (s *ShareService) ChangeExternalUserPassword(ctx context.Context, input Sha
 
 		return tx.Model(&model.ShareExternalUser{}).
 			Where("id = ?", user.ID).
-			Update("password", user.Password).Error
+			Updates(map[string]any{
+				"password":              user.Password,
+				"force_password_change": false,
+			}).Error
 	})
 }
 
@@ -994,6 +1215,14 @@ func (s *ShareService) cleanupShareEmailVerifications(ctx context.Context) error
 }
 
 func (s *ShareService) createOrRefreshEmailVerificationFromHash(ctx context.Context, email, nickname, passwordHash string) (int, error) {
+	return s.createOrRefreshEmailVerificationRecord(ctx, email, shareEmailVerificationPurposeRegister, nickname, passwordHash, true)
+}
+
+func (s *ShareService) createOrRefreshPasswordResetVerification(ctx context.Context, email, nickname, passwordHash string) (int, error) {
+	return s.createOrRefreshEmailVerificationRecord(ctx, email, shareEmailVerificationPurposeResetPassword, nickname, passwordHash, false)
+}
+
+func (s *ShareService) createOrRefreshEmailVerificationRecord(ctx context.Context, email, purpose, nickname, passwordHash string, removePendingUser bool) (int, error) {
 	if s.emailService == nil || !s.emailService.Enabled() {
 		return 0, fmt.Errorf("email service is disabled")
 	}
@@ -1007,19 +1236,21 @@ func (s *ShareService) createOrRefreshEmailVerificationFromHash(ctx context.Cont
 	}
 
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var count int64
-		if err := tx.Model(&model.ShareExternalUser{}).
-			Where("email = ?", email).
-			Count(&count).Error; err != nil {
-			return err
-		}
-		if count > 0 {
-			return ErrShareEmailExists
+		if removePendingUser {
+			var count int64
+			if err := tx.Model(&model.ShareExternalUser{}).
+				Where("email = ?", email).
+				Count(&count).Error; err != nil {
+				return err
+			}
+			if count > 0 {
+				return ErrShareEmailExists
+			}
 		}
 
 		var existing model.ShareEmailVerification
 		if err := tx.
-			Where("email = ? AND purpose = ? AND consumed_at IS NULL", email, shareEmailVerificationPurposeRegister).
+			Where("email = ? AND purpose = ? AND consumed_at IS NULL", email, purpose).
 			Order("created_at DESC").
 			First(&existing).Error; err == nil {
 			cfg := s.currentShareAuthConfig()
@@ -1031,14 +1262,14 @@ func (s *ShareService) createOrRefreshEmailVerificationFromHash(ctx context.Cont
 		}
 
 		if err := tx.
-			Where("email = ? AND purpose = ? AND consumed_at IS NULL", email, shareEmailVerificationPurposeRegister).
+			Where("email = ? AND purpose = ? AND consumed_at IS NULL", email, purpose).
 			Delete(&model.ShareEmailVerification{}).Error; err != nil {
 			return err
 		}
 
 		record := model.ShareEmailVerification{
 			Email:        email,
-			Purpose:      shareEmailVerificationPurposeRegister,
+			Purpose:      purpose,
 			Nickname:     nickname,
 			PasswordHash: passwordHash,
 			CodeHash:     codeHash,
@@ -1050,11 +1281,17 @@ func (s *ShareService) createOrRefreshEmailVerificationFromHash(ctx context.Cont
 		return 0, err
 	}
 
-	if err := s.emailService.SendVerificationCode(email, code, s.verificationCodeTTLMinutes()); err != nil {
+	var sendErr error
+	if purpose == shareEmailVerificationPurposeResetPassword {
+		sendErr = s.emailService.SendPasswordResetCode(email, code, s.verificationCodeTTLMinutes())
+	} else {
+		sendErr = s.emailService.SendVerificationCode(email, code, s.verificationCodeTTLMinutes())
+	}
+	if sendErr != nil {
 		_ = s.db.WithContext(ctx).
-			Where("email = ? AND purpose = ? AND consumed_at IS NULL", email, shareEmailVerificationPurposeRegister).
+			Where("email = ? AND purpose = ? AND consumed_at IS NULL", email, purpose).
 			Delete(&model.ShareEmailVerification{}).Error
-		return 0, err
+		return 0, sendErr
 	}
 
 	return int(ttl.Seconds()), nil

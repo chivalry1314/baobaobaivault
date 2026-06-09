@@ -5,9 +5,11 @@ const authText = {
   subtitle: "CardShare \u8d26\u53f7\u5165\u53e3",
   login: "\u767b\u5f55",
   register: "\u6ce8\u518c",
+  reset: "\u627e\u56de\u5bc6\u7801",
   email: "\u90ae\u7bb1",
   nickname: "\u6635\u79f0",
   password: "\u5bc6\u7801",
+  newPassword: "\u65b0\u5bc6\u7801",
   verificationCode: "\u9a8c\u8bc1\u7801",
   verificationSentPrefix: "\u9a8c\u8bc1\u7801\u5df2\u53d1\u9001\u81f3\uff1a",
   verificationExpiresPrefix: "\u6709\u6548\u671f\u7ea6 ",
@@ -19,12 +21,15 @@ const authText = {
   passwordPlaceholder: "\u8bf7\u8f93\u5165\u5bc6\u7801",
   processing: "\u5904\u7406\u4e2d...",
   sendCodeSubmit: "\u53d1\u9001\u9a8c\u8bc1\u7801",
+  sendResetCodeSubmit: "\u53d1\u9001\u627e\u56de\u7801",
   verifySubmit: "\u5b8c\u6210\u6ce8\u518c",
+  resetConfirmSubmit: "\u786e\u8ba4\u91cd\u7f6e",
   registerSubmit: "\u7acb\u5373\u6ce8\u518c",
   loginSubmit: "\u767b\u5f55",
   hidePassword: "\u9690\u85cf\u5bc6\u7801",
   showPassword: "\u663e\u793a\u5bc6\u7801",
   backToRegister: "\u8fd4\u56de\u4fee\u6539\u6ce8\u518c\u4fe1\u606f",
+  backToLogin: "\u8fd4\u56de\u767b\u5f55",
   resendCode: "\u91cd\u65b0\u53d1\u9001\u9a8c\u8bc1\u7801",
   resendPending: "\u53d1\u9001\u4e2d...",
   resendCooldownPrefix: "\u53ef\u5728 ",
@@ -37,7 +42,9 @@ const authText = {
     "\u5f53\u524d\u672a\u542f\u7528\u90ae\u7bb1\u9a8c\u8bc1\uff0c\u6ce8\u518c\u6210\u529f\u540e\u4f1a\u76f4\u63a5\u767b\u5f55\u3002",
   registerHint:
     "\u6ce8\u518c\u6210\u529f\u540e\u4f1a\u81ea\u52a8\u767b\u5f55\uff1b\u5982\u679c\u540e\u7aef\u542f\u7528\u4e86\u90ae\u7bb1\u9a8c\u8bc1\uff0c\u4f1a\u5148\u5b8c\u6210\u9a8c\u8bc1\u7801\u786e\u8ba4\u3002",
-  loginHint: "\u6ca1\u6709\u8d26\u53f7\u7684\u8bdd\uff0c\u5207\u6362\u5230\u201c\u6ce8\u518c\u201d\u5c31\u53ef\u4ee5\u521b\u5efa\u65b0\u8d26\u53f7\u3002",
+  loginHint: "\u6ca1\u6709\u8d26\u53f7\u7684\u8bdd\uff0c\u53ef\u4ee5\u70b9\u51fb\u201c\u6ce8\u518c\u201d\u521b\u5efa\u65b0\u8d26\u53f7\u3002",
+  resetHint: "\u8f93\u5165\u90ae\u7bb1\u540e\u53ef\u4ee5\u83b7\u53d6\u627e\u56de\u5bc6\u7801\u9a8c\u8bc1\u7801\u3002",
+  resetCodeHint: "\u8bf7\u8f93\u5165\u90ae\u7bb1\u6536\u5230\u7684 6 \u4f4d\u9a8c\u8bc1\u7801\u5e76\u8bbe\u7f6e\u65b0\u5bc6\u7801\u3002",
   backHome: "\u8fd4\u56de\u9996\u9875",
 } as const;
 
@@ -91,6 +98,7 @@ export function AuthFormCard(props: AuthFormCardProps) {
   const {
     mode,
     registerStep,
+    resetStep,
     emailVerificationEnabled,
     pending,
     resendPending,
@@ -98,6 +106,7 @@ export function AuthFormCard(props: AuthFormCardProps) {
     email,
     nickname,
     password,
+    newPassword,
     verificationCode,
     verificationEmail,
     verificationExpiresIn,
@@ -107,26 +116,35 @@ export function AuthFormCard(props: AuthFormCardProps) {
     onEmailChange,
     onNicknameChange,
     onPasswordChange,
+    onNewPasswordChange,
     onVerificationCodeChange,
     onTogglePassword,
-    onBackToRegister,
-    onResendVerificationCode,
-    onSubmit,
+  onBackToRegister,
+  onBackToLogin,
+  onResendVerificationCode,
+  onForgotPassword,
+  onSubmit,
   } = props;
 
   const isVerifyStep = mode === "register" && registerStep === "verify";
+  const isResetVerifyStep = mode === "reset" && resetStep === "verify";
   const showRegisterFields = mode === "register";
+  const showResetFields = mode === "reset";
   const usesEmailVerification = mode === "register" && emailVerificationEnabled;
-  const showVerificationField = usesEmailVerification;
+  const showVerificationField = usesEmailVerification || isResetVerifyStep;
   const submitLabel = pending
     ? authText.processing
     : isVerifyStep
       ? authText.verifySubmit
-      : usesEmailVerification
-        ? authText.sendCodeSubmit
-      : mode === "register"
-        ? authText.registerSubmit
-        : authText.loginSubmit;
+      : isResetVerifyStep
+        ? authText.resetConfirmSubmit
+        : mode === "reset"
+          ? authText.sendResetCodeSubmit
+          : usesEmailVerification
+            ? authText.sendCodeSubmit
+            : mode === "register"
+              ? authText.registerSubmit
+              : authText.loginSubmit;
 
   return (
     <section className="relative z-10 w-full max-w-md overflow-hidden rounded-[2rem] border-[4px] border-[var(--outline)] bg-white p-8 md:p-12">
@@ -140,31 +158,6 @@ export function AuthFormCard(props: AuthFormCardProps) {
           </div>
           <h1 className="text-4xl font-black tracking-tight text-[var(--foreground)]">Dreamy</h1>
           <p className="text-sm font-extrabold text-[var(--foreground)]/80">{authText.subtitle}</p>
-        </div>
-
-        <div className="mb-6 grid grid-cols-2 gap-2 rounded-2xl border-[3px] border-[var(--outline)] bg-[#f6f8fa] p-1.5">
-          <button
-            type="button"
-            onClick={() => onSwitchMode("login")}
-            className={`rounded-xl px-4 py-2 text-sm font-black transition ${
-              mode === "login"
-                ? "bg-[var(--button-primary)] text-[var(--foreground)]"
-                : "text-[var(--foreground)]/70 hover:text-[var(--foreground)]"
-            }`}
-          >
-            {authText.login}
-          </button>
-          <button
-            type="button"
-            onClick={() => onSwitchMode("register")}
-            className={`rounded-xl px-4 py-2 text-sm font-black transition ${
-              mode === "register"
-                ? "bg-[var(--button-primary)] text-[var(--foreground)]"
-                : "text-[var(--foreground)]/70 hover:text-[var(--foreground)]"
-            }`}
-          >
-            {authText.register}
-          </button>
         </div>
 
         {error ? (
@@ -198,35 +191,93 @@ export function AuthFormCard(props: AuthFormCardProps) {
             />
           ) : null}
 
-          <Field
-            label={authText.password}
-            placeholder={authText.passwordPlaceholder}
-            value={password}
-            onChange={onPasswordChange}
-            type={showPassword ? "text" : "password"}
-            autoComplete={mode === "register" ? "new-password" : "current-password"}
-            icon={<LockIcon className="h-5 w-5" />}
-            readOnly={isVerifyStep}
-            trailing={
+          {showResetFields ? (
+            isResetVerifyStep ? (
+              <Field
+                label={authText.newPassword}
+                placeholder={authText.passwordPlaceholder}
+                value={newPassword}
+                onChange={onNewPasswordChange}
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                icon={<LockIcon className="h-5 w-5" />}
+                readOnly={false}
+                trailing={
+                  <button
+                    type="button"
+                    onClick={onTogglePassword}
+                    className="text-[var(--text-muted)] transition hover:text-[var(--foreground)]"
+                    aria-label={showPassword ? authText.hidePassword : authText.showPassword}
+                  >
+                    {showPassword ? <EyeOpenIcon className="h-5 w-5" /> : <EyeClosedIcon className="h-5 w-5" />}
+                  </button>
+                }
+              />
+            ) : null
+          ) : null}
+
+          {!showResetFields ? (
+            <Field
+              label={authText.password}
+              placeholder={authText.passwordPlaceholder}
+              value={password}
+              onChange={onPasswordChange}
+              type={showPassword ? "text" : "password"}
+              autoComplete={mode === "register" ? "new-password" : "current-password"}
+              icon={<LockIcon className="h-5 w-5" />}
+              readOnly={isVerifyStep}
+              trailing={
+                <button
+                  type="button"
+                  onClick={onTogglePassword}
+                  className="text-[var(--text-muted)] transition hover:text-[var(--foreground)]"
+                  aria-label={showPassword ? authText.hidePassword : authText.showPassword}
+                >
+                  {showPassword ? (
+                    <EyeOpenIcon className="h-5 w-5" />
+                  ) : (
+                    <EyeClosedIcon className="h-5 w-5" />
+                  )}
+                </button>
+              }
+            />
+          ) : null}
+
+          {mode === "login" ? (
+            <div className="flex items-center justify-between gap-4">
               <button
                 type="button"
-                onClick={onTogglePassword}
-                className="text-[var(--text-muted)] transition hover:text-[var(--foreground)]"
-                aria-label={showPassword ? authText.hidePassword : authText.showPassword}
+                onClick={() => onSwitchMode("register")}
+                className="rounded-full px-1 py-0.5 text-2xl font-black tracking-tight text-[var(--foreground)] transition hover:underline"
               >
-                {showPassword ? (
-                  <EyeOpenIcon className="h-5 w-5" />
-                ) : (
-                  <EyeClosedIcon className="h-5 w-5" />
-                )}
+                {authText.register}
               </button>
-            }
-          />
+              {emailVerificationEnabled ? (
+                <button
+                  type="button"
+                  onClick={onForgotPassword}
+                  className="text-base font-semibold text-[var(--foreground)]/60 transition hover:text-[var(--foreground)] hover:underline"
+                >
+                  {authText.reset}
+                </button>
+              ) : (
+                <span className="text-sm font-semibold text-[var(--foreground)]/45">
+                  请联系管理员重置密码
+                </span>
+              )}
+            </div>
+          ) : null}
+
+          {mode === "reset" && !isResetVerifyStep ? (
+            <p className="rounded-2xl border-[3px] border-[var(--outline)] bg-[#f8f9fa] px-4 py-3 text-sm font-bold text-[var(--foreground)]/75">
+              {authText.resetHint}
+            </p>
+          ) : null}
 
           {showVerificationField ? (
             <>
               <div className="rounded-2xl border-[3px] border-[var(--outline)] bg-[#f8f9fa] px-4 py-3 text-sm font-bold text-[var(--foreground)]">
-                {isVerifyStep ? (
+                {isVerifyStep || isResetVerifyStep ? (
                   <>
                     <p>
                       {authText.verificationSentPrefix}
@@ -241,22 +292,26 @@ export function AuthFormCard(props: AuthFormCardProps) {
                     ) : null}
                   </>
                 ) : (
-                  <p className="text-[var(--foreground)]/75">{authText.verificationCodeReadyHint}</p>
+                  <p className="text-[var(--foreground)]/75">
+                    {mode === "reset" ? authText.resetCodeHint : authText.verificationCodeReadyHint}
+                  </p>
                 )}
               </div>
               <Field
                 label={authText.verificationCode}
                 placeholder={
-                  isVerifyStep ? authText.verificationPlaceholder : authText.verificationPlaceholderBeforeSend
+                  isVerifyStep || isResetVerifyStep
+                    ? authText.verificationPlaceholder
+                    : authText.verificationPlaceholderBeforeSend
                 }
                 value={verificationCode}
                 onChange={onVerificationCodeChange}
                 type="text"
                 autoComplete="one-time-code"
                 icon={<ShieldIcon className="h-5 w-5" />}
-                readOnly={!isVerifyStep}
+                readOnly={!(isVerifyStep || isResetVerifyStep)}
               />
-              {isVerifyStep ? (
+              {isVerifyStep || isResetVerifyStep ? (
                 <button
                   type="button"
                   onClick={onResendVerificationCode}
@@ -298,11 +353,22 @@ export function AuthFormCard(props: AuthFormCardProps) {
               ? emailVerificationEnabled
                 ? authText.verificationEnabledHint
                 : authText.verificationDisabledHint
+              : mode === "reset"
+                ? authText.resetHint
               : authText.loginHint}
           </p>
         )}
 
-        <div className="mt-6 flex items-center justify-center gap-4 text-sm font-bold text-[var(--foreground)]/70">
+        <div className="mt-6 flex items-center justify-center gap-6 text-sm font-bold text-[var(--foreground)]/70">
+          {mode !== "login" ? (
+            <button
+              type="button"
+              onClick={onBackToLogin}
+              className="transition hover:text-[var(--foreground)] hover:underline"
+            >
+              {authText.backToLogin}
+            </button>
+          ) : null}
           <a href="/" className="transition hover:text-[var(--foreground)] hover:underline">
             {authText.backHome}
           </a>

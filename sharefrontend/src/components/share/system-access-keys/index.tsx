@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AuthRedirect } from "@/components/share/auth-redirect";
+import { SystemBackLink } from "@/components/share/system-back-link";
 import { PaginationControls } from "@/components/share/pagination-controls/index";
 import { useShareSession } from "@/components/share/session-provider";
 import { SystemWorkspace } from "@/components/share/system-shell/index";
@@ -246,6 +247,8 @@ export function ShareSystemAccessKeysCreatePage() {
       {actionError ? <ErrorNotice message={actionError} /> : null}
       {successMessage ? <SuccessNotice message={successMessage} /> : null}
 
+      <SystemBackLink href="/system/access-keys" label="返回列表" />
+
       {lastCreated ? (
         <section className="dream-panel max-w-3xl px-6 py-6 sm:px-8">
           <h2 className="text-xl font-black text-[var(--foreground)]">新创建的密钥</h2>
@@ -258,11 +261,8 @@ export function ShareSystemAccessKeysCreatePage() {
       ) : null}
 
       <section className="dream-panel max-w-3xl px-6 py-6 sm:px-8">
-        <div className="flex items-center justify-between gap-4 border-b border-[rgba(220,173,187,0.35)] pb-4">
+        <div className="border-b border-[rgba(220,173,187,0.35)] pb-4">
           <h2 className="text-xl font-black text-[var(--foreground)]">创建表单</h2>
-          <Link href="/system/access-keys" className="btn-subtle inline-flex rounded-full px-4 py-2 text-sm font-black">
-            返回列表
-          </Link>
         </div>
 
         <form className="mt-6 space-y-4" onSubmit={handleCreate}>
@@ -286,9 +286,6 @@ export function ShareSystemAccessKeysCreatePage() {
             >
               {saving ? "创建中..." : "创建访问密钥"}
             </button>
-            <Link href="/system/access-keys" className="btn-subtle inline-flex rounded-full px-6 py-3 text-sm font-black">
-              返回列表
-            </Link>
           </div>
         </form>
       </section>
