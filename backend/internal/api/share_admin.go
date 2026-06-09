@@ -103,7 +103,11 @@ func (h *Handler) shareAdminUsers(c *gin.Context) {
 		return
 	}
 
-	users, err := h.shareService.ListUsersForRoleManage(c.Request.Context(), user.ID)
+	users, _, err := h.shareService.ListUsersForRoleManage(c.Request.Context(), service.ShareListUsersForRoleManageInput{
+		OperatorID: user.ID,
+		Page:       1,
+		PageSize:   1000,
+	})
 	if err != nil {
 		status := http.StatusBadRequest
 		switch {
@@ -217,6 +221,7 @@ func (h *Handler) shareAdminUpdateUserRole(c *gin.Context) {
 		c.JSON(status, gin.H{"error": err.Error()})
 		return
 	}
+	updated.IsConfiguredSuperAdmin = h.isConfiguredShareSuperAdmin(updated)
 	c.JSON(http.StatusOK, gin.H{"user": updated})
 }
 

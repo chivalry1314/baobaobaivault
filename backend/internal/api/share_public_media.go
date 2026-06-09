@@ -136,7 +136,7 @@ func (h *Handler) shareCardAssetPreview(c *gin.Context) {
 		return
 	}
 
-	file, stat, err := h.shareService.OpenCardFile(card, asset)
+	file, size, err := h.shareService.OpenCardFile(c.Request.Context(), card, asset)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "file not found"})
 		return
@@ -144,10 +144,13 @@ func (h *Handler) shareCardAssetPreview(c *gin.Context) {
 	defer file.Close()
 
 	c.Header("Content-Type", assetMimeType)
-	c.Header("Content-Length", strconv.FormatInt(stat.Size(), 10))
+	c.Header("Content-Length", strconv.FormatInt(size, 10))
 	c.Header("Content-Disposition", inlineDisposition(asset.OriginalFileName))
 	c.Header("Cache-Control", sharePreviewCacheControl(card))
-	http.ServeContent(c.Writer, c.Request, asset.OriginalFileName, stat.ModTime(), file)
+	c.DataFromReader(http.StatusOK, size, assetMimeType, file, map[string]string{
+		"Content-Disposition": inlineDisposition(asset.OriginalFileName),
+		"Cache-Control":       sharePreviewCacheControl(card),
+	})
 }
 
 func (h *Handler) shareCardCoverPreview(c *gin.Context) {
@@ -171,7 +174,7 @@ func (h *Handler) shareCardCoverPreview(c *gin.Context) {
 		return
 	}
 
-	file, stat, err := h.shareService.OpenCardCoverFile(card)
+	file, size, err := h.shareService.OpenCardCoverFile(c.Request.Context(), card)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "file not found"})
 		return
@@ -179,10 +182,13 @@ func (h *Handler) shareCardCoverPreview(c *gin.Context) {
 	defer file.Close()
 
 	c.Header("Content-Type", mimeType)
-	c.Header("Content-Length", strconv.FormatInt(stat.Size(), 10))
+	c.Header("Content-Length", strconv.FormatInt(size, 10))
 	c.Header("Content-Disposition", inlineDisposition(card.OriginalFileName))
 	c.Header("Cache-Control", sharePreviewCacheControl(card))
-	http.ServeContent(c.Writer, c.Request, card.OriginalFileName, stat.ModTime(), file)
+	c.DataFromReader(http.StatusOK, size, mimeType, file, map[string]string{
+		"Content-Disposition": inlineDisposition(card.OriginalFileName),
+		"Cache-Control":       sharePreviewCacheControl(card),
+	})
 }
 
 func (h *Handler) shareCardCoverDownload(c *gin.Context) {
@@ -202,7 +208,7 @@ func (h *Handler) shareCardCoverDownload(c *gin.Context) {
 
 	mimeType := resolveStoredMimeType(card.MimeType, card.OriginalFileName)
 
-	file, stat, err := h.shareService.OpenCardCoverFile(card)
+	file, size, err := h.shareService.OpenCardCoverFile(c.Request.Context(), card)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "file not found"})
 		return
@@ -210,10 +216,13 @@ func (h *Handler) shareCardCoverDownload(c *gin.Context) {
 	defer file.Close()
 
 	c.Header("Content-Type", mimeType)
-	c.Header("Content-Length", strconv.FormatInt(stat.Size(), 10))
+	c.Header("Content-Length", strconv.FormatInt(size, 10))
 	c.Header("Content-Disposition", toAttachmentDisposition(card.OriginalFileName))
 	c.Header("Cache-Control", "no-store")
-	http.ServeContent(c.Writer, c.Request, card.OriginalFileName, stat.ModTime(), file)
+	c.DataFromReader(http.StatusOK, size, mimeType, file, map[string]string{
+		"Content-Disposition": toAttachmentDisposition(card.OriginalFileName),
+		"Cache-Control":       "no-store",
+	})
 }
 
 func (h *Handler) shareCardAssetDownload(c *gin.Context) {
@@ -241,7 +250,7 @@ func (h *Handler) shareCardAssetDownload(c *gin.Context) {
 		return
 	}
 
-	file, stat, err := h.shareService.OpenCardFile(card, asset)
+	file, size, err := h.shareService.OpenCardFile(c.Request.Context(), card, asset)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "file not found"})
 		return
@@ -258,10 +267,13 @@ func (h *Handler) shareCardAssetDownload(c *gin.Context) {
 	}
 
 	c.Header("Content-Type", asset.MimeType)
-	c.Header("Content-Length", strconv.FormatInt(stat.Size(), 10))
+	c.Header("Content-Length", strconv.FormatInt(size, 10))
 	c.Header("Content-Disposition", toAttachmentDisposition(asset.OriginalFileName))
 	c.Header("Cache-Control", "no-store")
-	http.ServeContent(c.Writer, c.Request, asset.OriginalFileName, stat.ModTime(), file)
+	c.DataFromReader(http.StatusOK, size, asset.MimeType, file, map[string]string{
+		"Content-Disposition": toAttachmentDisposition(asset.OriginalFileName),
+		"Cache-Control":       "no-store",
+	})
 }
 
 func toAttachmentDisposition(fileName string) string {

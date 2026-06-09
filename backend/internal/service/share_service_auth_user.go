@@ -362,17 +362,66 @@ func (s *ShareService) GetSessionUser(ctx context.Context, userID string) (*Shar
 	return &sessionUser, nil
 }
 
-func (s *ShareService) ListUsersForRoleManage(ctx context.Context, operatorID string) ([]ShareUserRoleManageItem, error) {
-	if err := s.ensureShareManagerRole(ctx, operatorID); err != nil {
-		return nil, err
+func (s *ShareService) ListUsersForRoleManage(ctx context.Context, input ShareListUsersForRoleManageInput) ([]ShareUserRoleManageItem, int64, error) {
+	if err := s.ensureShareManagerRole(ctx, input.OperatorID); err != nil {
+		return nil, 0, err
 	}
 
-	rows := make([]model.ShareExternalUser, 0, 128)
-	if err := s.db.WithContext(ctx).
-		Where("status = ?", model.ShareExternalUserStatusActive).
+	page := input.Page
+	if page <= 0 {
+		page = 1
+	}
+	pageSize := input.PageSize
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+
+	keyword := strings.ToLower(strings.TrimSpace(input.Keyword))
+	rawRole := strings.ToLower(strings.TrimSpace(input.Role))
+	role := ""
+	if rawRole != "" {
+		if !isValidShareExternalUserRole(rawRole) {
+			return nil, 0, ErrShareInvalidUserRole
+		}
+		role = normalizeShareExternalUserRole(rawRole)
+	}
+
+	query := s.db.WithContext(ctx).
+		Model(&model.ShareExternalUser{}).
+		Where("status = ?", model.ShareExternalUserStatusActive)
+
+	if role != "" {
+		query = query.Where("role = ?", role)
+	}
+	if keyword != "" {
+		like := "%" + keyword + "%"
+		query = query.Where(
+			"lower(email) LIKE ? OR lower(username) LIKE ? OR lower(nickname) LIKE ?",
+			like,
+			like,
+			like,
+		)
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	if total == 0 {
+		return []ShareUserRoleManageItem{}, 0, nil
+	}
+
+	offset := (page - 1) * pageSize
+	rows := make([]model.ShareExternalUser, 0, pageSize)
+	if err := query.
 		Order("created_at DESC").
+		Offset(offset).
+		Limit(pageSize).
 		Find(&rows).Error; err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	items := make([]ShareUserRoleManageItem, 0, len(rows))
@@ -387,7 +436,7 @@ func (s *ShareService) ListUsersForRoleManage(ctx context.Context, operatorID st
 			CreatedAt: row.CreatedAt,
 		})
 	}
-	return items, nil
+	return items, total, nil
 }
 
 func (s *ShareService) UpdateUserRole(ctx context.Context, input ShareUpdateUserRoleInput) (*ShareSessionUser, error) {

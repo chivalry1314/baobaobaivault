@@ -31,6 +31,9 @@ const (
 
 	SharePlatformCardAccessModeFree = "free"
 	SharePlatformCardAccessModePaid = "paid"
+
+	ShareMediaStorageModeLocal         = "local"
+	ShareMediaStorageModeObjectStorage = "object_storage"
 )
 
 // ShareExternalUser is the platform-level account for sharefrontend users.
@@ -97,6 +100,10 @@ type SharePlatformCard struct {
 	AccessCodeExpiresAt   *time.Time     `json:"access_code_expires_at,omitempty"`
 	AccessCodeUsageLimit  int            `gorm:"not null;default:0" json:"access_code_usage_limit"`
 	AccessCodeUsageCount  int            `gorm:"not null;default:0" json:"access_code_usage_count"`
+	StorageBackend        string         `gorm:"type:varchar(32);not null;default:'local'" json:"storage_backend"`
+	StorageNamespaceID    *string        `gorm:"type:uuid;index" json:"storage_namespace_id,omitempty"`
+	StorageObjectKey      string         `gorm:"type:varchar(1024);default:''" json:"storage_object_key"`
+	StorageVersionID      string         `gorm:"type:varchar(255);default:''" json:"storage_version_id"`
 	StoredFileName        string         `gorm:"type:varchar(255);not null" json:"stored_file_name"`
 	OriginalFileName      string         `gorm:"type:varchar(255);not null" json:"original_file_name"`
 	MimeType              string         `gorm:"type:varchar(200);not null" json:"mime_type"`
@@ -119,6 +126,10 @@ type SharePlatformCardAsset struct {
 	ID               string         `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
 	CardID           string         `gorm:"type:uuid;not null;uniqueIndex:idx_share_platform_card_assets_card_slot,priority:1;index" json:"card_id"`
 	Slot             string         `gorm:"type:varchar(40);not null;uniqueIndex:idx_share_platform_card_assets_card_slot,priority:2;index" json:"slot"`
+	StorageBackend   string         `gorm:"type:varchar(32);not null;default:'local'" json:"storage_backend"`
+	StorageNamespaceID *string      `gorm:"type:uuid;index" json:"storage_namespace_id,omitempty"`
+	StorageObjectKey string         `gorm:"type:varchar(1024);default:''" json:"storage_object_key"`
+	StorageVersionID string         `gorm:"type:varchar(255);default:''" json:"storage_version_id"`
 	StoredFileName   string         `gorm:"type:varchar(255);not null" json:"stored_file_name"`
 	OriginalFileName string         `gorm:"type:varchar(255);not null" json:"original_file_name"`
 	MimeType         string         `gorm:"type:varchar(200);not null" json:"mime_type"`
@@ -177,4 +188,18 @@ type ShareAuthSettings struct {
 
 func (ShareAuthSettings) TableName() string {
 	return "share_auth_settings"
+}
+
+type ShareMediaStorageSettings struct {
+	Singleton            string    `gorm:"type:varchar(32);primaryKey" json:"singleton"`
+	StorageMode          string    `gorm:"type:varchar(32);not null;default:'local'" json:"storage_mode"`
+	LocalFallbackEnabled bool      `gorm:"not null;default:true" json:"local_fallback_enabled"`
+	CoverNamespaceID     *string   `gorm:"type:uuid" json:"cover_namespace_id,omitempty"`
+	AssetNamespaceID     *string   `gorm:"type:uuid" json:"asset_namespace_id,omitempty"`
+	CreatedAt            time.Time `json:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at"`
+}
+
+func (ShareMediaStorageSettings) TableName() string {
+	return "share_media_storage_settings"
 }

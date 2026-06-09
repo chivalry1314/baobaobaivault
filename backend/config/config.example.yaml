@@ -14,20 +14,11 @@ server:
   read_timeout: 30
   write_timeout: 30
   mode: debug # debug, release, test
-  allow_public_bootstrap: false
-  auto_bootstrap_admin: false
-  admin_email: ""
-  admin_password: ""
-  admin_username: "admin"
-  admin_nickname: "Administrator"
+  admin_email: "" # recommended: set to the sharefrontend super admin email
 
 cors:
   enabled: true
   allow_origins:
-    - "http://localhost:5173"
-    - "http://127.0.0.1:5173"
-    - "http://localhost:4173"
-    - "http://127.0.0.1:4173"
     - "http://localhost:3000"
     - "http://127.0.0.1:3000"
   allow_methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
@@ -60,25 +51,13 @@ jwt:
 
 storage:
   default_provider: "local" # local, s3, minio
-  temp_dir: "/tmp/baobaobaivault"
+  temp_dir: "/tmp/baobaobaivault" # also used as temporary buffering directory before share media is uploaded to object storage
   max_file_size: 10737418240 # 10GB in bytes
 
-# Baidu netdisk connector (optional)
-baidu:
-  enabled: false
-  api_key: "" # OAuth client_id
-  secret_key: "" # OAuth client_secret
-  redirect_uri: "http://127.0.0.1:8080/api/v1/connectors/baidu/callback"
-  scope: "basic,netdisk"
-  auth_url: "https://openapi.baidu.com/oauth/2.0/authorize"
-  auth_extra_params: {}
-  token_url: "https://openapi.baidu.com/oauth/2.0/token"
-  pan_api_base_url: "https://pan.baidu.com/rest/2.0"
-  pan_upload_url: "https://d.pcs.baidu.com/rest/2.0/pcs/superfile2"
-  default_path_prefix: "/apps/baobaobaiphone/backups"
-  state_secret: "" # random string, used for OAuth state signing
-  token_encrypt_secret: "" # random string, used to encrypt stored tokens
-  http_timeout_seconds: 30
+# Share media storage mode note:
+# - The switch between local and object storage for share card covers/attachments
+#   is configured in `sharefrontend` system management, not here in YAML.
+# - System page: `/system/media-storage`
 
 webpush:
   enabled: false

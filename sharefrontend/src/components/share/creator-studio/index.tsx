@@ -11,13 +11,10 @@ import {
   Avatar,
   CreatorCard,
   CreatorStudioIcons,
-  EmailVerificationSettingsPanel,
   EmptyState,
   HistoryItem,
-  InfoPanel,
   SidebarButton,
   TabButton,
-  UserManagementPanel,
 } from "@/components/share/creator-studio/sections";
 import { PaginationControls } from "@/components/share/pagination-controls/index";
 import { ShareProfileSettings } from "@/components/share/profile-settings";
@@ -30,7 +27,6 @@ const {
   PlusIcon,
   ReviewIcon,
   SettingsIcon,
-  UsersIcon,
 } = CreatorStudioIcons;
 
 export function CreatorStudio() {
@@ -48,43 +44,19 @@ export function CreatorStudio() {
     setCardsPage,
     historyPage,
     setHistoryPage,
-    userPage,
-    setUserPage,
     cards,
     displayName,
     accountLabel,
-    emailVerificationEnabled,
-    authSettings,
-    authSettingsDraft,
-    authSettingsPending,
-    authSettingsMessage,
-    emailHealth,
-    smtpTestPending,
-    smtpTestMessage,
-    smtpTestTargetEmail,
-    setSMTPTestTargetEmail,
-    updateAuthSettingsDraft,
-    roleUsers,
-    pagedRoleUsers,
-    roleLoadPending,
-    roleLoadError,
-    roleUpdatePendingByUser,
-    roleDeletePendingByUser,
     heroStats,
     historyItems,
     cardsTotalPages,
     historyTotalPages,
-    userTotalPages,
     pagedCards,
     pagedHistoryItems,
     heroSurfaceStyle,
     handleProfileSaved,
     openCreatePanel,
     handleReload,
-    handleSaveAuthSettings,
-    handleSMTPTest,
-    handleUpdateRole,
-    handleDeleteUser,
     handleLogout,
   } = useCreatorStudio();
 
@@ -154,24 +126,6 @@ export function CreatorStudio() {
                     icon={<ReviewIcon className="h-5 w-5" />}
                   >
                     审核中心
-                  </SidebarButton>
-                ) : null}
-                {isManager ? (
-                  <SidebarButton
-                    active={activeSection === "system_settings"}
-                    onClick={() => setActiveSection("system_settings")}
-                    icon={<KeyIcon className="h-5 w-5" />}
-                  >
-                    系统设置
-                  </SidebarButton>
-                ) : null}
-                {isManager ? (
-                  <SidebarButton
-                    active={activeSection === "user_management"}
-                    onClick={() => setActiveSection("user_management")}
-                    icon={<UsersIcon className="h-5 w-5" />}
-                  >
-                    用户管理
                   </SidebarButton>
                 ) : null}
                 <SidebarButton
@@ -299,7 +253,7 @@ export function CreatorStudio() {
                   <button
                     type="button"
                     onClick={openCreatePanel}
-                    className="btn-primary inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-black"
+                    className="btn-primary inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-black"
                   >
                     <PlusIcon className="h-4 w-4" />
                     新建卡片
@@ -308,7 +262,7 @@ export function CreatorStudio() {
 
                 <div className="pt-6">
                   {activeTab !== "collections" ? (
-                    <div className="mb-6 flex flex-col gap-3 rounded-[24px] border-[3px] border-[var(--outline-variant)] bg-[rgba(248,252,255,0.92)] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="mb-5 flex flex-col gap-3 rounded-[22px] border-[3px] border-[var(--outline-variant)] bg-[rgba(248,252,255,0.92)] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <div className="text-sm font-black text-[var(--foreground)]">
                           访问方式筛选
@@ -327,7 +281,7 @@ export function CreatorStudio() {
                   {activeTab === "cards" ? (
                     cards.length > 0 ? (
                       <div className="space-y-5">
-                        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                        <div className="grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                           {pagedCards.map((item) => (
                             <CreatorCard key={item.card.id} item={item} />
                           ))}
@@ -391,55 +345,6 @@ export function CreatorStudio() {
                 </div>
               </section>
             </>
-          ) : activeSection === "system_settings" ? (
-            <InfoPanel
-              title="系统设置"
-              description="这里放的是站点级配置状态，不属于某个用户的个人资料。当前提供邮箱验证与发信状态查看，以及 SMTP 测试能力。"
-            >
-              <EmailVerificationSettingsPanel
-                emailVerificationEnabled={emailVerificationEnabled}
-                authSettings={authSettings}
-                authSettingsDraft={authSettingsDraft}
-                authSettingsPending={authSettingsPending}
-                authSettingsMessage={authSettingsMessage}
-                emailHealth={emailHealth}
-                smtpTestPending={smtpTestPending}
-                smtpTestMessage={smtpTestMessage}
-                smtpTestTargetEmail={smtpTestTargetEmail}
-                setSMTPTestTargetEmail={setSMTPTestTargetEmail}
-                onAuthSettingsChange={updateAuthSettingsDraft}
-                onSaveAuthSettings={() => void handleSaveAuthSettings()}
-                onSMTPTest={() => void handleSMTPTest()}
-              />
-            </InfoPanel>
-          ) : activeSection === "user_management" ? (
-            <InfoPanel
-              title="用户管理"
-              description="这里用于管理站点用户角色。管理员可以调整浏览者、创作者和管理员权限。"
-            >
-              <UserManagementPanel
-                currentUserId={currentUser.id}
-                roleUsers={pagedRoleUsers}
-                totalUsers={roleUsers.length}
-                roleLoadPending={roleLoadPending}
-                roleLoadError={roleLoadError}
-                roleUpdatePendingByUser={roleUpdatePendingByUser}
-                roleDeletePendingByUser={roleDeletePendingByUser}
-                onUpdateRole={handleUpdateRole}
-                onDeleteUser={handleDeleteUser}
-                paginationSlot={
-                  <PaginationControls
-                    page={userPage}
-                    totalPages={userTotalPages}
-                    onPageChange={(nextPage) =>
-                      setUserPage(
-                        Math.min(Math.max(nextPage, 1), userTotalPages),
-                      )
-                    }
-                  />
-                }
-              />
-            </InfoPanel>
           ) : (
             <ShareProfileSettings
               user={currentUser}

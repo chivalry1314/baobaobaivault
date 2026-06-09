@@ -17,10 +17,6 @@ import {
 import type {
   DashboardCard,
   ExternalSessionUser,
-  ShareAuthSettings,
-  ShareEmailHealth,
-  ShareUserRole,
-  ShareUserRoleManageItem,
 } from "@/lib/shared";
 
 export function Avatar({
@@ -151,464 +147,99 @@ export function EmptyState({
   );
 }
 
-export function InfoPanel({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="dream-panel px-6 py-6 sm:px-8 sm:py-8">
-      <div className="border-b border-[rgba(220,173,187,0.35)] pb-5">
-        <h1 className="text-[1.65rem] font-black text-[var(--foreground)]">
-          {title}
-        </h1>
-        <p className="mt-2 text-sm leading-7 text-[var(--text-muted)]">
-          {description}
-        </p>
-      </div>
-      <div className="pt-6">{children}</div>
-    </section>
-  );
-}
-
-export function EmailVerificationSettingsPanel({
-  emailVerificationEnabled,
-  authSettings,
-  authSettingsDraft,
-  authSettingsPending,
-  authSettingsMessage,
-  emailHealth,
-  smtpTestPending,
-  smtpTestMessage,
-  smtpTestTargetEmail,
-  setSMTPTestTargetEmail,
-  onAuthSettingsChange,
-  onSaveAuthSettings,
-  onSMTPTest,
-}: {
-  emailVerificationEnabled: boolean;
-  authSettings: ShareAuthSettings | null;
-  authSettingsDraft: ShareAuthSettings | null;
-  authSettingsPending: boolean;
-  authSettingsMessage: string;
-  emailHealth: ShareEmailHealth | null;
-  smtpTestPending: boolean;
-  smtpTestMessage: string;
-  smtpTestTargetEmail: string;
-  setSMTPTestTargetEmail: (value: string) => void;
-  onAuthSettingsChange: (patch: Partial<ShareAuthSettings>) => void;
-  onSaveAuthSettings: () => void;
-  onSMTPTest: () => void;
-}) {
-  const canEditAuthSettings = Boolean(authSettings?.canUpdate && authSettingsDraft);
-
-  return (
-    <div className="dream-panel-soft overflow-hidden">
-      <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <div className="flex items-center gap-3">
-            <span
-              className={`inline-block h-3 w-3 rounded-full ${
-                emailVerificationEnabled ? "bg-[#0f9d77]" : "bg-[#f0a33e]"
-              }`}
-            />
-            <p className="text-[1.1rem] font-black text-[var(--foreground)]">
-              邮箱验证状态
-            </p>
-          </div>
-          <p className="mt-2 text-sm leading-7 text-[var(--text-muted)]">
-            {emailVerificationEnabled
-              ? "当前已开启邮箱验证码注册，新用户需要先完成邮箱验证后才能创建账号。"
-              : "当前未开启邮箱验证码注册，新用户注册成功后会直接创建账号并登录。"}
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={onSMTPTest}
-          disabled={smtpTestPending}
-          className="btn-subtle self-end rounded-full px-5 py-2.5 text-sm font-black text-[var(--foreground)]/76 disabled:cursor-not-allowed disabled:opacity-60 sm:self-auto"
-        >
-          {smtpTestPending ? "发送中..." : "发送 SMTP 测试邮件"}
-        </button>
-      </div>
-
-      <div className="dream-divider border-t border-dashed" />
-
-      <div className="grid gap-4 px-5 py-5 md:grid-cols-2">
-        <label className="block">
-          <span className="text-sm font-black text-[var(--foreground)]">
-            注册必须邮箱激活
-          </span>
-          <select
-            value={authSettingsDraft?.emailVerificationEnabled ? "enabled" : "disabled"}
-            onChange={(event) =>
-              onAuthSettingsChange({
-                emailVerificationEnabled: event.target.value === "enabled",
-              })
-            }
-            disabled={!canEditAuthSettings || authSettingsPending}
-            className="dream-input mt-3 w-full px-4 py-3 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <option value="enabled">开启</option>
-            <option value="disabled">关闭</option>
-          </select>
-        </label>
-
-        <label className="block">
-          <span className="text-sm font-black text-[var(--foreground)]">
-            验证码有效期（秒）
-          </span>
-          <input
-            type="number"
-            min={300}
-            max={1800}
-            step={30}
-            value={authSettingsDraft?.verificationCodeTTLSeconds ?? 600}
-            onChange={(event) =>
-              onAuthSettingsChange({
-                verificationCodeTTLSeconds: Number(event.target.value) || 0,
-              })
-            }
-            disabled={!canEditAuthSettings || authSettingsPending}
-            className="dream-input mt-3 w-full px-4 py-3 disabled:cursor-not-allowed disabled:opacity-60"
-          />
-        </label>
-
-        <label className="block">
-          <span className="text-sm font-black text-[var(--foreground)]">
-            重发间隔（秒）
-          </span>
-          <input
-            type="number"
-            min={30}
-            max={300}
-            step={5}
-            value={authSettingsDraft?.resendIntervalSeconds ?? 60}
-            onChange={(event) =>
-              onAuthSettingsChange({
-                resendIntervalSeconds: Number(event.target.value) || 0,
-              })
-            }
-            disabled={!canEditAuthSettings || authSettingsPending}
-            className="dream-input mt-3 w-full px-4 py-3 disabled:cursor-not-allowed disabled:opacity-60"
-          />
-        </label>
-
-        <label className="block">
-          <span className="text-sm font-black text-[var(--foreground)]">
-            最大验证次数
-          </span>
-          <input
-            type="number"
-            min={3}
-            max={10}
-            step={1}
-            value={authSettingsDraft?.maxVerifyAttempts ?? 5}
-            onChange={(event) =>
-              onAuthSettingsChange({
-                maxVerifyAttempts: Number(event.target.value) || 0,
-              })
-            }
-            disabled={!canEditAuthSettings || authSettingsPending}
-            className="dream-input mt-3 w-full px-4 py-3 disabled:cursor-not-allowed disabled:opacity-60"
-          />
-        </label>
-      </div>
-
-      <div className="px-5 pb-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs font-bold leading-6 text-[var(--text-muted)]">
-            仅系统初始化超级管理员可修改。建议：有效期 300-1800 秒，重发间隔 30-300 秒，且必须小于有效期。
-          </p>
-          <button
-            type="button"
-            onClick={onSaveAuthSettings}
-            disabled={!canEditAuthSettings || authSettingsPending}
-            className="btn-primary rounded-full px-5 py-2.5 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {authSettingsPending ? "保存中..." : "保存邮箱注册策略"}
-          </button>
-        </div>
-        {authSettingsMessage ? (
-          <p className="mt-3 text-sm font-bold text-[var(--foreground)]/72">
-            {authSettingsMessage}
-          </p>
-        ) : null}
-      </div>
-
-      <div className="dream-divider border-t border-dashed" />
-
-      <div className="px-5 py-5">
-        <label className="block">
-          <span className="text-sm font-black text-[var(--foreground)]">
-            测试收件邮箱
-          </span>
-          <input
-            type="email"
-            value={smtpTestTargetEmail}
-            onChange={(event) => setSMTPTestTargetEmail(event.target.value)}
-            className="dream-input mt-3 w-full px-4 py-3"
-            placeholder="请输入要接收测试邮件的邮箱"
-          />
-        </label>
-      </div>
-
-      <div className="dream-divider border-t border-dashed" />
-
-      <div className="grid gap-3 px-5 py-5 sm:grid-cols-3">
-        <MetricCard
-          label="SMTP 服务"
-          value={emailHealth?.enabled ? "已启用" : "未启用"}
-        />
-        <MetricCard
-          label="发件地址"
-          value={emailHealth?.fromAddress || "未配置"}
-          breakAll
-        />
-        <MetricCard
-          label="SMTP 主机"
-          value={`${emailHealth?.smtpHost || "未配置"}${
-            emailHealth && emailHealth.smtpPort > 0
-              ? `:${emailHealth.smtpPort}`
-              : ""
-          }`}
-          breakAll
-        />
-      </div>
-
-      {smtpTestMessage ? (
-        <>
-          <div className="dream-divider border-t border-dashed" />
-          <div className="px-5 py-4 text-sm font-bold text-[var(--foreground)]/70">
-            {smtpTestMessage}
-          </div>
-        </>
-      ) : null}
-    </div>
-  );
-}
-
-export function UserManagementPanel({
-  currentUserId,
-  roleUsers,
-  totalUsers,
-  roleLoadPending,
-  roleLoadError,
-  roleUpdatePendingByUser,
-  roleDeletePendingByUser,
-  onUpdateRole,
-  onDeleteUser,
-  paginationSlot,
-}: {
-  currentUserId: string;
-  roleUsers: ShareUserRoleManageItem[];
-  totalUsers: number;
-  roleLoadPending: boolean;
-  roleLoadError: string;
-  roleUpdatePendingByUser: Record<string, boolean>;
-  roleDeletePendingByUser: Record<string, boolean>;
-  onUpdateRole: (
-    targetUser: ShareUserRoleManageItem,
-    nextRole: ShareUserRole,
-  ) => Promise<void>;
-  onDeleteUser: (targetUser: ShareUserRoleManageItem) => Promise<void>;
-  paginationSlot?: ReactNode;
-}) {
-  return (
-    <div className="dream-panel-soft overflow-hidden">
-      {roleLoadError ? (
-        <p className="border-b border-dashed border-[#f3c8ad] bg-[#fff4ec] px-5 py-3 text-sm text-[#9a3412]">
-          {roleLoadError}
-        </p>
-      ) : null}
-
-      {roleLoadPending ? (
-        <p className="px-5 py-5 text-sm font-bold text-[var(--text-muted)]">
-          正在加载用户列表...
-        </p>
-      ) : null}
-
-      {!roleLoadPending && totalUsers === 0 ? (
-        <p className="px-5 py-5 text-sm font-bold text-[var(--text-muted)]">
-          暂无可管理用户
-        </p>
-      ) : null}
-
-      {!roleLoadPending && totalUsers > 0 ? (
-        <>
-          <div className="divide-y divide-dashed divide-[var(--outline-variant)]/65">
-            {roleUsers.map((item) => {
-              const displayName =
-                item.nickname.trim() || item.username.trim() || item.email;
-              const pending = Boolean(roleUpdatePendingByUser[item.id]);
-              const deletePending = Boolean(roleDeletePendingByUser[item.id]);
-              const isSelf = item.id === currentUserId;
-
-              return (
-                <div
-                  key={item.id}
-                  className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-[1.05rem] font-black text-[var(--foreground)]">
-                      {displayName}
-                      {isSelf ? "（我）" : ""}
-                    </p>
-                    <p className="mt-1 truncate text-xs text-[var(--text-muted)]">
-                      {item.email}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <UserRoleChip
-                      active={item.role === "viewer"}
-                      disabled={pending || deletePending || isSelf}
-                      onClick={() => void onUpdateRole(item, "viewer")}
-                    >
-                      浏览者
-                    </UserRoleChip>
-                    <UserRoleChip
-                      active={item.role === "creator"}
-                      disabled={pending || deletePending || isSelf}
-                      onClick={() => void onUpdateRole(item, "creator")}
-                    >
-                      创作者
-                    </UserRoleChip>
-                    <UserRoleChip
-                      active={item.role === "manager"}
-                      disabled={pending || deletePending}
-                      onClick={() => void onUpdateRole(item, "manager")}
-                    >
-                      管理员
-                    </UserRoleChip>
-                    {!isSelf ? (
-                      <button
-                        type="button"
-                        disabled={pending || deletePending}
-                        onClick={() => void onDeleteUser(item)}
-                        className="rounded-full border border-[#ef9a9a] bg-[#fff2f1] px-3.5 py-2 text-xs font-black text-[#b42318] transition hover:bg-[#ffe5e3] disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {deletePending ? "注销中..." : "注销用户"}
-                      </button>
-                    ) : null}
-                    {isSelf ? (
-                      <span className="text-xs font-bold text-[var(--text-muted)]">
-                        本人不可降为创作者或浏览者
-                      </span>
-                    ) : null}
-                    {pending ? (
-                      <span className="text-xs font-bold text-[var(--text-muted)]">
-                        更新中...
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {paginationSlot ? (
-            <div className="border-t border-dashed border-[var(--outline-variant)]/65 px-5 py-4">
-              {paginationSlot}
-            </div>
-          ) : null}
-        </>
-      ) : null}
-    </div>
-  );
-}
-
 export function CreatorCard({ item }: { item: DashboardCard }) {
   const rank = getCardRank(item);
   const editHref = `/creator/cards/${encodeURIComponent(item.card.id)}/edit`;
   const accessCodeHref = `/creator/cards/${encodeURIComponent(item.card.id)}/access-code`;
   const accessCode = item.accessCode?.trim() ?? "";
   const hasInlineAccessCode = accessCode.length > 0;
+  const accessCodeValue = hasInlineAccessCode
+    ? accessCode
+    : item.hasAccessCode
+      ? "已配置"
+      : "未配置";
 
   return (
-    <article className="dream-panel p-4">
-      <Link
-        href={editHref}
-        className="relative block overflow-hidden rounded-[26px] bg-[linear-gradient(135deg,#20161a_0%,#3f2b32_100%)]"
-      >
-        {isImageCard(item.card) ? (
-          <img
-            src={item.card.previewUrl}
-            alt={item.card.title}
-            className="h-[212px] w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-[212px] items-center justify-center bg-[linear-gradient(135deg,#382129_0%,#71545c_100%)] px-4 text-center text-lg font-black text-white/92">
-            {item.card.title}
-          </div>
-        )}
-        <span
-          className={`absolute left-4 top-4 rounded-full px-3 py-1 text-sm font-black ${rank.className}`}
-        >
-          {rank.label}
-        </span>
-        <span className="dream-chip absolute right-4 top-4 flex h-10 w-10 items-center justify-center text-[var(--primary)]">
-          <HeartIcon className="h-5 w-5" />
-        </span>
-      </Link>
-
-      <div className="mt-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <Link href={editHref} className="type-h2 block text-[var(--foreground)]">
-              {item.card.title}
-            </Link>
-          </div>
-          <div className="flex flex-wrap justify-end gap-2">
-            <AccessModeBadge mode={item.card.accessMode} compact />
-            <span className="dream-chip px-3 py-1 text-xs text-[var(--foreground)]/62">
-              {getVisibilityLabel(item.card.visibility)}
-            </span>
-            <span className="dream-chip px-3 py-1 text-xs text-[var(--foreground)]/62">
-              {getReviewStatusLabel(item.card.reviewStatus)}
+    <article className="dream-panel-soft flex h-full flex-col overflow-hidden rounded-[18px] p-1.5 shadow-[0_14px_30px_-26px_rgba(71,102,129,0.24)]">
+      <div className="relative overflow-hidden rounded-[14px] bg-[rgba(244,249,252,0.94)] p-2">
+        <div className="absolute inset-x-2.5 top-2 flex items-center justify-between">
+          <span
+            className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-black ${rank.className}`}
+          >
+            {rank.label}
+          </span>
+          <div className="flex gap-2">
+            <span className="inline-flex rounded-full bg-white/88 px-2 py-0.5 text-[9px] font-black text-[var(--foreground)]/62">
+              #{formatCardCode(item.card.id)}
             </span>
           </div>
         </div>
-        <p className="type-body-sm mt-2 line-clamp-2 min-h-[3rem] text-[var(--foreground)]/72">
-          {defaultCardDescription(item.card)}
-        </p>
-      </div>
 
-      <div className="mt-3 border-t border-dashed border-[var(--outline-variant)] pt-3">
-        <div className="dream-panel-soft px-3.5 py-3">
-          {hasInlineAccessCode ? (
-            <div className="flex items-center justify-between gap-3">
-              <code className="max-w-[70%] truncate rounded-full border border-[var(--outline-variant)] bg-white/65 px-3 py-1 text-sm font-black tracking-[0.12em] text-[var(--primary)]">
-                {accessCode}
-              </code>
-              <Link
-                href={accessCodeHref}
-                className="btn-subtle shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-black text-[var(--primary)]"
-              >
-                去管理
-              </Link>
+        <div className="pt-5">
+          {isImageCard(item.card) ? (
+            <div className="overflow-hidden rounded-[12px] border border-white/80 bg-white shadow-[0_14px_30px_-28px_rgba(83,110,122,0.4)]">
+              <img
+                src={item.card.previewUrl}
+                alt={item.card.title}
+                className="h-20 w-full object-cover"
+              />
             </div>
           ) : (
-            <div className="mt-2.5 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="type-body-sm tracking-[0.06em] text-[var(--primary)]">
-                  未配置
-                </div>
-                <div className="mt-1 text-xs text-[var(--text-subtle)]">
-                  点击右侧按钮进入提取码管理
-                </div>
-              </div>
-              <Link
-                href={accessCodeHref}
-                className="btn-subtle shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-black text-[var(--primary)]"
-              >
-                去管理
-              </Link>
+            <div className="flex h-20 items-end rounded-[12px] border border-dashed border-[var(--outline-variant)] bg-[linear-gradient(135deg,rgba(209,234,247,0.36),rgba(246,223,233,0.34))] p-2">
+              <p className="max-w-[12rem] text-[9px] leading-3.5 text-[var(--foreground)]/66">
+                {defaultCardDescription(item.card)}
+              </p>
             </div>
           )}
+        </div>
+      </div>
+
+      <div className="flex flex-1 flex-col px-1 pb-1 pt-1.5">
+        <div className="min-w-0">
+          <h2 className="line-clamp-1 text-[13px] font-black leading-[1.15] text-[var(--foreground)]">
+            {item.card.title}
+          </h2>
+          <p className="sr-only">
+            {defaultCardDescription(item.card)}
+          </p>
+        </div>
+
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          <AccessModeBadge mode={item.card.accessMode} compact />
+          <StatusBadge>{getVisibilityLabel(item.card.visibility)}</StatusBadge>
+          <StatusBadge>{getStatusLabel(item.card.status)}</StatusBadge>
+          <StatusBadge>{getReviewStatusLabel(item.card.reviewStatus)}</StatusBadge>
+        </div>
+
+        <dl className="mt-2 grid grid-cols-3 gap-1">
+          <StatCard label="下载" value={String(item.stats.downloadCount)} />
+          <StatCard
+            label="更新"
+            value={formatDate(item.card.updatedAt)}
+            compact
+          />
+          <StatCard
+            label="提取码"
+            value={accessCodeValue}
+            title={hasInlineAccessCode ? accessCode : accessCodeValue}
+            compact
+            mono={hasInlineAccessCode}
+          />
+        </dl>
+
+        <div className="mt-auto flex flex-wrap gap-1 pt-2">
+          <Link
+            href={editHref}
+            className="btn-primary inline-flex min-h-[32px] flex-1 items-center justify-center rounded-full px-2 py-1 text-[10px] font-black"
+          >
+            编辑卡片
+          </Link>
+          <Link
+            href={accessCodeHref}
+            className="btn-subtle inline-flex min-h-[32px] flex-1 items-center justify-center rounded-full px-2 py-1 text-[10px] font-black text-[var(--foreground)]/74"
+          >
+            管理提取码
+          </Link>
         </div>
       </div>
     </article>
@@ -616,198 +247,176 @@ export function CreatorCard({ item }: { item: DashboardCard }) {
 }
 
 export function HistoryItem({ item }: { item: DashboardCard }) {
-  const editHref = `/creator/cards/${encodeURIComponent(item.card.id)}/edit`;
   return (
-    <article className="dream-panel-soft flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 items-center gap-4">
-        <Link
-          href={editHref}
-          className="block h-24 w-24 shrink-0 overflow-hidden rounded-[22px] bg-[linear-gradient(135deg,#382129_0%,#71545c_100%)]"
-        >
-          {isImageCard(item.card) ? (
-            <img
-              src={item.card.previewUrl}
-              alt={item.card.title}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center px-3 text-center text-sm font-black text-white/92">
-              {item.card.title}
-            </div>
-          )}
-        </Link>
-
-        <div className="min-w-0">
-          <Link href={editHref} className="block truncate text-xl font-black text-[var(--foreground)]">
+    <div className="dream-panel-soft flex flex-col gap-4 rounded-[24px] p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-lg font-black text-[var(--foreground)]">
             {item.card.title}
-          </Link>
-          <p className="mt-2 text-sm leading-7 text-[var(--foreground)]/62">
-            更新时间：{formatDate(item.card.updatedAt)}，当前状态：
-            {getStatusLabel(item.card.status)} / {getReviewStatusLabel(item.card.reviewStatus)}
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--text-muted)]">
-            <AccessModeBadge mode={item.card.accessMode} compact />
-            <span className="dream-chip px-3 py-1">
-              {getVisibilityLabel(item.card.visibility)}
-            </span>
-            <span className="dream-chip px-3 py-1">
-              下载 {item.stats.downloadCount} 次
-            </span>
-            <span className="dream-chip px-3 py-1">
-              编号 {formatCardCode(item.card.id)}
-            </span>
-          </div>
+          </h3>
+          <AccessModeBadge mode={item.card.accessMode} />
         </div>
+        <p className="mt-2 text-sm text-[var(--foreground)]/62">
+          最近更新于 {formatDate(item.card.updatedAt)}
+        </p>
       </div>
-    </article>
-  );
-}
 
-export const CreatorStudioIcons = {
-  HomeIcon,
-  CardIcon,
-  SettingsIcon,
-  KeyIcon,
-  HeartIcon,
-  PlusIcon,
-  ReviewIcon,
-  UsersIcon,
-} as const;
-
-function MetricCard({
-  label,
-  value,
-  breakAll = false,
-}: {
-  label: string;
-  value: string;
-  breakAll?: boolean;
-}) {
-  return (
-    <div className="rounded-[20px] bg-white/72 px-4 py-3">
-      <div className="text-xs font-bold text-[var(--text-muted)]">{label}</div>
-      <div
-        className={`mt-1 text-sm font-black text-[var(--foreground)] ${
-          breakAll ? "break-all" : ""
-        }`}
-      >
-        {value}
+      <div className="flex flex-wrap gap-2">
+        <StatusBadge>{getVisibilityLabel(item.card.visibility)}</StatusBadge>
+        <StatusBadge>{getStatusLabel(item.card.status)}</StatusBadge>
+        <StatusBadge>{getReviewStatusLabel(item.card.reviewStatus)}</StatusBadge>
       </div>
     </div>
   );
 }
 
-function UserRoleChip({
-  active,
-  disabled,
-  children,
-  onClick,
+function StatusBadge({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-flex whitespace-nowrap rounded-full bg-white/86 px-1.5 py-0.5 text-[8px] font-black text-[var(--foreground)]/66">
+      {children}
+    </span>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  title,
+  compact = false,
+  mono = false,
 }: {
-  active: boolean;
-  disabled?: boolean;
-  children: ReactNode;
-  onClick: () => void;
+  label: string;
+  value: string;
+  title?: string;
+  compact?: boolean;
+  mono?: boolean;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`rounded-full px-4 py-1.5 text-xs font-black transition ${
-        active
-          ? "btn-primary text-[var(--foreground)]"
-          : "btn-subtle text-[var(--foreground)]/72"
-      } disabled:cursor-not-allowed disabled:opacity-60`}
-    >
-      {children}
-    </button>
+    <div className="flex min-h-[54px] flex-col justify-between rounded-[11px] bg-white/78 px-1 py-1.5 text-center">
+      <dt className="text-[8px] font-black uppercase tracking-[0.06em] text-[var(--foreground)]/42">
+        {label}
+      </dt>
+      <dd
+        title={title}
+        className={`mt-2 font-black text-[var(--foreground)] ${
+          compact ? "text-[9px] leading-3.5" : "text-[13px]"
+        } ${mono ? "font-mono tracking-[0.04em]" : ""}`}
+      >
+        <span className="block truncate">
+          {value}
+        </span>
+      </dd>
+    </div>
   );
 }
 
-function HomeIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
-      <path
-        d="M12 3.75 3.75 10.3V20.25h5.25V14.5h6v5.75h5.25V10.3L12 3.75Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-function CardIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
-      <path
-        d="M7.5 4.5h9A3.75 3.75 0 0 1 20.25 8.25v7.5A3.75 3.75 0 0 1 16.5 19.5h-9a3.75 3.75 0 0 1-3.75-3.75v-7.5A3.75 3.75 0 0 1 7.5 4.5Zm0 1.5A2.25 2.25 0 0 0 5.25 8.25v.75h13.5v-.75A2.25 2.25 0 0 0 16.5 6h-9Zm11.25 4.5H5.25v5.25A2.25 2.25 0 0 0 7.5 18h9a2.25 2.25 0 0 0 2.25-2.25V10.5Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-function SettingsIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
-      <path
-        d="m12 3.75 1.07 1.94 2.2.39 1.56-1.6 1.59 1.58-1.61 1.6.4 2.2 1.89 1.09-.63 2.18-2.18-.02-1.55 1.59.38 2.18-2.11.85-1.01-1.93-2.19-.01-1.02 1.93-2.1-.85.38-2.18-1.55-1.59-2.18.02-.63-2.18 1.89-1.09.4-2.2-1.61-1.6 1.59-1.58 1.56 1.6 2.2-.39L12 3.75Zm0 5.25A3 3 0 1 0 12 15a3 3 0 0 0 0-6Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-function KeyIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
-      <path
-        d="M13.5 6a4.5 4.5 0 1 0 3.96 6.64l4.79.01v1.5h-1.5v1.5h-1.5v1.5h-2.25V15.9h-1.33A4.5 4.5 0 0 0 13.5 6Zm0 1.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-function HeartIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
-      <path
-        d="M12 20.3 4.94 13.6a4.67 4.67 0 0 1 6.6-6.6L12 7.45l.46-.45a4.67 4.67 0 0 1 6.6 6.6L12 20.3Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-function PlusIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
-      <path
-        d="M11.25 5.25h1.5v5.25h5.25v1.5h-5.25v5.25h-1.5V12h-5.25v-1.5h5.25V5.25Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-function ReviewIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
-      <path
-        d="M6.75 3.75h10.5A2.25 2.25 0 0 1 19.5 6v12a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 18V6a2.25 2.25 0 0 1 2.25-2.25Zm0 1.5a.75.75 0 0 0-.75.75v12c0 .41.34.75.75.75h10.5a.75.75 0 0 0 .75-.75V6a.75.75 0 0 0-.75-.75H6.75Zm1.5 3h7.5v1.5h-7.5v-1.5Zm0 3.75h7.5v1.5h-7.5V12Zm0 3.75h4.5v1.5h-4.5v-1.5Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-function UsersIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
-      <path
-        d="M8.25 11.25a3 3 0 1 1 0-6 3 3 0 0 1 0 6Zm7.5-1.5a2.25 2.25 0 1 0 0-4.5 2.25 2.25 0 0 0 0 4.5Zm-7.5 3c-2.9 0-5.25 1.82-5.25 4.06 0 .38.3.69.68.69h9.14c.38 0 .68-.31.68-.69 0-2.24-2.35-4.06-5.25-4.06Zm7.5.75c-.76 0-1.48.12-2.13.34 1.03.83 1.69 1.93 1.84 3.16h4.13c.36 0 .66-.29.66-.66 0-1.58-1.99-2.84-4.5-2.84Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
+export const CreatorStudioIcons = {
+  HomeIcon(props: { className?: string }) {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        {...props}
+      >
+        <path d="M3 10.5 12 3l9 7.5" />
+        <path d="M5.5 9.8V21h13V9.8" />
+        <path d="M9.5 21v-6h5v6" />
+      </svg>
+    );
+  },
+  CardIcon(props: { className?: string }) {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        {...props}
+      >
+        <rect x="3" y="5" width="18" height="14" rx="3" />
+        <path d="M3 10h18" />
+        <path d="M8 15h4" />
+      </svg>
+    );
+  },
+  KeyIcon(props: { className?: string }) {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        {...props}
+      >
+        <circle cx="7.5" cy="12.5" r="3.5" />
+        <path d="M11 12.5h10" />
+        <path d="M17 12.5v3" />
+        <path d="M14 12.5v2" />
+      </svg>
+    );
+  },
+  ReviewIcon(props: { className?: string }) {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        {...props}
+      >
+        <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14.5a2.5 2.5 0 0 0-2.5-2.5H4z" />
+        <path d="M6.5 21A2.5 2.5 0 0 1 4 18.5V5.5" />
+        <path d="M8 8h8" />
+        <path d="M8 12h6" />
+      </svg>
+    );
+  },
+  SettingsIcon(props: { className?: string }) {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        {...props}
+      >
+        <path d="M12 8.4A3.6 3.6 0 1 0 12 15.6A3.6 3.6 0 1 0 12 8.4z" />
+        <path d="m19.4 15 .2 2.2-2 1.2-1.8-1a7.8 7.8 0 0 1-1.9.8l-.6 2h-2.4l-.6-2a7.8 7.8 0 0 1-1.9-.8l-1.8 1-2-1.2.2-2.2a7.7 7.7 0 0 1-1.3-1.6L2.2 11l1.8-1.2a7.7 7.7 0 0 1 1.3-1.6l-.2-2.2 2-1.2 1.8 1c.6-.3 1.2-.6 1.9-.8l.6-2h2.4l.6 2c.7.2 1.3.5 1.9.8l1.8-1 2 1.2-.2 2.2c.5.5.9 1 1.3 1.6L21.8 11 20 12.2c-.3.6-.8 1.1-1.3 1.6Z" />
+      </svg>
+    );
+  },
+  PlusIcon(props: { className?: string }) {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        {...props}
+      >
+        <path d="M12 5v14" />
+        <path d="M5 12h14" />
+      </svg>
+    );
+  },
+};

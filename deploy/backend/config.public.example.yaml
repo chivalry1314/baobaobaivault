@@ -3,12 +3,7 @@ server:
   read_timeout: 30
   write_timeout: 30
   mode: release
-  allow_public_bootstrap: false
-  auto_bootstrap_admin: false
   admin_email: ""
-  admin_password: ""
-  admin_username: "admin"
-  admin_nickname: "Administrator"
 
 cors:
   enabled: true
@@ -44,24 +39,13 @@ jwt:
 
 storage:
   default_provider: "local"
-  temp_dir: "/tmp/baobaobaivault"
+  temp_dir: "/tmp/baobaobaivault" # also used as temporary buffering directory before share media is uploaded to object storage
   max_file_size: 10737418240
 
-baidu:
-  enabled: false
-  api_key: ""
-  secret_key: ""
-  redirect_uri: "https://share.example.com/api/v1/connectors/baidu/callback"
-  scope: "basic,netdisk"
-  auth_url: "https://openapi.baidu.com/oauth/2.0/authorize"
-  auth_extra_params: {}
-  token_url: "https://openapi.baidu.com/oauth/2.0/token"
-  pan_api_base_url: "https://pan.baidu.com/rest/2.0"
-  pan_upload_url: "https://d.pcs.baidu.com/rest/2.0/pcs/superfile2"
-  default_path_prefix: "/apps/baobaobaiphone/backups"
-  state_secret: "change-this-state-secret"
-  token_encrypt_secret: "change-this-token-encrypt-secret"
-  http_timeout_seconds: 30
+# Share media storage mode note:
+# - The switch between local and object storage for share card covers/attachments
+#   is configured in `sharefrontend` system management, not here in YAML.
+# - System page: `/system/media-storage`
 
 webpush:
   enabled: false

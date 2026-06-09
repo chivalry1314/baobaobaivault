@@ -15,7 +15,7 @@ export function AccessModeBadge(props: {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border-[3px] px-3 py-1 text-xs font-black ${toneClass} ${className}`.trim()}
+      className={`inline-flex whitespace-nowrap items-center gap-1.5 rounded-full border-[3px] px-3 py-1 text-xs font-black ${toneClass} ${className}`.trim()}
     >
       <span
         className={`h-2.5 w-2.5 rounded-full ${isPaid ? "bg-[#f59e0b]" : "bg-[#2fbf71]"}`}
@@ -24,4 +24,3 @@ export function AccessModeBadge(props: {
     </span>
   );
 }
-

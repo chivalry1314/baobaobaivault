@@ -88,16 +88,20 @@ var (
 type ShareService struct {
 	db                *gorm.DB
 	logger            *zap.Logger
+	storageService    *StorageService
 	fileRoot          string
 	managerEmailAllow map[string]struct{}
 	shareAuthCfgMu    sync.RWMutex
 	shareAuthCfg      config.ShareAuthConfig
+	shareMediaCfgMu   sync.RWMutex
+	shareMediaCfg     ShareMediaStorageSettingsView
 	emailService      *EmailService
 }
 
 func NewShareService(
 	db *gorm.DB,
 	logger *zap.Logger,
+	storageService *StorageService,
 	fileRoot string,
 	shareAuthCfg config.ShareAuthConfig,
 	emailService *EmailService,
@@ -117,12 +121,15 @@ func NewShareService(
 	service := &ShareService{
 		db:                db,
 		logger:            logger,
+		storageService:    storageService,
 		fileRoot:          fileRoot,
 		managerEmailAllow: allow,
 		shareAuthCfg:      shareAuthCfg,
+		shareMediaCfg:     defaultShareMediaStorageSettingsView(),
 		emailService:      emailService,
 	}
 	service.loadShareAuthConfigFromDB()
+	service.loadShareMediaStorageSettingsFromDB()
 	return service
 }
 
@@ -136,6 +143,7 @@ type ShareSessionUser struct {
 	CoverImage string    `json:"coverImage"`
 	Phone      string    `json:"phone"`
 	Role       string    `json:"role"`
+	IsConfiguredSuperAdmin bool `json:"isConfiguredSuperAdmin"`
 	CreatedAt  time.Time `json:"createdAt"`
 }
 
@@ -158,6 +166,22 @@ type ShareAuthSettingsView struct {
 	ResendIntervalSeconds     int  `json:"resendIntervalSeconds"`
 	MaxVerifyAttempts         int  `json:"maxVerifyAttempts"`
 	CanUpdate                 bool `json:"canUpdate"`
+}
+
+type ShareMediaStorageSettingsView struct {
+	StorageMode          string `json:"storageMode"`
+	LocalFallbackEnabled bool   `json:"localFallbackEnabled"`
+	CoverNamespaceID     string `json:"coverNamespaceID"`
+	AssetNamespaceID     string `json:"assetNamespaceID"`
+	CanUpdate            bool   `json:"canUpdate"`
+}
+
+type ShareUpdateMediaStorageSettingsInput struct {
+	OperatorID           string
+	StorageMode          string
+	LocalFallbackEnabled bool
+	CoverNamespaceID     string
+	AssetNamespaceID     string
 }
 
 type ShareUpdateAuthSettingsInput struct {
@@ -351,6 +375,14 @@ type ShareUserRoleManageItem struct {
 	Role      string    `json:"role"`
 	Status    string    `json:"status"`
 	CreatedAt time.Time `json:"createdAt"`
+}
+
+type ShareListUsersForRoleManageInput struct {
+	OperatorID string
+	Page       int
+	PageSize   int
+	Keyword    string
+	Role       string
 }
 
 type ShareUpdateUserRoleInput struct {
@@ -1164,6 +1196,7 @@ func toShareSessionUser(user *model.ShareExternalUser) ShareSessionUser {
 		CoverImage: strings.TrimSpace(user.CoverImage),
 		Phone:      strings.TrimSpace(user.Phone),
 		Role:       normalizeShareExternalUserRole(user.Role),
+		IsConfiguredSuperAdmin: false,
 		CreatedAt:  user.CreatedAt,
 	}
 }
@@ -1179,7 +1212,7 @@ func toSharePublicUser(user *model.ShareExternalUser) SharePublicUser {
 
 func toShareCardView(card *model.SharePlatformCard, assets []model.SharePlatformCardAsset) ShareCardView {
 	cardID := card.ID
-	hasCover := strings.TrimSpace(card.StoredFileName) != ""
+	hasCover := hasShareStoredMedia(card.StorageBackend, card.StorageNamespaceID, card.StorageObjectKey, card.StoredFileName)
 	primaryFileName := strings.TrimSpace(card.OriginalFileName)
 	primaryMimeType := strings.TrimSpace(card.MimeType)
 	if hasCover {

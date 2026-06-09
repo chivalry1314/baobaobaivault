@@ -10,16 +10,12 @@ This project uses a local YAML config file which must not be committed with real
 
 ## Config topics
 
-### Bootstrap admin
+### Recommended entry
 
-- Public bootstrap API (optional): `POST /api/v1/bootstrap/admin`
-- Main fields:
-  - `server.allow_public_bootstrap`
-  - `server.auto_bootstrap_admin`
-  - `server.admin_email`
-  - `server.admin_password`
-  - `server.admin_username`
-  - `server.admin_nickname`
+- Primary frontend: `sharefrontend`
+- Primary API path: `/api/share/*`
+- New deployment and daily operations should follow the `sharefrontend + /api/share` architecture
+- `server.admin_email` is the configured super admin identity used by the share system
 
 ### Web Push
 
@@ -48,8 +44,22 @@ This repo can expose a standalone `mimiwebpushserver`-compatible Web Push API un
   - English: `backend/config/SHARE_AUTH_EMAIL_DEPLOY.md`
   - Chinese: `backend/config/SHARE_AUTH_EMAIL_DEPLOY_ZH.md`
 
+### Share media storage to OSS
+
+- The share card media storage switch is managed in the system UI, not in `config.yaml`
+- System page:
+  - `System Management -> Media Storage`
+  - route: `/system/media-storage`
+- This switch only affects newly uploaded share card media
+- Historical local files are not migrated automatically in the first stage
+- Keep backend local storage mounted during rollout if you enable local fallback
+- Detailed guides:
+  - English: `backend/config/SHARE_MEDIA_STORAGE_OSS_DEPLOY.md`
+  - Chinese: `backend/config/SHARE_MEDIA_STORAGE_OSS_DEPLOY_ZH.md`
+
 ## Notes
 
 - `share_auth.email_verification_enabled=false`: register creates and logs in directly
 - `share_auth.email_verification_enabled=true`: register must verify email code first
 - For Aliyun Direct Mail, use the same main config templates above and fill `email.*`; no separate provider template is kept
+- The local development CORS defaults now target the Next.js share frontend on `http://localhost:3000`

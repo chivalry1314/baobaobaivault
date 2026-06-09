@@ -14,7 +14,6 @@ type Config struct {
 	Redis     RedisConfig     `mapstructure:"redis"`
 	JWT       JWTConfig       `mapstructure:"jwt"`
 	Storage   StorageConfig   `mapstructure:"storage"`
-	Baidu     BaiduConfig     `mapstructure:"baidu"`
 	WebPush   WebPushConfig   `mapstructure:"webpush"`
 	Email     EmailConfig     `mapstructure:"email"`
 	ShareAuth ShareAuthConfig `mapstructure:"share_auth"`
@@ -22,16 +21,11 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port               string `mapstructure:"port"`
-	ReadTimeout        int    `mapstructure:"read_timeout"`
-	WriteTimeout       int    `mapstructure:"write_timeout"`
-	Mode               string `mapstructure:"mode"` // debug, release, test
-	AllowPublicBootstrap bool `mapstructure:"allow_public_bootstrap"`
-	AutoBootstrapAdmin bool   `mapstructure:"auto_bootstrap_admin"`
-	AdminEmail         string `mapstructure:"admin_email"`
-	AdminPassword      string `mapstructure:"admin_password"`
-	AdminUsername      string `mapstructure:"admin_username"`
-	AdminNickname      string `mapstructure:"admin_nickname"`
+	Port         string `mapstructure:"port"`
+	ReadTimeout  int    `mapstructure:"read_timeout"`
+	WriteTimeout int    `mapstructure:"write_timeout"`
+	Mode         string `mapstructure:"mode"` // debug, release, test
+	AdminEmail   string `mapstructure:"admin_email"`
 }
 
 type CorsConfig struct {
@@ -104,23 +98,6 @@ type ShareAuthConfig struct {
 	MaxVerifyAttempts int `mapstructure:"max_verify_attempts"`
 }
 
-type BaiduConfig struct {
-	Enabled            bool   `mapstructure:"enabled"`
-	APIKey             string `mapstructure:"api_key"`
-	SecretKey          string `mapstructure:"secret_key"`
-	RedirectURI        string `mapstructure:"redirect_uri"`
-	Scope              string `mapstructure:"scope"`
-	AuthURL            string `mapstructure:"auth_url"`
-	AuthExtraParams    map[string]string `mapstructure:"auth_extra_params"`
-	TokenURL           string `mapstructure:"token_url"`
-	PanAPIBaseURL      string `mapstructure:"pan_api_base_url"`
-	PanUploadURL       string `mapstructure:"pan_upload_url"`
-	DefaultPathPrefix  string `mapstructure:"default_path_prefix"`
-	StateSecret        string `mapstructure:"state_secret"`
-	TokenEncryptSecret string `mapstructure:"token_encrypt_secret"`
-	HTTPTimeoutSeconds int    `mapstructure:"http_timeout_seconds"`
-}
-
 type LogConfig struct {
 	Level  string `mapstructure:"level"`
 	Format string `mapstructure:"format"` // json, console
@@ -178,20 +155,11 @@ func setDefaults() {
 	viper.SetDefault("server.read_timeout", 30)
 	viper.SetDefault("server.write_timeout", 30)
 	viper.SetDefault("server.mode", "debug")
-	viper.SetDefault("server.allow_public_bootstrap", false)
-	viper.SetDefault("server.auto_bootstrap_admin", false)
 	viper.SetDefault("server.admin_email", "")
-	viper.SetDefault("server.admin_password", "")
-	viper.SetDefault("server.admin_username", "admin")
-	viper.SetDefault("server.admin_nickname", "Administrator")
 
 	// CORS
 	viper.SetDefault("cors.enabled", true)
 	viper.SetDefault("cors.allow_origins", []string{
-		"http://localhost:5173",
-		"http://127.0.0.1:5173",
-		"http://localhost:4173",
-		"http://127.0.0.1:4173",
 		"http://localhost:3000",
 		"http://127.0.0.1:3000",
 	})
@@ -227,22 +195,6 @@ func setDefaults() {
 	viper.SetDefault("storage.default_provider", "local")
 	viper.SetDefault("storage.temp_dir", "/tmp/baobaobaivault")
 	viper.SetDefault("storage.max_file_size", 10737418240) // 10GB
-
-	// Baidu netdisk connector
-	viper.SetDefault("baidu.enabled", false)
-	viper.SetDefault("baidu.api_key", "")
-	viper.SetDefault("baidu.secret_key", "")
-	viper.SetDefault("baidu.redirect_uri", "http://127.0.0.1:8080/api/v1/connectors/baidu/callback")
-	viper.SetDefault("baidu.scope", "basic,netdisk")
-	viper.SetDefault("baidu.auth_url", "https://openapi.baidu.com/oauth/2.0/authorize")
-	viper.SetDefault("baidu.auth_extra_params", map[string]string{})
-	viper.SetDefault("baidu.token_url", "https://openapi.baidu.com/oauth/2.0/token")
-	viper.SetDefault("baidu.pan_api_base_url", "https://pan.baidu.com/rest/2.0")
-	viper.SetDefault("baidu.pan_upload_url", "https://d.pcs.baidu.com/rest/2.0/pcs/superfile2")
-	viper.SetDefault("baidu.default_path_prefix", "/apps/baobaobaiphone/backups")
-	viper.SetDefault("baidu.state_secret", "")
-	viper.SetDefault("baidu.token_encrypt_secret", "")
-	viper.SetDefault("baidu.http_timeout_seconds", 30)
 
 	// Email
 	viper.SetDefault("email.enabled", false)

@@ -11,4 +11,5 @@ export type NavItem = {
   href: string;
   label: string;
   managerOnly?: boolean;
+  superAdminOnly?: boolean;
 };

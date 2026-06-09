@@ -7,11 +7,9 @@ import (
 )
 
 const (
-	ctxUserID      = "user_id"
-	ctxUsername    = "username"
-	ctxAuthType    = "auth_type"
-	ctxAuditBefore = "audit_before"
-	ctxAuditAfter  = "audit_after"
+	ctxUserID   = "user_id"
+	ctxUsername = "username"
+	ctxAuthType = "auth_type"
 )
 
 type apiError struct {

@@ -17,13 +17,29 @@
   RegisterVerifyResponse,
   ReviewDashboardResponse,
   ShareAuthConfigResponse,
+  ShareAccessKeyItem,
   ShareAuthSettingsResponse,
+  ShareAuditLog,
   ShareEmailHealthResponse,
+  ShareMediaStorageSettingsResponse,
   SessionResponse,
   ShareCardAccessMode,
   ShareSMTPTestResponse,
+  ShareNamespace,
+  ShareObjectVersion,
+  SharePagination,
+  SharePermission,
+  SharePreparedPresignPut,
+  ShareSystemAccessKeyCreateResult,
+  ShareSystemAccessKeyOwner,
+  ShareSystemRole,
+  ShareStorageConfig,
+  ShareStorageObject,
+  ShareSMTPTestRequest,
+  ShareSystemRolesResponse,
   ShareUserRole,
   ShareUserRoleManageItem,
+  ShareUsersManageResponse,
 } from "@/lib/shared";
 
 const API_ROOT = "/api/share";
@@ -55,8 +71,49 @@ const shareApiErrorMessages: Record<string, string> = {
   "access code exhausted": "当前提取码已达到使用上限",
   "manager role required": "需要管理员权限",
   "configured super admin required": "只有系统初始化超级管理员可以修改",
+  "namespace_id and key are required": "命名空间和对象 Key 不能为空",
+  "namespace id is required": "命名空间不能为空",
+  "cover_namespace_id and asset_namespace_id are required": "启用对象存储时，封面和附件命名空间都必须配置",
+  "namespace not found": "所选命名空间不存在或已被删除",
+  "name is required": "名称不能为空",
+  "provider is required": "存储类型不能为空",
+  "bucket is required": "Bucket 不能为空",
+  "storage config not found": "存储配置不存在",
+  "storage config is in use by namespaces": "该存储配置已被命名空间使用，不能直接删除",
+  "namespace name already exists": "命名空间名称已存在",
+  "namespace is not empty, please delete objects first": "命名空间不为空，请先删除对象后再删除命名空间",
+  "max_storage must be greater than 0": "最大存储空间必须大于 0",
+  "max_files must be greater than 0": "最大文件数必须大于 0",
+  "max_file_size must be greater than 0": "单文件最大大小必须大于 0",
+  "namespace max file size exceeded": "文件大小超过命名空间限制",
+  "namespace storage quota exceeded": "命名空间存储空间不足",
+  "namespace max files quota exceeded": "命名空间文件数量已达上限",
+  "file is required": "请先选择上传文件",
+  "object key is required": "对象 Key 不能为空",
+  "object not found": "对象不存在",
+  "target version not found": "目标版本不存在",
+  "version_id is required": "版本号不能为空",
+  "invalid from": "开始时间格式不正确",
+  "invalid to": "结束时间格式不正确",
+  "id is required": "密钥 ID 不能为空",
+  "aksk not found": "访问密钥不存在",
+  "server.admin_email is not configured": "未配置系统超级管理员邮箱",
   "manager or creator role required": "需要创作者或管理员权限",
   "invalid user role": "用户角色不正确",
+  "code and name are required": "角色编码和名称不能为空",
+  "role code already exists": "角色编码已存在",
+  "admin role can not be created manually": "管理员角色不能手动创建",
+  "admin role can not be modified": "管理员角色不能修改",
+  "admin role can not be deleted": "管理员角色不能删除",
+  "system role can not be modified": "系统角色不能修改",
+  "system role can not be deleted": "系统角色不能删除",
+  "role name can not be empty": "角色名称不能为空",
+  "some permission_ids are invalid": "存在无效的权限项",
+  "some namespace_ids are invalid": "存在无效的命名空间",
+  "role is assigned to users, unbind users first": "该角色已绑定用户，请先解除绑定",
+  "role not found": "角色不存在",
+  "role id is required": "角色 ID 不能为空",
+  "system role can not be created": "统一后的角色体系不支持新增自定义角色",
   "invalid verification code ttl": "验证码有效期需要在 300 到 1800 秒之间",
   "invalid resend interval": "重发间隔需要在 30 到 300 秒之间",
   "invalid max verify attempts": "最大验证次数需要在 3 到 10 次之间",
@@ -121,6 +178,30 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
 
   return payload as T;
+}
+
+async function requestBlob(path: string, options?: RequestInit): Promise<{ blob: Blob; filename: string }> {
+  const response = await fetch(path, {
+    credentials: "include",
+    ...options,
+  });
+
+  if (!response.ok) {
+    const contentType = response.headers.get("content-type") || "";
+    const payload = contentType.includes("application/json")
+      ? await response.json().catch(() => null)
+      : await response.text().catch(() => "");
+    throw new ShareApiError(response.status, toErrorMessage(payload, `Request failed (${response.status})`));
+  }
+
+  const disposition = response.headers.get("content-disposition") || "";
+  const matched = disposition.match(/filename="?([^"]+)"?/i);
+  const filename = matched?.[1]?.trim() || "download.bin";
+
+  return {
+    blob: await response.blob(),
+    filename,
+  };
 }
 
 export const shareApi = {
@@ -407,52 +488,6 @@ export const shareApi = {
     });
   },
 
-  adminUsers() {
-    return request<{ users: ShareUserRoleManageItem[] }>(
-      `${API_ROOT}/me/admin/users`,
-      {
-        cache: "no-store",
-      },
-    );
-  },
-
-  adminAuthSettings() {
-    return request<ShareAuthSettingsResponse>(`${API_ROOT}/me/admin/auth-settings`, {
-      cache: "no-store",
-    });
-  },
-
-  updateAdminAuthSettings(input: {
-    emailVerificationEnabled: boolean;
-    verificationCodeTTLSeconds: number;
-    resendIntervalSeconds: number;
-    maxVerifyAttempts: number;
-  }) {
-    return request<ShareAuthSettingsResponse>(`${API_ROOT}/me/admin/auth-settings`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(input),
-    });
-  },
-
-  updateUserRole(userId: string, role: ShareUserRole) {
-    return request<{ user: ExternalSessionUser }>(`${API_ROOT}/me/admin/users/${encodeURIComponent(userId)}/role`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ role }),
-    });
-  },
-
-  deleteAdminUser(userId: string) {
-    return request<{ ok: true }>(`${API_ROOT}/me/admin/users/${encodeURIComponent(userId)}`, {
-      method: "DELETE",
-    });
-  },
-
   adminReviews(status?: string) {
     const query = status ? `?status=${encodeURIComponent(status)}` : "";
     return request<ReviewDashboardResponse>(
@@ -518,6 +553,524 @@ export const shareApi = {
   deleteCard(cardId: string) {
     return request<{ ok: true }>(`${API_ROOT}/me/cards/${encodeURIComponent(cardId)}`, {
       method: "DELETE",
+    });
+  },
+
+  systemStorageConfigs() {
+    return request<{ items: ShareStorageConfig[] }>(`${API_ROOT}/me/system/storage/configs`, {
+      cache: "no-store",
+    });
+  },
+
+  createSystemStorageConfig(input: {
+    owner_user_id?: string;
+    name: string;
+    provider: string;
+    endpoint: string;
+    region: string;
+    bucket: string;
+    access_key: string;
+    secret_key: string;
+    path_style: boolean;
+    is_default: boolean;
+    extra_config: string;
+  }) {
+    return request<{ item: ShareStorageConfig }>(`${API_ROOT}/me/system/storage/configs`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  systemStorageConfig(id: string) {
+    return request<{ item: ShareStorageConfig }>(`${API_ROOT}/me/system/storage/configs/${encodeURIComponent(id)}`, {
+      cache: "no-store",
+    });
+  },
+
+  updateSystemStorageConfig(id: string, input: {
+    owner_user_id?: string | null;
+    name: string;
+    provider: string;
+    endpoint: string;
+    region: string;
+    bucket: string;
+    access_key?: string;
+    secret_key?: string;
+    path_style: boolean;
+    is_default: boolean;
+    extra_config: string;
+  }) {
+    return request<{ item: ShareStorageConfig }>(`${API_ROOT}/me/system/storage/configs/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  deleteSystemStorageConfig(id: string) {
+    return request<{ ok: true }>(`${API_ROOT}/me/system/storage/configs/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+  },
+
+  systemNamespaces(input?: { page?: number; pageSize?: number; status?: string }) {
+    const params = new URLSearchParams();
+    if (input?.page && input.page > 0) {
+      params.set("page", String(input.page));
+    }
+    if (input?.pageSize && input.pageSize > 0) {
+      params.set("page_size", String(input.pageSize));
+    }
+    if (input?.status) {
+      params.set("status", input.status);
+    }
+    const query = params.toString();
+    const path = query ? `${API_ROOT}/me/system/namespaces?${query}` : `${API_ROOT}/me/system/namespaces`;
+    return request<{
+      items: ShareNamespace[];
+      pagination: { total: number; page: number; pageSize: number };
+    }>(path, {
+      cache: "no-store",
+    });
+  },
+
+  systemNamespace(id: string) {
+    return request<{ item: ShareNamespace }>(`${API_ROOT}/me/system/namespaces/${encodeURIComponent(id)}`, {
+      cache: "no-store",
+    });
+  },
+
+  createSystemNamespace(input: {
+    name: string;
+    description: string;
+    storage_config_id?: string;
+    path_prefix?: string;
+    max_storage?: number;
+    max_files?: number;
+    max_file_size?: number;
+  }) {
+    return request<{ item: ShareNamespace }>(`${API_ROOT}/me/system/namespaces`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  updateSystemNamespace(id: string, input: {
+    name?: string;
+    description?: string;
+    status?: string;
+    storage_config_id?: string;
+    path_prefix?: string;
+    max_storage?: number;
+    max_files?: number;
+    max_file_size?: number;
+  }) {
+    return request<{ item: ShareNamespace }>(`${API_ROOT}/me/system/namespaces/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  deleteSystemNamespace(id: string) {
+    return request<{ ok: true }>(`${API_ROOT}/me/system/namespaces/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+  },
+
+  systemObjects(input: { namespaceID: string; prefix?: string; page?: number; pageSize?: number }) {
+    const params = new URLSearchParams();
+    params.set("namespace_id", input.namespaceID);
+    if (input.prefix) {
+      params.set("prefix", input.prefix);
+    }
+    if (input.page && input.page > 0) {
+      params.set("page", String(input.page));
+    }
+    if (input.pageSize && input.pageSize > 0) {
+      params.set("page_size", String(input.pageSize));
+    }
+    return request<{ total: number; page: number; page_size: number; items: ShareStorageObject[] }>(
+      `${API_ROOT}/me/system/objects?${params.toString()}`,
+      {
+        cache: "no-store",
+      },
+    ).then((response) => ({
+      items: response.items || [],
+      total: response.total || 0,
+      page: response.page || 1,
+      pageSize: response.page_size || input.pageSize || 20,
+    }) satisfies SharePagination & { items: ShareStorageObject[] });
+  },
+
+  systemObjectVersions(input: { namespaceID: string; key: string; page?: number; pageSize?: number }) {
+    const params = new URLSearchParams();
+    params.set("namespace_id", input.namespaceID);
+    params.set("key", input.key);
+    if (input.page && input.page > 0) {
+      params.set("page", String(input.page));
+    }
+    if (input.pageSize && input.pageSize > 0) {
+      params.set("page_size", String(input.pageSize));
+    }
+    return request<{ total: number; page: number; page_size: number; items: ShareObjectVersion[] }>(
+      `${API_ROOT}/me/system/objects/versions?${params.toString()}`,
+      {
+        cache: "no-store",
+      },
+    ).then((response) => ({
+      items: response.items || [],
+      total: response.total || 0,
+      page: response.page || 1,
+      pageSize: response.page_size || input.pageSize || 20,
+    }) satisfies SharePagination & { items: ShareObjectVersion[] });
+  },
+
+  createSystemObject(input: {
+    namespaceID: string;
+    key: string;
+    file: File;
+    contentType?: string;
+    metadata?: string;
+  }) {
+    const formData = new FormData();
+    formData.append("namespace_id", input.namespaceID);
+    formData.append("key", input.key);
+    formData.append("file", input.file);
+    if (input.contentType) {
+      formData.append("content_type", input.contentType);
+    }
+    if (input.metadata) {
+      formData.append("metadata", input.metadata);
+    }
+
+    return request<{ data: ShareStorageObject }>(`${API_ROOT}/me/system/objects/upload`, {
+      method: "POST",
+      body: formData,
+    });
+  },
+
+  deleteSystemObject(input: { namespaceID: string; key: string }) {
+    const params = new URLSearchParams();
+    params.set("namespace_id", input.namespaceID);
+    params.set("key", input.key);
+    return request<{ data: { deleted: boolean } }>(`${API_ROOT}/me/system/objects?${params.toString()}`, {
+      method: "DELETE",
+    });
+  },
+
+  downloadSystemObject(input: { namespaceID: string; key: string }) {
+    const params = new URLSearchParams();
+    params.set("namespace_id", input.namespaceID);
+    params.set("key", input.key);
+    return requestBlob(`${API_ROOT}/me/system/objects/download?${params.toString()}`);
+  },
+
+  rollbackSystemObjectVersion(input: { namespaceID: string; key: string; versionID: string }) {
+    return request<{ data: ShareStorageObject }>(`${API_ROOT}/me/system/objects/versions/rollback`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        namespace_id: input.namespaceID,
+        key: input.key,
+        version_id: input.versionID,
+      }),
+    });
+  },
+
+  systemPresignPutObject(input: { namespaceID: string; key: string; ttlSeconds?: number }) {
+    const params = new URLSearchParams();
+    params.set("namespace_id", input.namespaceID);
+    params.set("key", input.key);
+    if (input.ttlSeconds && input.ttlSeconds > 0) {
+      params.set("ttl_seconds", String(input.ttlSeconds));
+    }
+    return request<{ data: SharePreparedPresignPut }>(
+      `${API_ROOT}/me/system/objects/presign-put?${params.toString()}`,
+    );
+  },
+
+  completeSystemPresignPutObject(input: {
+    namespaceID: string;
+    key: string;
+    versionID: string;
+    contentType?: string;
+    metadata?: Record<string, string>;
+  }) {
+    return request<{ data: ShareStorageObject }>(`${API_ROOT}/me/system/objects/presign-put/complete`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        namespace_id: input.namespaceID,
+        key: input.key,
+        version_id: input.versionID,
+        content_type: input.contentType,
+        metadata: input.metadata,
+      }),
+    });
+  },
+
+  systemPresignGetObject(input: { namespaceID: string; key: string; ttlSeconds?: number }) {
+    const params = new URLSearchParams();
+    params.set("namespace_id", input.namespaceID);
+    params.set("key", input.key);
+    if (input.ttlSeconds && input.ttlSeconds > 0) {
+      params.set("ttl_seconds", String(input.ttlSeconds));
+    }
+    return request<{ data: { url: string } }>(
+      `${API_ROOT}/me/system/objects/presign-get?${params.toString()}`,
+    );
+  },
+
+  systemAuditLogs(input?: {
+    action?: string;
+    resource?: string;
+    status?: string;
+    userID?: string;
+    resourceID?: string;
+    from?: string;
+    to?: string;
+    page?: number;
+    pageSize?: number;
+  }) {
+    const params = new URLSearchParams();
+    if (input?.action) {
+      params.set("action", input.action);
+    }
+    if (input?.resource) {
+      params.set("resource", input.resource);
+    }
+    if (input?.status) {
+      params.set("status", input.status);
+    }
+    if (input?.userID) {
+      params.set("user_id", input.userID);
+    }
+    if (input?.resourceID) {
+      params.set("resource_id", input.resourceID);
+    }
+    if (input?.from) {
+      params.set("from", input.from);
+    }
+    if (input?.to) {
+      params.set("to", input.to);
+    }
+    if (input?.page && input.page > 0) {
+      params.set("page", String(input.page));
+    }
+    if (input?.pageSize && input.pageSize > 0) {
+      params.set("page_size", String(input.pageSize));
+    }
+
+    const query = params.toString();
+    const path = query ? `${API_ROOT}/me/system/audit/logs?${query}` : `${API_ROOT}/me/system/audit/logs`;
+    return request<{ total: number; page: number; page_size: number; items: ShareAuditLog[] }>(path, {
+      cache: "no-store",
+    }).then((response) => ({
+      items: response.items || [],
+      total: response.total || 0,
+      page: response.page || 1,
+      pageSize: response.page_size || input?.pageSize || 20,
+    }) satisfies SharePagination & { items: ShareAuditLog[] });
+  },
+
+  systemAccessKeys() {
+    return request<{ items: ShareAccessKeyItem[]; owner: ShareSystemAccessKeyOwner }>(
+      `${API_ROOT}/me/system/access-keys`,
+      {
+        cache: "no-store",
+      },
+    );
+  },
+
+  createSystemAccessKey(input: { description: string; expires_in_days: number }) {
+    return request<{ item: ShareSystemAccessKeyCreateResult }>(`${API_ROOT}/me/system/access-keys`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  revokeSystemAccessKey(id: string) {
+    return request<{ ok: true }>(`${API_ROOT}/me/system/access-keys/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+  },
+
+  systemPermissions() {
+    return request<SharePermission[]>(`${API_ROOT}/me/system/permissions`, {
+      cache: "no-store",
+    });
+  },
+
+  systemRoles(input?: { page?: number; pageSize?: number; keyword?: string; scope?: "all" | "system" | "custom" }) {
+    const params = new URLSearchParams();
+    if (input?.page && input.page > 0) {
+      params.set("page", String(input.page));
+    }
+    if (input?.pageSize && input.pageSize > 0) {
+      params.set("page_size", String(input.pageSize));
+    }
+    if (input?.keyword?.trim()) {
+      params.set("keyword", input.keyword.trim());
+    }
+    if (input?.scope && input.scope !== "all") {
+      params.set("scope", input.scope);
+    }
+    const query = params.toString();
+    const path = query ? `${API_ROOT}/me/system/roles?${query}` : `${API_ROOT}/me/system/roles`;
+    return request<ShareSystemRolesResponse>(path, {
+      cache: "no-store",
+    });
+  },
+
+  systemRole(id: string) {
+    return request<{ item: ShareSystemRole }>(`${API_ROOT}/me/system/roles/${encodeURIComponent(id)}`, {
+      cache: "no-store",
+    });
+  },
+
+  createSystemRole(input: {
+    code: string;
+    name: string;
+    description: string;
+    level: number;
+    permission_ids: string[];
+    namespace_ids: string[];
+  }) {
+    return request<{ item: ShareSystemRole }>(`${API_ROOT}/me/system/roles`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  updateSystemRole(id: string, input: {
+    name?: string;
+    description?: string;
+    level?: number;
+    permission_ids?: string[];
+    namespace_ids?: string[];
+  }) {
+    return request<{ item: ShareSystemRole }>(`${API_ROOT}/me/system/roles/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  deleteSystemRole(id: string) {
+    return request<{ ok: true }>(`${API_ROOT}/me/system/roles/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+  },
+
+  systemUsers(input?: { page?: number; pageSize?: number; keyword?: string; role?: ShareUserRole | "all" }) {
+    const params = new URLSearchParams();
+    if (input?.page && input.page > 0) {
+      params.set("page", String(input.page));
+    }
+    if (input?.pageSize && input.pageSize > 0) {
+      params.set("page_size", String(input.pageSize));
+    }
+    if (input?.keyword?.trim()) {
+      params.set("keyword", input.keyword.trim());
+    }
+    if (input?.role && input.role !== "all") {
+      params.set("role", input.role);
+    }
+    const query = params.toString();
+    const path = query ? `${API_ROOT}/me/system/users?${query}` : `${API_ROOT}/me/system/users`;
+    return request<ShareUsersManageResponse>(path, {
+      cache: "no-store",
+    });
+  },
+
+  updateSystemUserRole(userId: string, role: ShareUserRole) {
+    return request<{ user: ExternalSessionUser }>(`${API_ROOT}/me/system/users/${encodeURIComponent(userId)}/role`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ role }),
+    });
+  },
+
+  deleteSystemUser(userId: string) {
+    return request<{ ok: true }>(`${API_ROOT}/me/system/users/${encodeURIComponent(userId)}`, {
+      method: "DELETE",
+    });
+  },
+
+  systemAuthSettings() {
+    return request<ShareAuthSettingsResponse>(`${API_ROOT}/me/system/auth-settings`, {
+      cache: "no-store",
+    });
+  },
+
+  updateSystemAuthSettings(input: {
+    emailVerificationEnabled: boolean;
+    verificationCodeTTLSeconds: number;
+    resendIntervalSeconds: number;
+    maxVerifyAttempts: number;
+  }) {
+    return request<ShareAuthSettingsResponse>(`${API_ROOT}/me/system/auth-settings`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  sendSystemSMTPTestEmail(input: ShareSMTPTestRequest) {
+    return request<ShareSMTPTestResponse>(`${API_ROOT}/me/system/auth-settings/test-email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  systemMediaStorageSettings() {
+    return request<ShareMediaStorageSettingsResponse>(`${API_ROOT}/me/system/media-storage`, {
+      cache: "no-store",
+    });
+  },
+
+  updateSystemMediaStorageSettings(input: {
+    storageMode: "local" | "object_storage";
+    localFallbackEnabled: boolean;
+    coverNamespaceID: string;
+    assetNamespaceID: string;
+  }) {
+    return request<ShareMediaStorageSettingsResponse>(`${API_ROOT}/me/system/media-storage`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
     });
   },
 };

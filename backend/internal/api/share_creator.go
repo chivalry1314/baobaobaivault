@@ -22,6 +22,7 @@ func (h *Handler) shareMyCards(c *gin.Context) {
 		jsonError(c, http.StatusInternalServerError, err)
 		return
 	}
+	dashboard.User.IsConfiguredSuperAdmin = h.isConfiguredShareSuperAdmin(&dashboard.User)
 	c.JSON(http.StatusOK, dashboard)
 }
 
@@ -37,6 +38,7 @@ func (h *Handler) shareMyAccessCodes(c *gin.Context) {
 		jsonError(c, http.StatusInternalServerError, err)
 		return
 	}
+	dashboard.User.IsConfiguredSuperAdmin = h.isConfiguredShareSuperAdmin(&dashboard.User)
 	c.JSON(http.StatusOK, dashboard)
 }
 
@@ -77,6 +79,7 @@ func (h *Handler) shareUpdateProfile(c *gin.Context) {
 		return
 	}
 
+	updated.IsConfiguredSuperAdmin = h.isConfiguredShareSuperAdmin(updated)
 	c.JSON(http.StatusOK, gin.H{"ok": true, "user": updated})
 }
 

@@ -92,6 +92,83 @@ func (s *StorageService) ListStorageConfigs(ctx context.Context) ([]*model.Stora
 	return configs, nil
 }
 
+func (s *StorageService) UpdateStorageConfig(ctx context.Context, configID string, req *UpdateStorageConfigRequest) (*model.StorageConfig, error) {
+	configID = strings.TrimSpace(configID)
+	if configID == "" {
+		return nil, errors.New("id is required")
+	}
+
+	var config model.StorageConfig
+	if err := s.db.WithContext(ctx).First(&config, "id = ?", configID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("storage config not found")
+		}
+		return nil, fmt.Errorf("failed to get storage config: %w", err)
+	}
+
+	provider := strings.ToLower(strings.TrimSpace(req.Provider))
+	if provider == "" {
+		return nil, errors.New("provider is required")
+	}
+
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		return nil, errors.New("name is required")
+	}
+
+	bucket := strings.TrimSpace(req.Bucket)
+	if bucket == "" {
+		return nil, errors.New("bucket is required")
+	}
+
+	config.Name = name
+	config.Provider = model.StorageProvider(provider)
+	config.Endpoint = strings.TrimSpace(req.Endpoint)
+	config.Region = strings.TrimSpace(req.Region)
+	config.Bucket = bucket
+	config.PathStyle = req.PathStyle
+	config.IsDefault = req.IsDefault
+	config.ExtraConfig = strings.TrimSpace(req.ExtraConfig)
+
+	if req.OwnerUserID != nil {
+		ownerID := strings.TrimSpace(*req.OwnerUserID)
+		if ownerID == "" {
+			config.OwnerUserID = nil
+		} else {
+			config.OwnerUserID = &ownerID
+		}
+	}
+
+	if req.AccessKey != nil {
+		config.AccessKey = strings.TrimSpace(*req.AccessKey)
+	}
+	if req.SecretKey != nil {
+		config.SecretKey = strings.TrimSpace(*req.SecretKey)
+	}
+
+	if err := s.db.WithContext(ctx).Save(&config).Error; err != nil {
+		return nil, fmt.Errorf("failed to update storage config: %w", err)
+	}
+
+	if config.IsDefault {
+		query := s.db.WithContext(ctx).Model(&model.StorageConfig{}).Where("id != ?", config.ID)
+		if config.OwnerUserID == nil {
+			query = query.Where("owner_user_id IS NULL")
+		} else {
+			query = query.Where("owner_user_id = ?", *config.OwnerUserID)
+		}
+		_ = query.Update("is_default", false).Error
+	}
+
+	s.registry.Unregister(config.ID)
+	s.logger.Info("Storage config updated",
+		zap.String("config_id", config.ID),
+		zap.String("provider", string(config.Provider)),
+	)
+
+	return &config, nil
+}
+
 func (s *StorageService) DeleteStorageConfig(ctx context.Context, configID string) error {
 	var count int64
 	if err := s.db.WithContext(ctx).Model(&model.Namespace{}).
@@ -959,6 +1036,20 @@ type CreateStorageConfigRequest struct {
 	PathStyle   bool   `json:"path_style"`
 	IsDefault   bool   `json:"is_default"`
 	ExtraConfig string `json:"extra_config"`
+}
+
+type UpdateStorageConfigRequest struct {
+	OwnerUserID *string `json:"owner_user_id"`
+	Name        string  `json:"name" binding:"required"`
+	Provider    string  `json:"provider" binding:"required"`
+	Endpoint    string  `json:"endpoint"`
+	Region      string  `json:"region"`
+	Bucket      string  `json:"bucket" binding:"required"`
+	AccessKey   *string `json:"access_key"`
+	SecretKey   *string `json:"secret_key"`
+	PathStyle   bool    `json:"path_style"`
+	IsDefault   bool    `json:"is_default"`
+	ExtraConfig string  `json:"extra_config"`
 }
 
 type PutObjectRequest struct {

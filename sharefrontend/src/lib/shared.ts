@@ -12,6 +12,7 @@ export type ExternalSessionUser = {
   coverImage: string;
   phone: string;
   role: ShareUserRole;
+  isConfiguredSuperAdmin: boolean;
   createdAt: string;
 };
 
@@ -23,6 +24,16 @@ export type ShareUserRoleManageItem = {
   role: ShareUserRole;
   status: string;
   createdAt: string;
+};
+
+export type ShareUsersManageResponse = {
+  users: ShareUserRoleManageItem[];
+  pagination: SharePagination;
+};
+
+export type ShareSystemRolesResponse = {
+  items: ShareSystemRole[];
+  pagination: SharePagination;
 };
 
 export type CardContentSlot = "system_theme" | "wechat_theme" | "app" | "character_persona" | "world_book";
@@ -133,6 +144,14 @@ export type ShareAuthSettings = {
   canUpdate: boolean;
 };
 
+export type ShareMediaStorageSettings = {
+  storageMode: "local" | "object_storage";
+  localFallbackEnabled: boolean;
+  coverNamespaceID: string;
+  assetNamespaceID: string;
+  canUpdate: boolean;
+};
+
 export type ShareAuthConfigResponse = {
   ok: true;
   config: ShareAuthConfig;
@@ -141,6 +160,11 @@ export type ShareAuthConfigResponse = {
 export type ShareAuthSettingsResponse = {
   ok: true;
   settings: ShareAuthSettings;
+};
+
+export type ShareMediaStorageSettingsResponse = {
+  ok: true;
+  settings: ShareMediaStorageSettings;
 };
 
 export type ShareEmailHealth = {
@@ -163,6 +187,149 @@ export type ShareSMTPTestResponse = {
 
 export type ShareSMTPTestRequest = {
   targetEmail: string;
+};
+
+export type ShareStorageConfig = {
+  id: string;
+  owner_user_id?: string | null;
+  name: string;
+  provider: string;
+  endpoint: string;
+  region: string;
+  bucket: string;
+  path_style: boolean;
+  is_default: boolean;
+  status: string;
+  extra_config: string;
+  used_storage: number;
+  object_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ShareNamespace = {
+  id: string;
+  owner_user_id?: string | null;
+  name: string;
+  description: string;
+  status: string;
+  is_default: boolean;
+  storage_config_id?: string | null;
+  path_prefix: string;
+  max_storage?: number | null;
+  max_files?: number | null;
+  max_file_size?: number | null;
+  used_storage: number;
+  used_files: number;
+  created_at: string;
+  updated_at: string;
+  storage_config?: ShareStorageConfig | null;
+};
+
+export type SharePagination = {
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+export type ShareStorageObject = {
+  id: string;
+  namespace_id: string;
+  key: string;
+  name: string;
+  size: number;
+  content_type: string;
+  etag: string;
+  version_id: string;
+  storage_key: string;
+  metadata: string;
+  is_latest: boolean;
+  last_modified: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ShareObjectVersion = {
+  id: string;
+  object_id: string;
+  version_id: string;
+  size: number;
+  etag: string;
+  storage_key: string;
+  is_latest: boolean;
+  created_at: string;
+};
+
+export type SharePreparedPresignPut = {
+  url: string;
+  key: string;
+  version_id: string;
+  storage_key: string;
+};
+
+export type ShareAuditLog = {
+  id: string;
+  user_id?: string | null;
+  action: string;
+  resource: string;
+  resource_id: string;
+  detail: string;
+  ip_address: string;
+  user_agent: string;
+  status: string;
+  created_at: string;
+};
+
+export type ShareAccessKeyItem = {
+  id: string;
+  user_id?: string | null;
+  access_key: string;
+  description: string;
+  status: string;
+  expires_at?: string | null;
+  created_at: string;
+  updated_at?: string;
+};
+
+export type ShareSystemAccessKeyCreateResult = {
+  id: string;
+  access_key: string;
+  secret_key: string;
+  description: string;
+  status: string;
+  expires_at?: string | null;
+  created_at: string;
+};
+
+export type ShareSystemAccessKeyOwner = {
+  id: string;
+  email: string;
+  username: string;
+  nickname: string;
+};
+
+export type SharePermission = {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  resource: string;
+  action: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ShareSystemRole = {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  is_system: boolean;
+  level: number;
+  created_at: string;
+  updated_at: string;
+  permissions?: SharePermission[];
+  namespaces?: ShareNamespace[];
 };
 
 export type DashboardCard = {

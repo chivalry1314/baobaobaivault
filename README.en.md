@@ -295,12 +295,7 @@ server:
   read_timeout: 30
   write_timeout: 30
   mode: release
-  allow_public_bootstrap: false
-  auto_bootstrap_admin: false
   admin_email: ""
-  admin_password: ""
-  admin_username: "admin"
-  admin_nickname: "Administrator"
 
 cors:
   enabled: true
@@ -339,22 +334,6 @@ storage:
   temp_dir: "/tmp/baobaobaivault"
   max_file_size: 10737418240
 
-baidu:
-  enabled: false
-  api_key: ""
-  secret_key: ""
-  redirect_uri: "https://share.example.com/api/v1/connectors/baidu/callback"
-  scope: "basic,netdisk"
-  auth_url: "https://openapi.baidu.com/oauth/2.0/authorize"
-  auth_extra_params: {}
-  token_url: "https://openapi.baidu.com/oauth/2.0/token"
-  pan_api_base_url: "https://pan.baidu.com/rest/2.0"
-  pan_upload_url: "https://d.pcs.baidu.com/rest/2.0/pcs/superfile2"
-  default_path_prefix: "/apps/baobaobaiphone/backups"
-  state_secret: "change-this-state-secret"
-  token_encrypt_secret: "change-this-token-encrypt-secret"
-  http_timeout_seconds: 30
-
 webpush:
   enabled: false
   public_api_enabled: false
@@ -388,8 +367,6 @@ Important notes:
   - replace with a strong random secret
 - `storage.default_provider: local`
   - stores files in the mounted local volume
-- `baidu.redirect_uri`
-  - must use the real HTTPS domain if Baidu OAuth is enabled
 
 ## 8. Nginx Full Example
 
@@ -721,12 +698,6 @@ Common cause:
 - `config.yaml` does not use `postgres` and `redis` as hostnames
 - secrets do not match `.env`
 
-### 7. Baidu callback failures
-
-Common cause:
-
-- `baidu.redirect_uri` is still pointing to a local address
-
 ## 15. Recommended Production Practices
 
 - pin version tags instead of relying on `latest`
@@ -742,6 +713,8 @@ Common cause:
 
 - [README.md](./README.md)
 - [README.zh-CN.md](./README.zh-CN.md)
+- [Minimal Production Checklist](./DEPLOY_CHECKLIST.en.md)
+- [最小生产配置清单](./DEPLOY_CHECKLIST.zh-CN.md)
 - [docker-compose.public.yml](./docker-compose.public.yml)
 - [.env.public.example](./.env.public.example)
 - [deploy/backend/config.public.example.yaml](./deploy/backend/config.public.example.yaml)
@@ -749,3 +722,7 @@ Common cause:
 - [.github/workflows/publish-images.yml](./.github/workflows/publish-images.yml)
 - [Share Auth Email Verification Guide](./backend/config/SHARE_AUTH_EMAIL_DEPLOY.md)
 - [Share Auth Email Verification Guide (Chinese)](./backend/config/SHARE_AUTH_EMAIL_DEPLOY_ZH.md)
+- [Share Media Storage to OSS Guide](./backend/config/SHARE_MEDIA_STORAGE_OSS_DEPLOY.md)
+- [Share 媒体文件切换到 OSS 指南](./backend/config/SHARE_MEDIA_STORAGE_OSS_DEPLOY_ZH.md)
+- [Storage to Media Upload Workflow](./STORAGE_WORKFLOW.en.md)
+- [存储到媒体上传操作手册](./STORAGE_WORKFLOW.zh-CN.md)

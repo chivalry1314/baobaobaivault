@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -131,7 +132,7 @@ func (s *ShareService) CanAccessCardCover(ctx context.Context, cardID, viewerUse
 	if !canAccess {
 		return nil, ErrShareCardForbidden
 	}
-	if strings.TrimSpace(card.StoredFileName) == "" {
+	if !hasShareStoredMedia(card.StorageBackend, card.StorageNamespaceID, card.StorageObjectKey, card.StoredFileName) {
 		return nil, ErrShareCardNotFound
 	}
 	return &card, nil
@@ -235,32 +236,34 @@ func (s *ShareService) RecordDownload(ctx context.Context, cardID string, downlo
 	})
 }
 
-func (s *ShareService) OpenCardFile(card *model.SharePlatformCard, asset *model.SharePlatformCardAsset) (*os.File, os.FileInfo, error) {
-	path := s.getStoredFilePath(card.CreatorExternalUserID, asset.StoredFileName)
-	file, err := os.Open(path)
+func (s *ShareService) OpenCardFile(ctx context.Context, card *model.SharePlatformCard, asset *model.SharePlatformCardAsset) (io.ReadCloser, int64, error) {
+	stream, err := s.openCardStoredMedia(
+		ctx,
+		card.CreatorExternalUserID,
+		asset.StorageBackend,
+		asset.StorageNamespaceID,
+		asset.StorageObjectKey,
+		asset.StoredFileName,
+	)
 	if err != nil {
-		return nil, nil, err
+		return nil, 0, err
 	}
-	stat, err := file.Stat()
-	if err != nil {
-		_ = file.Close()
-		return nil, nil, err
-	}
-	return file, stat, nil
+	return stream.Reader, stream.Size, nil
 }
 
-func (s *ShareService) OpenCardCoverFile(card *model.SharePlatformCard) (*os.File, os.FileInfo, error) {
-	path := s.getStoredFilePath(card.CreatorExternalUserID, card.StoredFileName)
-	file, err := os.Open(path)
+func (s *ShareService) OpenCardCoverFile(ctx context.Context, card *model.SharePlatformCard) (io.ReadCloser, int64, error) {
+	stream, err := s.openCardStoredMedia(
+		ctx,
+		card.CreatorExternalUserID,
+		card.StorageBackend,
+		card.StorageNamespaceID,
+		card.StorageObjectKey,
+		card.StoredFileName,
+	)
 	if err != nil {
-		return nil, nil, err
+		return nil, 0, err
 	}
-	stat, err := file.Stat()
-	if err != nil {
-		_ = file.Close()
-		return nil, nil, err
-	}
-	return file, stat, nil
+	return stream.Reader, stream.Size, nil
 }
 
 func (s *ShareService) OpenProfileAsset(userID, storedFileName string) (*os.File, os.FileInfo, error) {

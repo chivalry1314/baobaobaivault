@@ -234,6 +234,7 @@ func (h *Handler) shareContinue(c *gin.Context) {
 		return
 	}
 
+	user.IsConfiguredSuperAdmin = h.isConfiguredShareSuperAdmin(user)
 	h.setShareSessionCookie(c, user.ID)
 	status := http.StatusOK
 	if created {
@@ -265,6 +266,7 @@ func (h *Handler) shareLogin(c *gin.Context) {
 		return
 	}
 
+	user.IsConfiguredSuperAdmin = h.isConfiguredShareSuperAdmin(user)
 	h.setShareSessionCookie(c, user.ID)
 	c.JSON(http.StatusOK, gin.H{"ok": true, "user": user})
 }
@@ -280,6 +282,7 @@ func (h *Handler) shareSession(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"authenticated": false, "user": nil})
 		return
 	}
+	user.IsConfiguredSuperAdmin = h.isConfiguredShareSuperAdmin(user)
 	c.JSON(http.StatusOK, gin.H{"authenticated": true, "user": user})
 }
 
@@ -305,6 +308,7 @@ func (h *Handler) requireShareUser(c *gin.Context) (*service.ShareSessionUser, e
 	if !ok || user == nil {
 		return nil, errors.New("authentication required")
 	}
+	user.IsConfiguredSuperAdmin = h.isConfiguredShareSuperAdmin(user)
 	return user, nil
 }
 
@@ -314,6 +318,18 @@ func (h *Handler) currentShareUserID(c *gin.Context) string {
 		return ""
 	}
 	return user.ID
+}
+
+func (h *Handler) isConfiguredShareSuperAdmin(user *service.ShareSessionUser) bool {
+	if user == nil {
+		return false
+	}
+	configuredEmail := strings.ToLower(strings.TrimSpace(h.cfg.Server.AdminEmail))
+	currentEmail := strings.ToLower(strings.TrimSpace(user.Email))
+	if configuredEmail == "" || currentEmail == "" {
+		return false
+	}
+	return configuredEmail == currentEmail
 }
 
 func (h *Handler) setShareSessionCookie(c *gin.Context, userID string) {

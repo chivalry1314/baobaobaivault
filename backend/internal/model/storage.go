@@ -28,8 +28,8 @@ type StorageConfig struct {
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
-	Owner      *User       `gorm:"foreignKey:OwnerUserID" json:"owner,omitempty"`
-	Namespaces []Namespace `gorm:"foreignKey:StorageConfigID" json:"namespaces,omitempty"`
+	Owner      *ShareExternalUser `gorm:"foreignKey:OwnerUserID" json:"owner,omitempty"`
+	Namespaces []Namespace       `gorm:"foreignKey:StorageConfigID" json:"namespaces,omitempty"`
 }
 
 type StorageProvider string

@@ -48,7 +48,17 @@ func (s *ShareService) CreateCard(ctx context.Context, input ShareCreateCardInpu
 		return nil, err
 	}
 
-	storedFileName, fileSize, err := s.saveUploadFile(input.CreatorID, input.FileName, input.FileReader, input.MaxFileSize)
+	cardID := randomUUIDLike()
+	storedAsset, err := s.storeCardAssetMedia(
+		ctx,
+		input.CreatorID,
+		cardID,
+		"system_theme",
+		input.FileName,
+		input.MimeType,
+		input.FileReader,
+		input.MaxFileSize,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -56,12 +66,31 @@ func (s *ShareService) CreateCard(ctx context.Context, input ShareCreateCardInpu
 	coverFileSize := int64(0)
 	coverFileName := ""
 	coverMimeType := ""
+	var coverStorageNamespaceID *string
+	coverStorageObjectKey := ""
+	coverStorageVersionID := ""
+	coverStorageBackend := model.ShareMediaStorageModeLocal
 	if strings.TrimSpace(input.CoverFileName) != "" && input.CoverReader != nil {
-		coverStoredFileName, coverFileSize, err = s.saveUploadFile(input.CreatorID, input.CoverFileName, input.CoverReader, input.MaxFileSize)
+		storedCover, coverErr := s.storeCardCoverMedia(
+			ctx,
+			input.CreatorID,
+			cardID,
+			input.CoverFileName,
+			input.CoverMimeType,
+			input.CoverReader,
+			input.MaxFileSize,
+		)
+		err = coverErr
 		if err != nil {
-			_ = s.removeStoredFile(input.CreatorID, storedFileName)
+			_ = s.deleteCardStoredMedia(ctx, input.CreatorID, storedAsset.StorageBackend, storedAsset.StorageNamespaceID, storedAsset.StorageObjectKey, storedAsset.StoredFileName)
 			return nil, err
 		}
+		coverStoredFileName = storedCover.StoredFileName
+		coverFileSize = storedCover.Size
+		coverStorageNamespaceID = storedCover.StorageNamespaceID
+		coverStorageObjectKey = storedCover.StorageObjectKey
+		coverStorageVersionID = storedCover.StorageVersionID
+		coverStorageBackend = storedCover.StorageBackend
 		coverFileName = filepath.Base(input.CoverFileName)
 		coverMimeType = detectUploadMimeType(input.CoverFileName, input.CoverMimeType)
 	}
@@ -69,6 +98,7 @@ func (s *ShareService) CreateCard(ctx context.Context, input ShareCreateCardInpu
 	mimeType := detectUploadMimeType(input.FileName, input.MimeType)
 
 	card := model.SharePlatformCard{
+		ID:                     cardID,
 		CreatorExternalUserID:  strings.TrimSpace(input.CreatorID),
 		Title:                  strings.TrimSpace(input.Title),
 		Description:            strings.TrimSpace(input.Description),
@@ -80,6 +110,10 @@ func (s *ShareService) CreateCard(ctx context.Context, input ShareCreateCardInpu
 		ReviewedAt:             nil,
 		ReviewReason:           "",
 		ReviewerExternalUserID: nil,
+		StorageBackend:         coverStorageBackend,
+		StorageNamespaceID:     coverStorageNamespaceID,
+		StorageObjectKey:       coverStorageObjectKey,
+		StorageVersionID:       coverStorageVersionID,
 		StoredFileName:         coverStoredFileName,
 		OriginalFileName:       coverFileName,
 		MimeType:               coverMimeType,
@@ -93,10 +127,14 @@ func (s *ShareService) CreateCard(ctx context.Context, input ShareCreateCardInpu
 		asset := model.SharePlatformCardAsset{
 			CardID:           card.ID,
 			Slot:             "system_theme",
-			StoredFileName:   storedFileName,
+			StorageBackend:   storedAsset.StorageBackend,
+			StorageNamespaceID: storedAsset.StorageNamespaceID,
+			StorageObjectKey: storedAsset.StorageObjectKey,
+			StorageVersionID: storedAsset.StorageVersionID,
+			StoredFileName:   storedAsset.StoredFileName,
 			OriginalFileName: filepath.Base(input.FileName),
 			MimeType:         mimeType,
-			Size:             fileSize,
+			Size:             storedAsset.Size,
 			SortOrder:        0,
 		}
 		if err := tx.Create(&asset).Error; err != nil {
@@ -104,9 +142,9 @@ func (s *ShareService) CreateCard(ctx context.Context, input ShareCreateCardInpu
 		}
 		return nil
 	}); err != nil {
-		_ = s.removeStoredFile(input.CreatorID, storedFileName)
-		if coverStoredFileName != "" {
-			_ = s.removeStoredFile(input.CreatorID, coverStoredFileName)
+		_ = s.deleteCardStoredMedia(ctx, input.CreatorID, storedAsset.StorageBackend, storedAsset.StorageNamespaceID, storedAsset.StorageObjectKey, storedAsset.StoredFileName)
+		if hasShareStoredMedia(coverStorageBackend, coverStorageNamespaceID, coverStorageObjectKey, coverStoredFileName) {
+			_ = s.deleteCardStoredMedia(ctx, input.CreatorID, coverStorageBackend, coverStorageNamespaceID, coverStorageObjectKey, coverStoredFileName)
 		}
 		return nil, err
 	}
@@ -161,50 +199,89 @@ func (s *ShareService) CreateCardBundle(ctx context.Context, input ShareCreateCa
 	}
 
 	type savedAsset struct {
-		slot           string
-		storedFileName string
-		fileName       string
-		mimeType       string
-		size           int64
+		slot              string
+		storageBackend    string
+		storageNamespaceID *string
+		storageObjectKey  string
+		storageVersionID  string
+		storedFileName    string
+		fileName          string
+		mimeType          string
+		size              int64
 	}
 
+	cardID := randomUUIDLike()
 	savedAssets := make([]savedAsset, 0, len(input.Assets))
 	coverStoredFileName := ""
 	coverFileSize := int64(0)
 	coverFileName := ""
 	coverMimeType := ""
+	var coverStorageNamespaceID *string
+	coverStorageObjectKey := ""
+	coverStorageVersionID := ""
+	coverStorageBackend := model.ShareMediaStorageModeLocal
 	var err error
 	if strings.TrimSpace(input.CoverFileName) != "" && input.CoverReader != nil {
-		coverStoredFileName, coverFileSize, err = s.saveUploadFile(creatorID, input.CoverFileName, input.CoverReader, input.MaxFileSize)
+		storedCover, coverErr := s.storeCardCoverMedia(
+			ctx,
+			creatorID,
+			cardID,
+			input.CoverFileName,
+			input.CoverMimeType,
+			input.CoverReader,
+			input.MaxFileSize,
+		)
+		err = coverErr
 		if err != nil {
 			return nil, err
 		}
+		coverStoredFileName = storedCover.StoredFileName
+		coverFileSize = storedCover.Size
+		coverStorageNamespaceID = storedCover.StorageNamespaceID
+		coverStorageObjectKey = storedCover.StorageObjectKey
+		coverStorageVersionID = storedCover.StorageVersionID
+		coverStorageBackend = storedCover.StorageBackend
 		coverFileName = filepath.Base(input.CoverFileName)
 		coverMimeType = detectUploadMimeType(input.CoverFileName, input.CoverMimeType)
 	}
 	for _, item := range input.Assets {
-		storedFileName, fileSize, err := s.saveUploadFile(creatorID, item.FileName, item.FileReader, input.MaxFileSize)
+		storedAsset, saveErr := s.storeCardAssetMedia(
+			ctx,
+			creatorID,
+			cardID,
+			item.Slot,
+			item.FileName,
+			item.MimeType,
+			item.FileReader,
+			input.MaxFileSize,
+		)
+		err := saveErr
 		if err != nil {
-			if coverStoredFileName != "" {
-				_ = s.removeStoredFile(creatorID, coverStoredFileName)
+			if hasShareStoredMedia(coverStorageBackend, coverStorageNamespaceID, coverStorageObjectKey, coverStoredFileName) {
+				_ = s.deleteCardStoredMedia(ctx, creatorID, coverStorageBackend, coverStorageNamespaceID, coverStorageObjectKey, coverStoredFileName)
 			}
 			for _, saved := range savedAssets {
-				_ = s.removeStoredFile(creatorID, saved.storedFileName)
+				_ = s.deleteCardStoredMedia(ctx, creatorID, saved.storageBackend, saved.storageNamespaceID, saved.storageObjectKey, saved.storedFileName)
 			}
 			return nil, err
 		}
 
 		mimeType := detectUploadMimeType(item.FileName, item.MimeType)
 		savedAssets = append(savedAssets, savedAsset{
-			slot:           normalizeShareCardSlot(item.Slot),
-			storedFileName: storedFileName,
-			fileName:       filepath.Base(item.FileName),
-			mimeType:       mimeType,
-			size:           fileSize,
+			slot:              normalizeShareCardSlot(item.Slot),
+			storageBackend:    storedAsset.StorageBackend,
+			storageNamespaceID: storedAsset.StorageNamespaceID,
+			storageObjectKey:  storedAsset.StorageObjectKey,
+			storageVersionID:  storedAsset.StorageVersionID,
+			storedFileName:    storedAsset.StoredFileName,
+			fileName:          filepath.Base(item.FileName),
+			mimeType:          mimeType,
+			size:              storedAsset.Size,
 		})
 	}
 
 	card := model.SharePlatformCard{
+		ID:                     cardID,
 		CreatorExternalUserID:  creatorID,
 		Title:                  strings.TrimSpace(input.Title),
 		Description:            strings.TrimSpace(input.Description),
@@ -216,6 +293,10 @@ func (s *ShareService) CreateCardBundle(ctx context.Context, input ShareCreateCa
 		ReviewedAt:             nil,
 		ReviewReason:           "",
 		ReviewerExternalUserID: nil,
+		StorageBackend:         coverStorageBackend,
+		StorageNamespaceID:     coverStorageNamespaceID,
+		StorageObjectKey:       coverStorageObjectKey,
+		StorageVersionID:       coverStorageVersionID,
 		StoredFileName:         coverStoredFileName,
 		OriginalFileName:       coverFileName,
 		MimeType:               coverMimeType,
@@ -228,13 +309,17 @@ func (s *ShareService) CreateCardBundle(ctx context.Context, input ShareCreateCa
 		}
 		for index, asset := range savedAssets {
 			row := model.SharePlatformCardAsset{
-				CardID:           card.ID,
-				Slot:             asset.slot,
-				StoredFileName:   asset.storedFileName,
-				OriginalFileName: asset.fileName,
-				MimeType:         asset.mimeType,
-				Size:             asset.size,
-				SortOrder:        index,
+				CardID:             card.ID,
+				Slot:               asset.slot,
+				StorageBackend:     asset.storageBackend,
+				StorageNamespaceID: asset.storageNamespaceID,
+				StorageObjectKey:   asset.storageObjectKey,
+				StorageVersionID:   asset.storageVersionID,
+				StoredFileName:     asset.storedFileName,
+				OriginalFileName:   asset.fileName,
+				MimeType:           asset.mimeType,
+				Size:               asset.size,
+				SortOrder:          index,
 			}
 			if err := tx.Create(&row).Error; err != nil {
 				return err
@@ -242,11 +327,11 @@ func (s *ShareService) CreateCardBundle(ctx context.Context, input ShareCreateCa
 		}
 		return nil
 	}); err != nil {
-		if coverStoredFileName != "" {
-			_ = s.removeStoredFile(creatorID, coverStoredFileName)
+		if hasShareStoredMedia(coverStorageBackend, coverStorageNamespaceID, coverStorageObjectKey, coverStoredFileName) {
+			_ = s.deleteCardStoredMedia(ctx, creatorID, coverStorageBackend, coverStorageNamespaceID, coverStorageObjectKey, coverStoredFileName)
 		}
 		for _, saved := range savedAssets {
-			_ = s.removeStoredFile(creatorID, saved.storedFileName)
+			_ = s.deleteCardStoredMedia(ctx, creatorID, saved.storageBackend, saved.storageNamespaceID, saved.storageObjectKey, saved.storedFileName)
 		}
 		return nil, err
 	}
@@ -364,12 +449,24 @@ func (s *ShareService) ReplaceCardAssetByOwner(ctx context.Context, input ShareU
 
 	mimeType := detectUploadMimeType(input.FileName, input.MimeType)
 
-	storedFileName, fileSize, err := s.saveUploadFile(ownerID, input.FileName, input.FileReader, input.MaxFileSize)
+	storedAsset, err := s.storeCardAssetMedia(
+		ctx,
+		ownerID,
+		cardID,
+		slot,
+		input.FileName,
+		input.MimeType,
+		input.FileReader,
+		input.MaxFileSize,
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	var oldStoredFileName string
+	var oldStorageBackend string
+	var oldStorageNamespaceID *string
+	var oldStorageObjectKey string
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var card model.SharePlatformCard
 		if err := tx.First(&card, "id = ?", cardID).Error; err != nil {
@@ -397,13 +494,17 @@ func (s *ShareService) ReplaceCardAssetByOwner(ctx context.Context, input ShareU
 		if err := tx.First(&asset, "card_id = ? AND slot = ?", card.ID, slot).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				asset = model.SharePlatformCardAsset{
-					CardID:           card.ID,
-					Slot:             slot,
-					StoredFileName:   storedFileName,
-					OriginalFileName: filepath.Base(input.FileName),
-					MimeType:         mimeType,
-					Size:             fileSize,
-					SortOrder:        shareCardSlotSortOrder(slot),
+					CardID:             card.ID,
+					Slot:               slot,
+					StorageBackend:     storedAsset.StorageBackend,
+					StorageNamespaceID: storedAsset.StorageNamespaceID,
+					StorageObjectKey:   storedAsset.StorageObjectKey,
+					StorageVersionID:   storedAsset.StorageVersionID,
+					StoredFileName:     storedAsset.StoredFileName,
+					OriginalFileName:   filepath.Base(input.FileName),
+					MimeType:           mimeType,
+					Size:               storedAsset.Size,
+					SortOrder:          shareCardSlotSortOrder(slot),
 				}
 				if err := tx.Create(&asset).Error; err != nil {
 					return err
@@ -424,10 +525,17 @@ func (s *ShareService) ReplaceCardAssetByOwner(ctx context.Context, input ShareU
 		}
 
 		oldStoredFileName = strings.TrimSpace(asset.StoredFileName)
-		asset.StoredFileName = storedFileName
+		oldStorageBackend = strings.TrimSpace(asset.StorageBackend)
+		oldStorageNamespaceID = asset.StorageNamespaceID
+		oldStorageObjectKey = strings.TrimSpace(asset.StorageObjectKey)
+		asset.StorageBackend = storedAsset.StorageBackend
+		asset.StorageNamespaceID = storedAsset.StorageNamespaceID
+		asset.StorageObjectKey = storedAsset.StorageObjectKey
+		asset.StorageVersionID = storedAsset.StorageVersionID
+		asset.StoredFileName = storedAsset.StoredFileName
 		asset.OriginalFileName = filepath.Base(input.FileName)
 		asset.MimeType = mimeType
-		asset.Size = fileSize
+		asset.Size = storedAsset.Size
 		asset.SortOrder = shareCardSlotSortOrder(slot)
 		asset.UpdatedAt = time.Now().UTC()
 		if err := tx.Save(&asset).Error; err != nil {
@@ -447,11 +555,12 @@ func (s *ShareService) ReplaceCardAssetByOwner(ctx context.Context, input ShareU
 			}).Error
 	})
 	if err != nil {
-		_ = s.removeStoredFile(ownerID, storedFileName)
+		_ = s.deleteCardStoredMedia(ctx, ownerID, storedAsset.StorageBackend, storedAsset.StorageNamespaceID, storedAsset.StorageObjectKey, storedAsset.StoredFileName)
 		return nil, err
 	}
-	if oldStoredFileName != "" && oldStoredFileName != storedFileName {
-		_ = s.removeStoredFile(ownerID, oldStoredFileName)
+	if hasShareStoredMedia(oldStorageBackend, oldStorageNamespaceID, oldStorageObjectKey, oldStoredFileName) &&
+		(oldStoredFileName != storedAsset.StoredFileName || oldStorageObjectKey != storedAsset.StorageObjectKey) {
+		_ = s.deleteCardStoredMedia(ctx, ownerID, oldStorageBackend, oldStorageNamespaceID, oldStorageObjectKey, oldStoredFileName)
 	}
 	return s.GetCardDetail(ctx, cardID, ownerID)
 }
@@ -480,12 +589,23 @@ func (s *ShareService) ReplaceCardCoverByOwner(
 		return nil, ErrShareInvalidImageData
 	}
 
-	storedFileName, fileSize, err := s.saveUploadFile(ownerID, fileName, fileReader, maxFileSize)
+	storedCover, err := s.storeCardCoverMedia(
+		ctx,
+		ownerID,
+		cardID,
+		fileName,
+		mimeType,
+		fileReader,
+		maxFileSize,
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	oldStoredFileName := ""
+	oldStorageBackend := ""
+	var oldStorageNamespaceID *string
+	oldStorageObjectKey := ""
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var card model.SharePlatformCard
 		if err := tx.First(&card, "id = ?", cardID).Error; err != nil {
@@ -510,14 +630,25 @@ func (s *ShareService) ReplaceCardCoverByOwner(
 		}
 
 		oldStoredFileName = strings.TrimSpace(card.StoredFileName)
-		card.StoredFileName = storedFileName
+		oldStorageBackend = strings.TrimSpace(card.StorageBackend)
+		oldStorageNamespaceID = card.StorageNamespaceID
+		oldStorageObjectKey = strings.TrimSpace(card.StorageObjectKey)
+		card.StorageBackend = storedCover.StorageBackend
+		card.StorageNamespaceID = storedCover.StorageNamespaceID
+		card.StorageObjectKey = storedCover.StorageObjectKey
+		card.StorageVersionID = storedCover.StorageVersionID
+		card.StoredFileName = storedCover.StoredFileName
 		card.OriginalFileName = filepath.Base(fileName)
 		card.MimeType = normalizedMimeType
-		card.Size = fileSize
+		card.Size = storedCover.Size
 		card.UpdatedAt = time.Now().UTC()
 		return tx.Model(&model.SharePlatformCard{}).
 			Where("id = ?", card.ID).
 			Updates(map[string]any{
+				"storage_backend":           card.StorageBackend,
+				"storage_namespace_id":      card.StorageNamespaceID,
+				"storage_object_key":        card.StorageObjectKey,
+				"storage_version_id":        card.StorageVersionID,
 				"stored_file_name":          card.StoredFileName,
 				"original_file_name":        card.OriginalFileName,
 				"mime_type":                 card.MimeType,
@@ -531,12 +662,13 @@ func (s *ShareService) ReplaceCardCoverByOwner(
 			}).Error
 	})
 	if err != nil {
-		_ = s.removeStoredFile(ownerID, storedFileName)
+		_ = s.deleteCardStoredMedia(ctx, ownerID, storedCover.StorageBackend, storedCover.StorageNamespaceID, storedCover.StorageObjectKey, storedCover.StoredFileName)
 		return nil, err
 	}
 
-	if oldStoredFileName != "" && oldStoredFileName != storedFileName {
-		_ = s.removeStoredFile(ownerID, oldStoredFileName)
+	if hasShareStoredMedia(oldStorageBackend, oldStorageNamespaceID, oldStorageObjectKey, oldStoredFileName) &&
+		(oldStoredFileName != storedCover.StoredFileName || oldStorageObjectKey != storedCover.StorageObjectKey) {
+		_ = s.deleteCardStoredMedia(ctx, ownerID, oldStorageBackend, oldStorageNamespaceID, oldStorageObjectKey, oldStoredFileName)
 	}
 	return s.GetCardDetail(ctx, cardID, ownerID)
 }
@@ -549,6 +681,9 @@ func (s *ShareService) DeleteCardCoverByOwner(ctx context.Context, ownerID, card
 	}
 
 	storedFileName := ""
+	storageBackend := ""
+	var storageNamespaceID *string
+	storageObjectKey := ""
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var card model.SharePlatformCard
 		if err := tx.First(&card, "id = ?", cardID).Error; err != nil {
@@ -573,6 +708,13 @@ func (s *ShareService) DeleteCardCoverByOwner(ctx context.Context, ownerID, card
 		}
 
 		storedFileName = strings.TrimSpace(card.StoredFileName)
+		storageBackend = strings.TrimSpace(card.StorageBackend)
+		storageNamespaceID = card.StorageNamespaceID
+		storageObjectKey = strings.TrimSpace(card.StorageObjectKey)
+		card.StorageBackend = model.ShareMediaStorageModeLocal
+		card.StorageNamespaceID = nil
+		card.StorageObjectKey = ""
+		card.StorageVersionID = ""
 		card.StoredFileName = ""
 		card.OriginalFileName = ""
 		card.MimeType = ""
@@ -581,6 +723,10 @@ func (s *ShareService) DeleteCardCoverByOwner(ctx context.Context, ownerID, card
 		return tx.Model(&model.SharePlatformCard{}).
 			Where("id = ?", card.ID).
 			Updates(map[string]any{
+				"storage_backend":           card.StorageBackend,
+				"storage_namespace_id":      card.StorageNamespaceID,
+				"storage_object_key":        card.StorageObjectKey,
+				"storage_version_id":        card.StorageVersionID,
 				"stored_file_name":          card.StoredFileName,
 				"original_file_name":        card.OriginalFileName,
 				"mime_type":                 card.MimeType,
@@ -597,8 +743,8 @@ func (s *ShareService) DeleteCardCoverByOwner(ctx context.Context, ownerID, card
 		return nil, err
 	}
 
-	if storedFileName != "" {
-		_ = s.removeStoredFile(ownerID, storedFileName)
+	if hasShareStoredMedia(storageBackend, storageNamespaceID, storageObjectKey, storedFileName) {
+		_ = s.deleteCardStoredMedia(ctx, ownerID, storageBackend, storageNamespaceID, storageObjectKey, storedFileName)
 	}
 	return s.GetCardDetail(ctx, cardID, ownerID)
 }
@@ -615,6 +761,9 @@ func (s *ShareService) DeleteCardAssetByOwner(ctx context.Context, ownerID, card
 	}
 
 	storedFileName := ""
+	storageBackend := ""
+	var storageNamespaceID *string
+	storageObjectKey := ""
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var card model.SharePlatformCard
 		if err := tx.First(&card, "id = ?", cardID).Error; err != nil {
@@ -646,6 +795,9 @@ func (s *ShareService) DeleteCardAssetByOwner(ctx context.Context, ownerID, card
 			return err
 		}
 		storedFileName = strings.TrimSpace(asset.StoredFileName)
+		storageBackend = strings.TrimSpace(asset.StorageBackend)
+		storageNamespaceID = asset.StorageNamespaceID
+		storageObjectKey = strings.TrimSpace(asset.StorageObjectKey)
 
 		var count int64
 		if err := tx.Model(&model.SharePlatformCardAsset{}).Where("card_id = ?", card.ID).Count(&count).Error; err != nil {
@@ -673,8 +825,8 @@ func (s *ShareService) DeleteCardAssetByOwner(ctx context.Context, ownerID, card
 	if err != nil {
 		return nil, err
 	}
-	if storedFileName != "" {
-		_ = s.removeStoredFile(ownerID, storedFileName)
+	if hasShareStoredMedia(storageBackend, storageNamespaceID, storageObjectKey, storedFileName) {
+		_ = s.deleteCardStoredMedia(ctx, ownerID, storageBackend, storageNamespaceID, storageObjectKey, storedFileName)
 	}
 	return s.GetCardDetail(ctx, cardID, ownerID)
 }
@@ -684,7 +836,13 @@ func (s *ShareService) DeleteCardByOwner(ctx context.Context, ownerID, cardID st
 	cardID = strings.TrimSpace(cardID)
 
 	var creatorID string
-	storedFileNames := make([]string, 0, 8)
+	type mediaRef struct {
+		backend     string
+		namespaceID *string
+		objectKey   string
+		storedName  string
+	}
+	storedMedia := make([]mediaRef, 0, 8)
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var card model.SharePlatformCard
 		if err := tx.First(&card, "id = ?", cardID).Error; err != nil {
@@ -706,12 +864,22 @@ func (s *ShareService) DeleteCardByOwner(ctx context.Context, ownerID, cardID st
 			return err
 		}
 		for _, asset := range assets {
-			if name := strings.TrimSpace(asset.StoredFileName); name != "" {
-				storedFileNames = append(storedFileNames, name)
+			if hasShareStoredMedia(asset.StorageBackend, asset.StorageNamespaceID, asset.StorageObjectKey, asset.StoredFileName) {
+				storedMedia = append(storedMedia, mediaRef{
+					backend:     strings.TrimSpace(asset.StorageBackend),
+					namespaceID: asset.StorageNamespaceID,
+					objectKey:   strings.TrimSpace(asset.StorageObjectKey),
+					storedName:  strings.TrimSpace(asset.StoredFileName),
+				})
 			}
 		}
-		if coverName := strings.TrimSpace(card.StoredFileName); coverName != "" {
-			storedFileNames = append(storedFileNames, coverName)
+		if hasShareStoredMedia(card.StorageBackend, card.StorageNamespaceID, card.StorageObjectKey, card.StoredFileName) {
+			storedMedia = append(storedMedia, mediaRef{
+				backend:     strings.TrimSpace(card.StorageBackend),
+				namespaceID: card.StorageNamespaceID,
+				objectKey:   strings.TrimSpace(card.StorageObjectKey),
+				storedName:  strings.TrimSpace(card.StoredFileName),
+			})
 		}
 		if err := tx.Where("card_id = ?", card.ID).Delete(&model.SharePlatformDownloadLog{}).Error; err != nil {
 			return err
@@ -725,13 +893,13 @@ func (s *ShareService) DeleteCardByOwner(ctx context.Context, ownerID, cardID st
 		return err
 	}
 
-	for _, storedFileName := range storedFileNames {
-		if removeErr := s.removeStoredFile(creatorID, storedFileName); removeErr != nil {
+	for _, item := range storedMedia {
+		if removeErr := s.deleteCardStoredMedia(ctx, creatorID, item.backend, item.namespaceID, item.objectKey, item.storedName); removeErr != nil {
 			s.logger.Warn(
 				"share remove stored file failed",
 				zap.Error(removeErr),
 				zap.String("card_id", cardID),
-				zap.String("stored_file_name", storedFileName),
+				zap.String("stored_file_name", item.storedName),
 			)
 		}
 	}

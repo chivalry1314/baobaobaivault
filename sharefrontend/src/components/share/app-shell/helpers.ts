@@ -7,6 +7,10 @@ export function isNavItemActive(currentPath: string, href: string) {
     return currentPath.startsWith("/creator/reviews");
   }
 
+  if (href === "/system") {
+    return currentPath === "/system" || currentPath.startsWith("/system/");
+  }
+
   if (href.startsWith("/creator")) {
     return currentPath.startsWith("/creator");
   }

@@ -28,10 +28,10 @@ type Namespace struct {
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
-	Owner         *User          `gorm:"foreignKey:OwnerUserID" json:"owner,omitempty"`
-	StorageConfig *StorageConfig `gorm:"foreignKey:StorageConfigID" json:"storage_config,omitempty"`
-	Objects       []Object       `gorm:"foreignKey:NamespaceID" json:"objects,omitempty"`
-	Roles         []Role         `gorm:"many2many:role_namespaces;" json:"roles,omitempty"`
+	Owner         *ShareExternalUser `gorm:"foreignKey:OwnerUserID" json:"owner,omitempty"`
+	StorageConfig *StorageConfig     `gorm:"foreignKey:StorageConfigID" json:"storage_config,omitempty"`
+	Objects       []Object           `gorm:"foreignKey:NamespaceID" json:"objects,omitempty"`
+	Roles         []Role             `gorm:"many2many:role_namespaces;" json:"roles,omitempty"`
 }
 
 type NSStatus string

@@ -17,7 +17,11 @@ export function AppShell({
 }: AppShellProps) {
   const { user } = useAccountEntry();
   const navItems = NAV_ITEMS.filter((item) =>
-    item.managerOnly ? user?.role === "manager" : true,
+    item.superAdminOnly
+      ? user?.isConfiguredSuperAdmin === true
+      : item.managerOnly
+        ? user?.role === "manager"
+        : true,
   );
 
   return (
