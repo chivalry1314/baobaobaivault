@@ -62,4 +62,4 @@ This repo can expose a standalone `mimiwebpushserver`-compatible Web Push API un
 - `share_auth.email_verification_enabled=false`: register creates and logs in directly
 - `share_auth.email_verification_enabled=true`: register must verify email code first
 - For Aliyun Direct Mail, use the same main config templates above and fill `email.*`; no separate provider template is kept
-- The local development CORS defaults now target the Next.js share frontend on `http://localhost:3000`
+- The local development CORS defaults now target the Next.js share frontend on `http://localhost:3002`

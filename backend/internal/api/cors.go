@@ -11,8 +11,8 @@ import (
 )
 
 var defaultCORSAllowOrigins = []string{
-	"http://localhost:3000",
-	"http://127.0.0.1:3000",
+	"http://localhost:3002",
+	"http://127.0.0.1:3002",
 }
 
 func newCORSMiddleware(cfg config.CorsConfig, publicReadCfg config.CorsConfig) gin.HandlerFunc {

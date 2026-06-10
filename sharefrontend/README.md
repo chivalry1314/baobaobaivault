@@ -146,7 +146,7 @@ npm run dev
 默认访问：
 
 ```text
-http://127.0.0.1:3000
+http://127.0.0.1:3002
 ```
 
 ### 4. 生产构建与启动
@@ -159,7 +159,7 @@ npm run start
 如果需要指定监听地址和端口：
 
 ```bash
-npm run start -- --hostname 0.0.0.0 --port 3000
+npm run start -- --hostname 0.0.0.0 --port 3002
 ```
 
 ## 生产部署建议
@@ -173,7 +173,7 @@ npm run start -- --hostname 0.0.0.0 --port 3000
 ### Nginx / 网关建议
 
 - 用户只访问前端域名，例如 `https://share.example.com`
-- 前端 Node 服务监听内网端口，例如 `3000`
+- 前端 Node 服务监听内网端口，例如 `3002`
 - 后端 Go 服务监听内网端口，例如 `8080`
 - 由 `sharefrontend` 继续转发 `/api/share/*` 到后端
 

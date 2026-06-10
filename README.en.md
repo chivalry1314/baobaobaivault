@@ -29,7 +29,7 @@ Recommended traffic flow:
 
 - users only access `https://share.example.com`
 - `nginx` exposes `80` and `443`
-- `sharefrontend` only listens on the Docker network on `3000`
+- `sharefrontend` only listens on the Docker network on `3002`
 - `backend` only listens on the Docker network on `8080`
 - `postgres` and `redis` are not exposed publicly
 
@@ -220,7 +220,7 @@ networks:
 ### `sharefrontend`
 
 - image: `ghcr.io/chivalry1314/baobaobaivault-sharefrontend`
-- internal port: `3000`
+- internal port: `3002`
 - not exposed directly to the public internet
 - this public image is built to talk to the backend at `http://backend:8080`
 
@@ -414,7 +414,7 @@ server {
         image/svg+xml;
 
     location /_next/static/ {
-        proxy_pass http://sharefrontend:3000;
+        proxy_pass http://sharefrontend:3002;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -441,7 +441,7 @@ server {
     }
 
     location / {
-        proxy_pass http://sharefrontend:3000;
+        proxy_pass http://sharefrontend:3002;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

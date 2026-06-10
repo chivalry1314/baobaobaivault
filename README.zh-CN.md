@@ -29,7 +29,7 @@
 
 - 用户只访问 `https://share.example.com`
 - `nginx` 对外暴露 `80` 和 `443`
-- `sharefrontend` 只在 Docker 内网监听 `3000`
+- `sharefrontend` 只在 Docker 内网监听 `3002`
 - `backend` 只在 Docker 内网监听 `8080`
 - `postgres` 和 `redis` 不对公网暴露
 
@@ -220,7 +220,7 @@ networks:
 ### `sharefrontend`
 
 - 镜像：`ghcr.io/chivalry1314/baobaobaivault-sharefrontend`
-- 容器内端口：`3000`
+- 容器内端口：`3002`
 - 不直接对公网暴露
 - 公开镜像默认通过 `http://backend:8080` 访问后端
 
@@ -414,7 +414,7 @@ server {
         image/svg+xml;
 
     location /_next/static/ {
-        proxy_pass http://sharefrontend:3000;
+        proxy_pass http://sharefrontend:3002;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -441,7 +441,7 @@ server {
     }
 
     location / {
-        proxy_pass http://sharefrontend:3000;
+        proxy_pass http://sharefrontend:3002;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
