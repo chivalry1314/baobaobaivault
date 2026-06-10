@@ -47,6 +47,10 @@ func (s *ShareService) GetCardDetail(ctx context.Context, cardID, viewerUserID s
 		return nil, err
 	}
 	assetsView := buildShareCardAssetViews(card.ID, assets)
+	systemTheme, err := s.loadCardSystemThemeView(ctx, &card, assets)
+	if err != nil {
+		return nil, err
+	}
 
 	var creator model.ShareExternalUser
 	if err := s.db.WithContext(ctx).First(&creator, "id = ?", card.CreatorExternalUserID).Error; err != nil {
@@ -63,6 +67,7 @@ func (s *ShareService) GetCardDetail(ctx context.Context, cardID, viewerUserID s
 		Creator:          toSharePublicUser(&creator),
 		Stats:            statsByCard[card.ID],
 		Assets:           assetsView,
+		SystemTheme:      systemTheme,
 		CanEdit:          canEdit,
 		CanDownload:      canDownload,
 		AccessCodeStatus: accessCodeStatus,
@@ -230,7 +235,7 @@ func (s *ShareService) RecordDownload(ctx context.Context, cardID string, downlo
 		return tx.Model(&model.SharePlatformCard{}).
 			Where("id = ?", entry.CardID).
 			Updates(map[string]any{
-				"download_count":      gorm.Expr("download_count + 1"),
+				"download_count":     gorm.Expr("download_count + 1"),
 				"last_downloaded_at": entry.DownloadedAt,
 			}).Error
 	})

@@ -10,6 +10,7 @@
   DashboardResponse,
   DiscoverCardItem,
   DiscoverCardsPagination,
+  DiscoverSystemThemeItem,
   ExternalSessionUser,
   PlatformCard,
   RegisterResendResponse,
@@ -132,6 +133,8 @@ const shareApiErrorMessages: Record<string, string> = {
   "invalid card access mode": "卡片状态不正确",
   "paid access mode required": "请先把卡片切换为付费模式后再保存提取码",
   "card must keep at least one category file": "卡片至少保留一个分类文件",
+  "invalid system theme package": "系统主题包无法按 baobaobaiphone 当前解析规则导入，请检查 zip/json 结构、manifest 和资源路径",
+  "system theme package exceeds 20mb": "系统主题包不能超过 20MB",
   "invalid review status": "审核状态不正确",
   "review reason is required": "驳回时必须填写原因",
   "card not found": "卡片不存在",
@@ -377,6 +380,19 @@ export const shareApi = {
     const query = params.toString();
     const path = query ? `${API_ROOT}/discover/cards?${query}` : `${API_ROOT}/discover/cards`;
     return request<{ cards: DiscoverCardItem[]; pagination: DiscoverCardsPagination }>(path);
+  },
+
+  discoverSystemThemes(input?: { page?: number; size?: number }) {
+    const params = new URLSearchParams();
+    if (input?.page && input.page > 0) {
+      params.set("page", String(input.page));
+    }
+    if (input?.size && input.size > 0) {
+      params.set("size", String(input.size));
+    }
+    const query = params.toString();
+    const path = query ? `${API_ROOT}/discover/system-themes?${query}` : `${API_ROOT}/discover/system-themes`;
+    return request<{ items: DiscoverSystemThemeItem[]; pagination: DiscoverCardsPagination }>(path);
   },
 
   cardDetail(cardId: string) {

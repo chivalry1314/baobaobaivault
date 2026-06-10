@@ -25,6 +25,11 @@ func (s *ShareService) CreateCard(ctx context.Context, input ShareCreateCardInpu
 	if !isValidShareCardAccessMode(input.AccessMode) {
 		return nil, ErrShareInvalidAccessMode
 	}
+	validatedReader, err := validateAndCloneShareSystemThemeReader(input.FileName, input.FileReader)
+	if err != nil {
+		return nil, err
+	}
+	input.FileReader = validatedReader
 
 	status := strings.TrimSpace(input.Status)
 	if status == "" {
@@ -125,17 +130,17 @@ func (s *ShareService) CreateCard(ctx context.Context, input ShareCreateCardInpu
 		}
 
 		asset := model.SharePlatformCardAsset{
-			CardID:           card.ID,
-			Slot:             "system_theme",
-			StorageBackend:   storedAsset.StorageBackend,
+			CardID:             card.ID,
+			Slot:               "system_theme",
+			StorageBackend:     storedAsset.StorageBackend,
 			StorageNamespaceID: storedAsset.StorageNamespaceID,
-			StorageObjectKey: storedAsset.StorageObjectKey,
-			StorageVersionID: storedAsset.StorageVersionID,
-			StoredFileName:   storedAsset.StoredFileName,
-			OriginalFileName: filepath.Base(input.FileName),
-			MimeType:         mimeType,
-			Size:             storedAsset.Size,
-			SortOrder:        0,
+			StorageObjectKey:   storedAsset.StorageObjectKey,
+			StorageVersionID:   storedAsset.StorageVersionID,
+			StoredFileName:     storedAsset.StoredFileName,
+			OriginalFileName:   filepath.Base(input.FileName),
+			MimeType:           mimeType,
+			Size:               storedAsset.Size,
+			SortOrder:          0,
 		}
 		if err := tx.Create(&asset).Error; err != nil {
 			return err
@@ -173,6 +178,16 @@ func (s *ShareService) CreateCardBundle(ctx context.Context, input ShareCreateCa
 	if err := validateShareCardSlotItems(input.Assets); err != nil {
 		return nil, err
 	}
+	for index := range input.Assets {
+		if normalizeShareCardSlot(input.Assets[index].Slot) != "system_theme" {
+			continue
+		}
+		validatedReader, err := validateAndCloneShareSystemThemeReader(input.Assets[index].FileName, input.Assets[index].FileReader)
+		if err != nil {
+			return nil, err
+		}
+		input.Assets[index].FileReader = validatedReader
+	}
 
 	status := strings.TrimSpace(input.Status)
 	if status == "" {
@@ -199,15 +214,15 @@ func (s *ShareService) CreateCardBundle(ctx context.Context, input ShareCreateCa
 	}
 
 	type savedAsset struct {
-		slot              string
-		storageBackend    string
+		slot               string
+		storageBackend     string
 		storageNamespaceID *string
-		storageObjectKey  string
-		storageVersionID  string
-		storedFileName    string
-		fileName          string
-		mimeType          string
-		size              int64
+		storageObjectKey   string
+		storageVersionID   string
+		storedFileName     string
+		fileName           string
+		mimeType           string
+		size               int64
 	}
 
 	cardID := randomUUIDLike()
@@ -268,15 +283,15 @@ func (s *ShareService) CreateCardBundle(ctx context.Context, input ShareCreateCa
 
 		mimeType := detectUploadMimeType(item.FileName, item.MimeType)
 		savedAssets = append(savedAssets, savedAsset{
-			slot:              normalizeShareCardSlot(item.Slot),
-			storageBackend:    storedAsset.StorageBackend,
+			slot:               normalizeShareCardSlot(item.Slot),
+			storageBackend:     storedAsset.StorageBackend,
 			storageNamespaceID: storedAsset.StorageNamespaceID,
-			storageObjectKey:  storedAsset.StorageObjectKey,
-			storageVersionID:  storedAsset.StorageVersionID,
-			storedFileName:    storedAsset.StoredFileName,
-			fileName:          filepath.Base(item.FileName),
-			mimeType:          mimeType,
-			size:              storedAsset.Size,
+			storageObjectKey:   storedAsset.StorageObjectKey,
+			storageVersionID:   storedAsset.StorageVersionID,
+			storedFileName:     storedAsset.StoredFileName,
+			fileName:           filepath.Base(item.FileName),
+			mimeType:           mimeType,
+			size:               storedAsset.Size,
 		})
 	}
 
@@ -445,6 +460,13 @@ func (s *ShareService) ReplaceCardAssetByOwner(ctx context.Context, input ShareU
 	}
 	if strings.TrimSpace(input.FileName) == "" || input.FileReader == nil {
 		return nil, ErrShareFileRequired
+	}
+	if slot == "system_theme" {
+		validatedReader, err := validateAndCloneShareSystemThemeReader(input.FileName, input.FileReader)
+		if err != nil {
+			return nil, err
+		}
+		input.FileReader = validatedReader
 	}
 
 	mimeType := detectUploadMimeType(input.FileName, input.MimeType)

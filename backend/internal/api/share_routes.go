@@ -27,6 +27,7 @@ func (h *Handler) registerShareRoutes(r *gin.Engine) {
 		}
 
 		group.GET("/discover/cards", h.shareDiscoverCards)
+		group.GET("/discover/system-themes", h.shareDiscoverSystemThemes)
 		group.GET("/users/:userId/assets/:fileName", h.shareUserAsset)
 		group.GET("/cards/:cardId", h.shareCardDetail)
 		group.GET("/cards/:cardId/cover/preview", h.shareCardCoverPreview)

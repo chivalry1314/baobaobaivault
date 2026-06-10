@@ -94,6 +94,30 @@ export type DiscoverCardItem = {
   stats: CardStats;
 };
 
+export type ShareSystemTheme = {
+  protocol: string;
+  id: string;
+  format: string;
+  supported: boolean;
+  name: string;
+  author: string;
+  version: string;
+  description: string;
+  tags: string[];
+  fileName: string;
+  mimeType: string;
+  size: number;
+};
+
+export type DiscoverSystemThemeItem = {
+  card: PlatformCard;
+  creator: PublicCreator;
+  stats: CardStats;
+  asset: CardAsset;
+  systemTheme: ShareSystemTheme;
+  accessCodeStatus: "none" | "required" | "expired" | "exhausted";
+};
+
 export type DiscoverCardsPagination = {
   page: number;
   size: number;
@@ -440,6 +464,7 @@ export type CardDetailResponse = {
   creator: PublicCreator;
   stats: CardStats;
   assets: CardAsset[];
+  systemTheme?: ShareSystemTheme;
   canEdit: boolean;
   canDownload: boolean;
   accessCodeStatus?: "none" | "required" | "expired" | "exhausted";

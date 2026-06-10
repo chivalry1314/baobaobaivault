@@ -34,58 +34,60 @@ var (
 		"world_book",
 	}
 
-	ErrShareInvalidEmail         = errors.New("invalid email")
-	ErrShareEmailExists          = errors.New("email already registered")
-	ErrShareEmailNotVerified     = errors.New("email not verified")
-	ErrShareVerificationExpired  = errors.New("verification code expired")
-	ErrShareVerificationInvalid  = errors.New("invalid verification code")
-	ErrShareVerificationRequired = errors.New("verification required")
-	ErrShareVerificationTooMany  = errors.New("too many verification attempts")
-	ErrShareVerificationTooSoon  = errors.New("verification requested too frequently")
-	ErrShareResetPasswordTooSoon = errors.New("password reset requested too frequently")
-	ErrShareResetPasswordNotFound = errors.New("password reset request not found")
-	ErrShareWeakPassword         = errors.New("password must be at least 6 characters")
-	ErrShareInvalidProfile       = errors.New("nickname must be between 2 and 40 characters")
-	ErrShareInvalidBio           = errors.New("bio must be at most 100 characters")
-	ErrShareInvalidPhone         = errors.New("phone format is invalid")
-	ErrShareAuthFailed           = errors.New("invalid email or password")
-	ErrShareInvalidOldPassword   = errors.New("current password is incorrect")
-	ErrShareInvalidImageData     = errors.New("invalid image data")
-	ErrShareImageTooLarge        = errors.New("image exceeds 5MB")
-	ErrShareUserNotFound         = errors.New("user not found")
-	ErrShareCardNotFound         = errors.New("card not found")
-	ErrShareCardForbidden        = errors.New("card access denied")
-	ErrShareCardTitleRequired    = errors.New("card title is required")
-	ErrShareFileRequired         = errors.New("upload file is required")
-	ErrShareFileTooLarge         = errors.New("file exceeds max upload size")
-	ErrShareSaveFileFailed       = errors.New("failed to save file")
-	ErrShareInvalidVisibility    = errors.New("invalid card visibility")
-	ErrShareInvalidCardStatus    = errors.New("invalid card status")
-	ErrShareInvalidAccessMode    = errors.New("invalid card access mode")
-	ErrSharePaidAccessRequired   = errors.New("paid access mode required")
-	ErrShareInvalidAccessCode    = errors.New("invalid access code")
-	ErrShareInvalidAccessRules   = errors.New("invalid access code rules")
-	ErrShareAccessCodeRequired   = errors.New("access code required")
-	ErrShareAccessCodeExpired    = errors.New("access code expired")
-	ErrShareAccessCodeExhausted  = errors.New("access code exhausted")
-	ErrShareForbiddenRole        = errors.New("manager role required")
-	ErrShareInvalidCardSlot      = errors.New("invalid card content slot")
-	ErrShareInvalidUserRole      = errors.New("invalid user role")
-	ErrShareSelfRoleDowngrade    = errors.New("cannot downgrade your own role")
-	ErrShareSelfDelete           = errors.New("cannot delete your own account")
-	ErrShareLastManagerDelete    = errors.New("cannot delete the last manager account")
-	ErrShareProtectedSuperAdmin  = errors.New("cannot delete configured super admin account")
-	ErrShareSuperAdminRequired   = errors.New("configured super admin required")
-	ErrShareDeleteAuthFailed     = errors.New("current password is incorrect")
-	ErrSharePasswordResetFailed   = errors.New("password reset failed")
-	ErrShareAdminResetUnavailable = errors.New("admin password reset unavailable")
-	ErrShareCardAssetRequired    = errors.New("card must keep at least one category file")
-	ErrShareInvalidReviewStatus  = errors.New("invalid review status")
-	ErrShareReviewReasonRequired = errors.New("review reason is required")
-	ErrShareInvalidVerificationCodeTTL = errors.New("invalid verification code ttl")
-	ErrShareInvalidResendInterval = errors.New("invalid resend interval")
-	ErrShareInvalidMaxVerifyAttempts = errors.New("invalid max verify attempts")
-	ErrShareAuthConfigConflict = errors.New("resend interval must be shorter than verification code ttl")
+	ErrShareInvalidEmail                   = errors.New("invalid email")
+	ErrShareEmailExists                    = errors.New("email already registered")
+	ErrShareEmailNotVerified               = errors.New("email not verified")
+	ErrShareVerificationExpired            = errors.New("verification code expired")
+	ErrShareVerificationInvalid            = errors.New("invalid verification code")
+	ErrShareVerificationRequired           = errors.New("verification required")
+	ErrShareVerificationTooMany            = errors.New("too many verification attempts")
+	ErrShareVerificationTooSoon            = errors.New("verification requested too frequently")
+	ErrShareResetPasswordTooSoon           = errors.New("password reset requested too frequently")
+	ErrShareResetPasswordNotFound          = errors.New("password reset request not found")
+	ErrShareWeakPassword                   = errors.New("password must be at least 6 characters")
+	ErrShareInvalidProfile                 = errors.New("nickname must be between 2 and 40 characters")
+	ErrShareInvalidBio                     = errors.New("bio must be at most 100 characters")
+	ErrShareInvalidPhone                   = errors.New("phone format is invalid")
+	ErrShareAuthFailed                     = errors.New("invalid email or password")
+	ErrShareInvalidOldPassword             = errors.New("current password is incorrect")
+	ErrShareInvalidImageData               = errors.New("invalid image data")
+	ErrShareImageTooLarge                  = errors.New("image exceeds 5MB")
+	ErrShareUserNotFound                   = errors.New("user not found")
+	ErrShareCardNotFound                   = errors.New("card not found")
+	ErrShareCardForbidden                  = errors.New("card access denied")
+	ErrShareCardTitleRequired              = errors.New("card title is required")
+	ErrShareFileRequired                   = errors.New("upload file is required")
+	ErrShareFileTooLarge                   = errors.New("file exceeds max upload size")
+	ErrShareSaveFileFailed                 = errors.New("failed to save file")
+	ErrShareInvalidVisibility              = errors.New("invalid card visibility")
+	ErrShareInvalidCardStatus              = errors.New("invalid card status")
+	ErrShareInvalidAccessMode              = errors.New("invalid card access mode")
+	ErrSharePaidAccessRequired             = errors.New("paid access mode required")
+	ErrShareInvalidAccessCode              = errors.New("invalid access code")
+	ErrShareInvalidAccessRules             = errors.New("invalid access code rules")
+	ErrShareAccessCodeRequired             = errors.New("access code required")
+	ErrShareAccessCodeExpired              = errors.New("access code expired")
+	ErrShareAccessCodeExhausted            = errors.New("access code exhausted")
+	ErrShareForbiddenRole                  = errors.New("manager role required")
+	ErrShareInvalidCardSlot                = errors.New("invalid card content slot")
+	ErrShareInvalidUserRole                = errors.New("invalid user role")
+	ErrShareSelfRoleDowngrade              = errors.New("cannot downgrade your own role")
+	ErrShareSelfDelete                     = errors.New("cannot delete your own account")
+	ErrShareLastManagerDelete              = errors.New("cannot delete the last manager account")
+	ErrShareProtectedSuperAdmin            = errors.New("cannot delete configured super admin account")
+	ErrShareSuperAdminRequired             = errors.New("configured super admin required")
+	ErrShareDeleteAuthFailed               = errors.New("current password is incorrect")
+	ErrSharePasswordResetFailed            = errors.New("password reset failed")
+	ErrShareAdminResetUnavailable          = errors.New("admin password reset unavailable")
+	ErrShareCardAssetRequired              = errors.New("card must keep at least one category file")
+	ErrShareInvalidReviewStatus            = errors.New("invalid review status")
+	ErrShareReviewReasonRequired           = errors.New("review reason is required")
+	ErrShareInvalidSystemThemePackage      = errors.New("invalid system theme package")
+	ErrShareSystemThemePackageTooLarge     = errors.New("system theme package exceeds 20MB")
+	ErrShareInvalidVerificationCodeTTL     = errors.New("invalid verification code ttl")
+	ErrShareInvalidResendInterval          = errors.New("invalid resend interval")
+	ErrShareInvalidMaxVerifyAttempts       = errors.New("invalid max verify attempts")
+	ErrShareAuthConfigConflict             = errors.New("resend interval must be shorter than verification code ttl")
 	ErrShareEmailVerificationRequiresEmail = errors.New("email verification requires email service configuration")
 )
 
@@ -138,18 +140,18 @@ func NewShareService(
 }
 
 type ShareSessionUser struct {
-	ID         string    `json:"id"`
-	Email      string    `json:"email"`
-	Username   string    `json:"username"`
-	Nickname   string    `json:"nickname"`
-	Avatar     string    `json:"avatar"`
-	Bio        string    `json:"bio"`
-	CoverImage string    `json:"coverImage"`
-	Phone      string    `json:"phone"`
-	Role       string    `json:"role"`
-	IsConfiguredSuperAdmin bool `json:"isConfiguredSuperAdmin"`
-	ForcePasswordChange bool `json:"forcePasswordChange"`
-	CreatedAt  time.Time `json:"createdAt"`
+	ID                     string    `json:"id"`
+	Email                  string    `json:"email"`
+	Username               string    `json:"username"`
+	Nickname               string    `json:"nickname"`
+	Avatar                 string    `json:"avatar"`
+	Bio                    string    `json:"bio"`
+	CoverImage             string    `json:"coverImage"`
+	Phone                  string    `json:"phone"`
+	Role                   string    `json:"role"`
+	IsConfiguredSuperAdmin bool      `json:"isConfiguredSuperAdmin"`
+	ForcePasswordChange    bool      `json:"forcePasswordChange"`
+	CreatedAt              time.Time `json:"createdAt"`
 }
 
 type ShareRegistrationResult struct {
@@ -160,29 +162,29 @@ type ShareRegistrationResult struct {
 }
 
 type SharePasswordResetRequestResult struct {
-	Email            string `json:"email"`
-	VerificationRequired bool `json:"verificationRequired"`
-	ExpiresInSeconds int    `json:"expiresIn"`
+	Email                string `json:"email"`
+	VerificationRequired bool   `json:"verificationRequired"`
+	ExpiresInSeconds     int    `json:"expiresIn"`
 }
 
 type SharePasswordResetVerifyResult struct {
-	Email            string `json:"email"`
-	VerificationRequired bool `json:"verificationRequired"`
-	ExpiresInSeconds int    `json:"expiresIn"`
+	Email                string `json:"email"`
+	VerificationRequired bool   `json:"verificationRequired"`
+	ExpiresInSeconds     int    `json:"expiresIn"`
 }
 
 type ShareAuthConfigView struct {
-	EmailVerificationEnabled  bool `json:"emailVerificationEnabled"`
-	VerificationCodeTTLSeconds int `json:"verificationCodeTTLSeconds"`
-	ResendIntervalSeconds     int  `json:"resendIntervalSeconds"`
+	EmailVerificationEnabled   bool `json:"emailVerificationEnabled"`
+	VerificationCodeTTLSeconds int  `json:"verificationCodeTTLSeconds"`
+	ResendIntervalSeconds      int  `json:"resendIntervalSeconds"`
 }
 
 type ShareAuthSettingsView struct {
-	EmailVerificationEnabled  bool `json:"emailVerificationEnabled"`
-	VerificationCodeTTLSeconds int `json:"verificationCodeTTLSeconds"`
-	ResendIntervalSeconds     int  `json:"resendIntervalSeconds"`
-	MaxVerifyAttempts         int  `json:"maxVerifyAttempts"`
-	CanUpdate                 bool `json:"canUpdate"`
+	EmailVerificationEnabled   bool `json:"emailVerificationEnabled"`
+	VerificationCodeTTLSeconds int  `json:"verificationCodeTTLSeconds"`
+	ResendIntervalSeconds      int  `json:"resendIntervalSeconds"`
+	MaxVerifyAttempts          int  `json:"maxVerifyAttempts"`
+	CanUpdate                  bool `json:"canUpdate"`
 }
 
 type ShareMediaStorageSettingsView struct {
@@ -219,14 +221,14 @@ type ShareMediaStorageMigrationRunInput struct {
 }
 
 type ShareMediaStorageMigrationRunResult struct {
-	Processed      int                             `json:"processed"`
-	Succeeded      int                             `json:"succeeded"`
-	Skipped        int                             `json:"skipped"`
-	Failed         int                             `json:"failed"`
-	DeleteLocal    bool                            `json:"deleteLocal"`
-	HasMore        bool                            `json:"hasMore"`
-	Messages       []string                        `json:"messages"`
-	Summary        ShareMediaStorageMigrationSummary `json:"summary"`
+	Processed   int                               `json:"processed"`
+	Succeeded   int                               `json:"succeeded"`
+	Skipped     int                               `json:"skipped"`
+	Failed      int                               `json:"failed"`
+	DeleteLocal bool                              `json:"deleteLocal"`
+	HasMore     bool                              `json:"hasMore"`
+	Messages    []string                          `json:"messages"`
+	Summary     ShareMediaStorageMigrationSummary `json:"summary"`
 }
 
 type ShareUpdateMediaStorageSettingsInput struct {
@@ -238,19 +240,19 @@ type ShareUpdateMediaStorageSettingsInput struct {
 }
 
 type ShareUpdateAuthSettingsInput struct {
-	OperatorID                string
-	EmailVerificationEnabled  bool
+	OperatorID                 string
+	EmailVerificationEnabled   bool
 	VerificationCodeTTLSeconds int
-	ResendIntervalSeconds     int
-	MaxVerifyAttempts         int
+	ResendIntervalSeconds      int
+	MaxVerifyAttempts          int
 }
 
 type ShareEmailHealthView struct {
-	Enabled bool `json:"enabled"`
-	EmailVerificationEnabled bool `json:"emailVerificationEnabled"`
-	FromAddress string `json:"fromAddress"`
-	SMTPHost string `json:"smtpHost"`
-	SMTPPort int `json:"smtpPort"`
+	Enabled                  bool   `json:"enabled"`
+	EmailVerificationEnabled bool   `json:"emailVerificationEnabled"`
+	FromAddress              string `json:"fromAddress"`
+	SMTPHost                 string `json:"smtpHost"`
+	SMTPPort                 int    `json:"smtpPort"`
 }
 
 type ShareCardAssetView struct {
@@ -307,6 +309,7 @@ type ShareCardDetail struct {
 	Creator          SharePublicUser       `json:"creator"`
 	Stats            ShareCardStats        `json:"stats"`
 	Assets           []ShareCardAssetView  `json:"assets"`
+	SystemTheme      *ShareSystemThemeView `json:"systemTheme,omitempty"`
 	CanEdit          bool                  `json:"canEdit"`
 	CanDownload      bool                  `json:"canDownload"`
 	AccessCodeStatus ShareCardAccessStatus `json:"accessCodeStatus"`
@@ -421,14 +424,14 @@ type ShareUpdateCardAssetInput struct {
 }
 
 type ShareUserRoleManageItem struct {
-	ID        string    `json:"id"`
-	Email     string    `json:"email"`
-	Username  string    `json:"username"`
-	Nickname  string    `json:"nickname"`
-	Role      string    `json:"role"`
-	Status    string    `json:"status"`
-	ForcePasswordChange bool `json:"forcePasswordChange"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID                  string    `json:"id"`
+	Email               string    `json:"email"`
+	Username            string    `json:"username"`
+	Nickname            string    `json:"nickname"`
+	Role                string    `json:"role"`
+	Status              string    `json:"status"`
+	ForcePasswordChange bool      `json:"forcePasswordChange"`
+	CreatedAt           time.Time `json:"createdAt"`
 }
 
 type ShareListUsersForRoleManageInput struct {
@@ -1250,18 +1253,18 @@ func deriveShareCardAccessStatus(card *model.SharePlatformCard, canEdit bool) Sh
 
 func toShareSessionUser(user *model.ShareExternalUser) ShareSessionUser {
 	return ShareSessionUser{
-		ID:         user.ID,
-		Email:      user.Email,
-		Username:   user.Username,
-		Nickname:   user.NormalizedDisplayName(),
-		Avatar:     user.Avatar,
-		Bio:        strings.TrimSpace(user.Bio),
-		CoverImage: strings.TrimSpace(user.CoverImage),
-		Phone:      strings.TrimSpace(user.Phone),
-		Role:       normalizeShareExternalUserRole(user.Role),
+		ID:                     user.ID,
+		Email:                  user.Email,
+		Username:               user.Username,
+		Nickname:               user.NormalizedDisplayName(),
+		Avatar:                 user.Avatar,
+		Bio:                    strings.TrimSpace(user.Bio),
+		CoverImage:             strings.TrimSpace(user.CoverImage),
+		Phone:                  strings.TrimSpace(user.Phone),
+		Role:                   normalizeShareExternalUserRole(user.Role),
 		IsConfiguredSuperAdmin: false,
-		ForcePasswordChange: user.ForcePasswordChange,
-		CreatedAt:  user.CreatedAt,
+		ForcePasswordChange:    user.ForcePasswordChange,
+		CreatedAt:              user.CreatedAt,
 	}
 }
 

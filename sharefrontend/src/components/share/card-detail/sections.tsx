@@ -133,6 +133,61 @@ export function CardDetailContent(props: {
           </div>
         </section>
 
+        {detail.systemTheme ? (
+          <section className="rounded-[1.8rem] border-[4px] border-[var(--outline)] bg-[var(--secondary)] p-6 sm:p-7">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="type-h2 text-[var(--foreground)]">系统主题协议</h3>
+                <p className="mt-2 text-sm font-bold text-[var(--foreground)]/78">
+                  这个卡片挂载了可供 `baobaobaiphone` 安装的系统主题包，下载时仍然遵循当前卡片的提取码规则。
+                </p>
+              </div>
+              <span className="rounded-full border-[3px] border-[var(--outline)] bg-white px-4 py-1 text-xs font-black text-[var(--foreground)]">
+                {detail.systemTheme.supported ? "已识别协议" : "待校验协议"}
+              </span>
+            </div>
+
+            <div className="mt-5 rounded-[1.4rem] border-[3px] border-[var(--outline)] bg-white p-4">
+              <div className="flex flex-wrap gap-2">
+                <span className="inline-flex rounded-full border-[3px] border-[var(--outline)] bg-[var(--accent)] px-3 py-1 text-xs font-black text-[var(--foreground)]">
+                  {detail.systemTheme.protocol}
+                </span>
+                <span className="inline-flex rounded-full border-[3px] border-[var(--outline)] bg-[var(--primary)] px-3 py-1 text-xs font-black text-[var(--foreground)]">
+                  {detail.systemTheme.format.toUpperCase()}
+                </span>
+                <span className="inline-flex rounded-full border-[3px] border-[var(--outline)] bg-[var(--tertiary)] px-3 py-1 text-xs font-black text-[var(--foreground)]">
+                  {formatBytes(detail.systemTheme.size)}
+                </span>
+              </div>
+
+              <div className="mt-4">
+                <p className="text-lg font-black text-[var(--foreground)]">{detail.systemTheme.name}</p>
+                <p className="mt-1 text-sm font-bold text-[var(--foreground)]/72">
+                  {detail.systemTheme.author || "未知作者"}
+                  {detail.systemTheme.version ? ` · ${detail.systemTheme.version}` : ""}
+                </p>
+                <p className="mt-3 text-sm font-bold leading-6 text-[var(--foreground)]/78">
+                  {detail.systemTheme.description || "当前主题包未提供额外说明，可直接按卡片规则下载后导入系统主题。"}
+                </p>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {detail.systemTheme.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex rounded-full border-[3px] border-[var(--outline)] bg-[#f8f9fa] px-3 py-1 text-xs font-black text-[var(--foreground)]"
+                  >
+                    {tag}
+                  </span>
+                ))}
+                <span className="inline-flex rounded-full border-[3px] border-[var(--outline)] bg-[#f8f9fa] px-3 py-1 text-xs font-black text-[var(--foreground)]">
+                  {detail.systemTheme.fileName}
+                </span>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         <section className="relative overflow-hidden rounded-[1.8rem] border-[4px] border-[var(--outline)] bg-[var(--tertiary)] p-6 text-center sm:p-7">
           <h3 className="type-h2 text-[var(--foreground)]">下载分享卡片</h3>
           <p className="mt-2 text-sm font-bold text-[var(--foreground)]/78">

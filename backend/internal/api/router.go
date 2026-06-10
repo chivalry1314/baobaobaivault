@@ -94,7 +94,7 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, logger *zap
 	r := gin.New()
 	r.Use(gin.Recovery(), gin.Logger())
 	if cfg.Cors.Enabled {
-		r.Use(newCORSMiddleware(cfg.Cors))
+		r.Use(newCORSMiddleware(cfg.Cors, cfg.SharePublicReadCors))
 	}
 
 	r.GET("/healthz", func(c *gin.Context) {

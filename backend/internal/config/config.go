@@ -8,16 +8,17 @@ import (
 )
 
 type Config struct {
-	Server    ServerConfig    `mapstructure:"server"`
-	Cors      CorsConfig      `mapstructure:"cors"`
-	Database  DatabaseConfig  `mapstructure:"database"`
-	Redis     RedisConfig     `mapstructure:"redis"`
-	JWT       JWTConfig       `mapstructure:"jwt"`
-	Storage   StorageConfig   `mapstructure:"storage"`
-	WebPush   WebPushConfig   `mapstructure:"webpush"`
-	Email     EmailConfig     `mapstructure:"email"`
-	ShareAuth ShareAuthConfig `mapstructure:"share_auth"`
-	Log       LogConfig       `mapstructure:"log"`
+	Server              ServerConfig    `mapstructure:"server"`
+	Cors                CorsConfig      `mapstructure:"cors"`
+	SharePublicReadCors CorsConfig      `mapstructure:"share_public_read_cors"`
+	Database            DatabaseConfig  `mapstructure:"database"`
+	Redis               RedisConfig     `mapstructure:"redis"`
+	JWT                 JWTConfig       `mapstructure:"jwt"`
+	Storage             StorageConfig   `mapstructure:"storage"`
+	WebPush             WebPushConfig   `mapstructure:"webpush"`
+	Email               EmailConfig     `mapstructure:"email"`
+	ShareAuth           ShareAuthConfig `mapstructure:"share_auth"`
+	Log                 LogConfig       `mapstructure:"log"`
 }
 
 type ServerConfig struct {
@@ -82,20 +83,20 @@ type StorageConfig struct {
 }
 
 type EmailConfig struct {
-	Enabled     bool   `mapstructure:"enabled"`
-	FromName    string `mapstructure:"from_name"`
-	FromAddress string `mapstructure:"from_address"`
-	SMTPHost    string `mapstructure:"smtp_host"`
-	SMTPPort    int    `mapstructure:"smtp_port"`
+	Enabled      bool   `mapstructure:"enabled"`
+	FromName     string `mapstructure:"from_name"`
+	FromAddress  string `mapstructure:"from_address"`
+	SMTPHost     string `mapstructure:"smtp_host"`
+	SMTPPort     int    `mapstructure:"smtp_port"`
 	SMTPUsername string `mapstructure:"smtp_username"`
 	SMTPPassword string `mapstructure:"smtp_password"`
 }
 
 type ShareAuthConfig struct {
-	EmailVerificationEnabled bool `mapstructure:"email_verification_enabled"`
-	VerificationCodeTTLSeconds int `mapstructure:"verification_code_ttl_seconds"`
-	ResendIntervalSeconds int `mapstructure:"resend_interval_seconds"`
-	MaxVerifyAttempts int `mapstructure:"max_verify_attempts"`
+	EmailVerificationEnabled   bool `mapstructure:"email_verification_enabled"`
+	VerificationCodeTTLSeconds int  `mapstructure:"verification_code_ttl_seconds"`
+	ResendIntervalSeconds      int  `mapstructure:"resend_interval_seconds"`
+	MaxVerifyAttempts          int  `mapstructure:"max_verify_attempts"`
 }
 
 type LogConfig struct {
@@ -162,12 +163,29 @@ func setDefaults() {
 	viper.SetDefault("cors.allow_origins", []string{
 		"http://localhost:3000",
 		"http://127.0.0.1:3000",
+		"http://localhost:3001",
+		"http://127.0.0.1:3001",
+		"http://localhost:4173",
+		"http://127.0.0.1:4173",
+		"http://localhost:*",
+		"http://127.0.0.1:*",
 	})
 	viper.SetDefault("cors.allow_methods", []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"})
 	viper.SetDefault("cors.allow_headers", []string{"Authorization", "Content-Type", "X-Requested-With", "X-Timestamp"})
 	viper.SetDefault("cors.expose_headers", []string{"Content-Disposition", "Content-Length", "ETag"})
 	viper.SetDefault("cors.allow_credentials", false)
 	viper.SetDefault("cors.max_age", 86400)
+
+	// Public read CORS for share query/download endpoints.
+	// This keeps public card/theme discovery accessible like a query API
+	// without weakening authenticated write/admin endpoints.
+	viper.SetDefault("share_public_read_cors.enabled", true)
+	viper.SetDefault("share_public_read_cors.allow_origins", []string{"*"})
+	viper.SetDefault("share_public_read_cors.allow_methods", []string{"GET", "HEAD", "OPTIONS"})
+	viper.SetDefault("share_public_read_cors.allow_headers", []string{"*"})
+	viper.SetDefault("share_public_read_cors.expose_headers", []string{"Content-Disposition", "Content-Length", "ETag"})
+	viper.SetDefault("share_public_read_cors.allow_credentials", false)
+	viper.SetDefault("share_public_read_cors.max_age", 86400)
 
 	// Database
 	viper.SetDefault("database.host", "localhost")

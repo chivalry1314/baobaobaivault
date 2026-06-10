@@ -129,6 +129,11 @@ export function CardAssetsPanel(props: {
                 ) : null}
               </div>
               <p className="mt-2 text-xs text-[var(--text-subtle)]">{item.file ? item.file.name : "未选择文件"}</p>
+              {item.slot === "system_theme" ? (
+                <p className="mt-2 text-xs font-bold text-[var(--foreground)]/65">
+                  系统主题会按 `baobaobaiphone` 当前导入规则校验，仅支持可解析的 `.zip` / `.json` 主题包。
+                </p>
+              ) : null}
             </div>
           ))}
 
@@ -223,6 +228,11 @@ export function CardAssetsPanel(props: {
                         {pendingMode === "remove" ? "删除中..." : "删除该分类文件"}
                       </button>
                     </div>
+                    {slot === "system_theme" ? (
+                      <p className="mt-2 text-xs font-bold text-[var(--foreground)]/65">
+                        替换系统主题时会校验主题包能否被 `baobaobaiphone` 正常解析和导入。
+                      </p>
+                    ) : null}
                   </div>
                 );
               })}
