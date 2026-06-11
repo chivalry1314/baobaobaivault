@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { shareSiteBrand } from "@/lib/site-config";
 
 const cardThemes: Record<string, [string, string]> = {
   "demo-sakura": ["#f5cad6", "#f8d9ec"],
@@ -77,7 +78,7 @@ export async function GET(request: Request) {
   const download = searchParams.get("download") === "1";
 
   const [colorStart, colorEnd] = (kind === "avatar" ? avatarThemes : cardThemes)[safeId];
-  const label = escapeXml(labels[safeId] ?? "CardShare");
+  const label = escapeXml(labels[safeId] ?? shareSiteBrand.siteShortName);
   const fontSize = kind === "avatar" ? Math.max(20, Math.round(Math.min(width, height) * 0.22)) : Math.max(24, Math.round(Math.min(width, height) * 0.11));
   const textY = kind === "avatar" ? Math.round(height * 0.56) : Math.round(height * 0.5);
   const radius = kind === "avatar" ? "9999" : "32";
@@ -118,7 +119,7 @@ export async function GET(request: Request) {
     font-weight="500"
     letter-spacing="1.4"
   >
-    CardShare
+    ${escapeXml(shareSiteBrand.siteShortName)}
   </text>
 </svg>`;
 

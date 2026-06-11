@@ -1,6 +1,7 @@
 import { SLOT_LABEL_MAP } from "@/components/share/card-detail/constants";
 import type { CardViewModel } from "@/components/share/card-detail/types";
 import type { CardAsset, CardDetailResponse } from "@/lib/shared";
+import { shareSiteBrand } from "@/lib/site-config";
 
 export function formatBytes(size: number) {
   if (!Number.isFinite(size) || size <= 0) {
@@ -30,7 +31,7 @@ export function formatMetric(count: number) {
 }
 
 export function getCreatorName(detail: CardDetailResponse) {
-  return detail.creator.nickname.trim() || detail.creator.username.trim() || "CardShare Creator";
+  return detail.creator.nickname.trim() || detail.creator.username.trim() || shareSiteBrand.defaultCreatorName;
 }
 
 export function getCreatorHandle(detail: CardDetailResponse) {
@@ -38,13 +39,13 @@ export function getCreatorHandle(detail: CardDetailResponse) {
   if (username) {
     return `@${username}`;
   }
-  return "@cardshare";
+  return shareSiteBrand.defaultCreatorHandle;
 }
 
 export function getInitials(name: string) {
   const value = name.trim();
   if (!value) {
-    return "CS";
+    return shareSiteBrand.defaultInitials;
   }
   return Array.from(value).slice(0, 2).join("").toUpperCase();
 }
@@ -124,4 +125,3 @@ export function buildCardViewModel(detail: CardDetailResponse | null, unlockCode
     downloadHint,
   };
 }
-

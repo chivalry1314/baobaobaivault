@@ -18,6 +18,7 @@ import {
 } from "@/components/share/creator-studio/sections";
 import { PaginationControls } from "@/components/share/pagination-controls/index";
 import { ShareProfileSettings } from "@/components/share/profile-settings";
+import { useShareSiteBrand } from "@/components/share/site-brand/provider";
 import { UnifiedFooter } from "@/components/share/unified-footer/index";
 
 const {
@@ -30,6 +31,7 @@ const {
 } = CreatorStudioIcons;
 
 export function CreatorStudio() {
+  const brand = useShareSiteBrand();
   const {
     sessionChecking,
     currentUser,
@@ -176,7 +178,7 @@ export function CreatorStudio() {
                       </div>
                       <div className="max-w-2xl">
                         <p className="type-overline text-[var(--primary)]/55">
-                          Card Share
+                          {brand.siteShortName}
                         </p>
                         <h1 className="type-hero mt-3 text-[var(--foreground)]">
                           {displayName}

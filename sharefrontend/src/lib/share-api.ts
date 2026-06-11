@@ -26,6 +26,7 @@
   ShareAuditLog,
   ShareEmailHealthResponse,
   ShareMediaStorageSettingsResponse,
+  ShareSiteBrandingSettingsResponse,
   SessionResponse,
   ShareCardAccessMode,
   ShareMediaStorageMigrationRunResponse,
@@ -216,6 +217,12 @@ async function requestBlob(path: string, options?: RequestInit): Promise<{ blob:
 }
 
 export const shareApi = {
+  revalidateSiteBrandingCache() {
+    return request<{ ok: true }>("/api/share-site-branding/revalidate", {
+      method: "POST",
+    });
+  },
+
   continueAuth(input: { email: string; password: string }) {
     return request<ContinueAuthResponse>(`${API_ROOT}/auth/continue`, {
       method: "POST",
@@ -1122,6 +1129,18 @@ export const shareApi = {
     });
   },
 
+  systemSiteBrandingSettings() {
+    return request<ShareSiteBrandingSettingsResponse>(`${API_ROOT}/me/system/site-branding`, {
+      cache: "no-store",
+    });
+  },
+
+  publicSiteBrandingSettings() {
+    return request<ShareSiteBrandingSettingsResponse>(`${API_ROOT}/discover/site-branding`, {
+      cache: "no-store",
+    });
+  },
+
   updateSystemMediaStorageSettings(input: {
     storageMode: "local" | "object_storage";
     localFallbackEnabled: boolean;
@@ -1134,6 +1153,47 @@ export const shareApi = {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(input),
+    });
+  },
+
+  updateSystemSiteBrandingSettings(input: {
+    siteName: string;
+    siteShortName: string;
+    siteDescription: string;
+    siteSubtitle: string;
+    showSiteSubtitle: boolean;
+    authSubtitle: string;
+    showAuthSubtitle: boolean;
+    logoText: string;
+    logoBadgeText: string;
+    logoImageSrc: string;
+    logoOriginalFileName: string;
+    logoMimeType: string;
+    footerText: string;
+    defaultDisplayName: string;
+    defaultCreatorName: string;
+    defaultCreatorHandle: string;
+    defaultInitials: string;
+    creatorTagline: string;
+  }) {
+    return request<ShareSiteBrandingSettingsResponse>(`${API_ROOT}/me/system/site-branding`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  uploadSystemSiteBrandingLogo(input: { file: File; contentType?: string }) {
+    const formData = new FormData();
+    formData.append("file", input.file);
+    if (input.contentType?.trim()) {
+      formData.append("content_type", input.contentType.trim());
+    }
+    return request<ShareSiteBrandingSettingsResponse>(`${API_ROOT}/me/system/site-branding/logo`, {
+      method: "POST",
+      body: formData,
     });
   },
 

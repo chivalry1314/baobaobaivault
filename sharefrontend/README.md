@@ -131,6 +131,27 @@ cp .env.example .env.local
 SHARE_BACKEND_ORIGIN=http://127.0.0.1:8080
 ```
 
+如需把站点品牌做成前端可配置，也可以在 `.env.local` 中继续配置：
+
+```env
+NEXT_PUBLIC_SHARE_SITE_NAME=Dreamy Card Gallery
+NEXT_PUBLIC_SHARE_SITE_SHORT_NAME=Dreamy
+NEXT_PUBLIC_SHARE_SITE_DESCRIPTION=Storefront for browsing and redeeming shared cards.
+NEXT_PUBLIC_SHARE_SITE_SUBTITLE=Card Gallery
+NEXT_PUBLIC_SHARE_SITE_AUTH_SUBTITLE=Dreamy Card Gallery 账号入口
+NEXT_PUBLIC_SHARE_SITE_LOGO_TEXT=DR
+NEXT_PUBLIC_SHARE_SITE_LOGO_BADGE_TEXT=
+NEXT_PUBLIC_SHARE_SITE_LOGO_IMAGE=
+NEXT_PUBLIC_SHARE_SITE_FOOTER_TEXT=© 2026 Dreamy Card Gallery
+NEXT_PUBLIC_SHARE_SITE_DEFAULT_DISPLAY_NAME=Dreamy Card Gallery
+NEXT_PUBLIC_SHARE_SITE_DEFAULT_CREATOR_NAME=Dreamy Creator
+NEXT_PUBLIC_SHARE_SITE_DEFAULT_CREATOR_HANDLE=@dreamy
+NEXT_PUBLIC_SHARE_SITE_DEFAULT_INITIALS=DR
+NEXT_PUBLIC_SHARE_SITE_CREATOR_TAGLINE=在 Dreamy 展示你的创作，让更多人看见你的灵感。
+```
+
+这些变量会影响浏览器标题、导航品牌区、登录页品牌文案、详情页站点字样、页脚，以及默认昵称/creator 占位信息。
+
 含义：
 
 - 这是 Next.js 服务端转发时访问的后端地址

@@ -1,5 +1,6 @@
-﻿import type { SettingsDraft } from "@/components/share/profile-settings/types";
+import type { SettingsDraft } from "@/components/share/profile-settings/types";
 import type { ExternalSessionUser } from "@/lib/shared";
+import { shareSiteBrand } from "@/lib/site-config";
 
 export function createDraft(user: ExternalSessionUser): SettingsDraft {
   return {
@@ -22,11 +23,11 @@ export function getDisplayName(user: ExternalSessionUser) {
     return username;
   }
 
-  return user.email.split("@")[0]?.trim() || "Card Share";
+  return user.email.split("@")[0]?.trim() || shareSiteBrand.defaultDisplayName;
 }
 
 export function getInitials(user: ExternalSessionUser) {
-  return Array.from(getDisplayName(user)).slice(0, 2).join("").toUpperCase() || "CS";
+  return Array.from(getDisplayName(user)).slice(0, 2).join("").toUpperCase() || shareSiteBrand.defaultInitials;
 }
 
 export function maskPhone(phone: string) {

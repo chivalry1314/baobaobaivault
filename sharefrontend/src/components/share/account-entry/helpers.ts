@@ -1,4 +1,5 @@
 import type { ExternalSessionUser } from "@/lib/shared";
+import { shareSiteBrand } from "@/lib/site-config";
 
 export function getDisplayName(user: ExternalSessionUser) {
   const nickname = user.nickname.trim();
@@ -12,11 +13,11 @@ export function getDisplayName(user: ExternalSessionUser) {
   }
 
   const emailName = user.email.split("@")[0]?.trim();
-  return emailName || "Card Share";
+  return emailName || shareSiteBrand.defaultDisplayName;
 }
 
 export function getInitials(user: ExternalSessionUser) {
-  return Array.from(getDisplayName(user)).slice(0, 2).join("").toUpperCase() || "CS";
+  return Array.from(getDisplayName(user)).slice(0, 2).join("").toUpperCase() || shareSiteBrand.defaultInitials;
 }
 
 export function getEntryLabel(user: ExternalSessionUser | null) {

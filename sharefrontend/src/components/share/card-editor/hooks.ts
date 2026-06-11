@@ -26,6 +26,7 @@ import type {
   CardDetailResponse,
   ShareCardAccessMode,
 } from "@/lib/shared";
+import { shareSiteBrand } from "@/lib/site-config";
 
 type UseShareCardEditorArgs = {
   mode: EditorMode;
@@ -163,7 +164,7 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
       !reviewSubmitPending &&
       reviewStatus !== "pending",
   );
-  const authorName = currentUser ? getDisplayName(currentUser) : "Card Share";
+  const authorName = currentUser ? getDisplayName(currentUser) : shareSiteBrand.defaultDisplayName;
 
   const coverPreviewUrl = useMemo(() => {
     if (!coverFile) {

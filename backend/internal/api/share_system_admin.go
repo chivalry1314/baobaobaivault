@@ -2,8 +2,11 @@ package api
 
 import (
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"net/mail"
+	"strconv"
 	"strings"
 
 	"github.com/baobaobai/baobaobaivault/internal/service"
@@ -153,6 +156,31 @@ func (h *Handler) shareSystemAuthSettings(c *gin.Context) {
 	}
 
 	settings, err := h.shareService.GetShareAuthSettings(c.Request.Context(), user.ID)
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareForbiddenRole),
+			errors.Is(err, service.ErrShareSuperAdminRequired):
+			status = http.StatusForbidden
+		case errors.Is(err, service.ErrShareUserNotFound):
+			status = http.StatusNotFound
+		default:
+			status = http.StatusInternalServerError
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"settings": settings})
+}
+
+func (h *Handler) shareSystemSiteBrandingSettings(c *gin.Context) {
+	user, ok := h.requireConfiguredShareSuperAdmin(c)
+	if !ok {
+		return
+	}
+
+	settings, err := h.shareService.GetShareSiteBrandingSettings(c.Request.Context(), user.ID)
 	if err != nil {
 		status := http.StatusBadRequest
 		switch {
@@ -348,6 +376,144 @@ func (h *Handler) shareSystemUpdateAuthSettings(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"settings": settings})
+}
+
+func (h *Handler) shareSystemUpdateSiteBrandingSettings(c *gin.Context) {
+	user, ok := h.requireConfiguredShareSuperAdmin(c)
+	if !ok {
+		return
+	}
+
+	var req struct {
+		SiteName             string `json:"siteName"`
+		SiteShortName        string `json:"siteShortName"`
+		SiteDescription      string `json:"siteDescription"`
+		SiteSubtitle         string `json:"siteSubtitle"`
+		ShowSiteSubtitle     bool   `json:"showSiteSubtitle"`
+		AuthSubtitle         string `json:"authSubtitle"`
+		ShowAuthSubtitle     bool   `json:"showAuthSubtitle"`
+		LogoText             string `json:"logoText"`
+		LogoBadgeText        string `json:"logoBadgeText"`
+		LogoImageSrc         string `json:"logoImageSrc"`
+		LogoOriginalFileName string `json:"logoOriginalFileName"`
+		LogoMimeType         string `json:"logoMimeType"`
+		FooterText           string `json:"footerText"`
+		DefaultDisplayName   string `json:"defaultDisplayName"`
+		DefaultCreatorName   string `json:"defaultCreatorName"`
+		DefaultCreatorHandle string `json:"defaultCreatorHandle"`
+		DefaultInitials      string `json:"defaultInitials"`
+		CreatorTagline       string `json:"creatorTagline"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	settings, err := h.shareService.UpdateShareSiteBrandingSettings(c.Request.Context(), service.ShareUpdateSiteBrandingSettingsInput{
+		OperatorID:           user.ID,
+		SiteName:             req.SiteName,
+		SiteShortName:        req.SiteShortName,
+		SiteDescription:      req.SiteDescription,
+		SiteSubtitle:         req.SiteSubtitle,
+		ShowSiteSubtitle:     req.ShowSiteSubtitle,
+		AuthSubtitle:         req.AuthSubtitle,
+		ShowAuthSubtitle:     req.ShowAuthSubtitle,
+		LogoText:             req.LogoText,
+		LogoBadgeText:        req.LogoBadgeText,
+		LogoImageSrc:         req.LogoImageSrc,
+		LogoOriginalFileName: req.LogoOriginalFileName,
+		LogoMimeType:         req.LogoMimeType,
+		FooterText:           req.FooterText,
+		DefaultDisplayName:   req.DefaultDisplayName,
+		DefaultCreatorName:   req.DefaultCreatorName,
+		DefaultCreatorHandle: req.DefaultCreatorHandle,
+		DefaultInitials:      req.DefaultInitials,
+		CreatorTagline:       req.CreatorTagline,
+	})
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareForbiddenRole),
+			errors.Is(err, service.ErrShareSuperAdminRequired):
+			status = http.StatusForbidden
+		case errors.Is(err, service.ErrShareUserNotFound):
+			status = http.StatusNotFound
+		default:
+			status = http.StatusInternalServerError
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"settings": settings})
+}
+
+func (h *Handler) shareSystemUploadSiteBrandingLogo(c *gin.Context) {
+	user, ok := h.requireConfiguredShareSuperAdmin(c)
+	if !ok {
+		return
+	}
+
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
+		return
+	}
+	defer file.Close()
+
+	mimeType := strings.TrimSpace(c.PostForm("content_type"))
+	if mimeType == "" {
+		mimeType = strings.TrimSpace(header.Header.Get("Content-Type"))
+	}
+
+	settings, err := h.shareService.UploadShareSiteBrandingLogo(c.Request.Context(), service.ShareUploadSiteBrandingLogoInput{
+		OperatorID:  user.ID,
+		FileName:    header.Filename,
+		MimeType:    mimeType,
+		FileReader:  file,
+		MaxFileSize: header.Size,
+	})
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareForbiddenRole), errors.Is(err, service.ErrShareSuperAdminRequired):
+			status = http.StatusForbidden
+		case errors.Is(err, service.ErrShareUserNotFound):
+			status = http.StatusNotFound
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"settings": settings})
+}
+
+func (h *Handler) sharePublicSiteBrandingSettings(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"settings": h.shareService.GetSharePublicSiteBrandingSettings(),
+	})
+}
+
+func (h *Handler) sharePublicSiteBrandingLogo(c *gin.Context) {
+	stream, fileName, mimeType, err := h.shareService.OpenShareSiteBrandingLogo(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "object not found"})
+		return
+	}
+	defer stream.Reader.Close()
+
+	if strings.TrimSpace(mimeType) == "" {
+		mimeType = "application/octet-stream"
+	}
+	c.Header("Content-Type", mimeType)
+	if stream.Size > 0 {
+		c.Header("Content-Length", strconv.FormatInt(stream.Size, 10))
+	}
+	c.Header("Content-Disposition", fmt.Sprintf(`inline; filename="%s"`, strings.ReplaceAll(fileName, `"`, "_")))
+	c.Status(http.StatusOK)
+	if _, copyErr := io.Copy(c.Writer, stream.Reader); copyErr != nil {
+		c.Error(copyErr)
+	}
 }
 
 func (h *Handler) shareSystemSendSMTPTest(c *gin.Context) {

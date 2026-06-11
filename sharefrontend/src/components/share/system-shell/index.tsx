@@ -15,6 +15,7 @@ const SYSTEM_NAV_ITEMS = [
   { href: "/system/roles", label: "角色权限" },
   { href: "/system/users", label: "用户管理" },
   { href: "/system/media-storage", label: "媒体存储" },
+  { href: "/system/site-branding", label: "站点品牌" },
   { href: "/system/auth-settings", label: "认证设置" },
 ];
 

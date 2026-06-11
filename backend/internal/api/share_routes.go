@@ -28,6 +28,8 @@ func (h *Handler) registerShareRoutes(r *gin.Engine) {
 
 		group.GET("/discover/cards", h.shareDiscoverCards)
 		group.GET("/discover/system-themes", h.shareDiscoverSystemThemes)
+		group.GET("/discover/site-branding", h.sharePublicSiteBrandingSettings)
+		group.GET("/discover/site-branding/logo", h.sharePublicSiteBrandingLogo)
 		group.GET("/users/:userId/assets/:fileName", h.shareUserAsset)
 		group.GET("/cards/:cardId", h.shareCardDetail)
 		group.GET("/cards/:cardId/cover/preview", h.shareCardCoverPreview)
@@ -84,6 +86,9 @@ func (h *Handler) registerShareRoutes(r *gin.Engine) {
 			me.GET("/system/media-storage", h.shareSystemMediaStorageSettings)
 			me.PATCH("/system/media-storage", h.shareSystemUpdateMediaStorageSettings)
 			me.POST("/system/media-storage/migrate", h.shareSystemRunMediaStorageMigration)
+			me.GET("/system/site-branding", h.shareSystemSiteBrandingSettings)
+			me.PATCH("/system/site-branding", h.shareSystemUpdateSiteBrandingSettings)
+			me.POST("/system/site-branding/logo", h.shareSystemUploadSiteBrandingLogo)
 			me.GET("/system/auth-settings", h.shareSystemAuthSettings)
 			me.PATCH("/system/auth-settings", h.shareSystemUpdateAuthSettings)
 			me.POST("/system/auth-settings/test-email", h.shareSystemSendSMTPTest)

@@ -101,6 +101,8 @@ type ShareService struct {
 	shareAuthCfg      config.ShareAuthConfig
 	shareMediaCfgMu   sync.RWMutex
 	shareMediaCfg     ShareMediaStorageSettingsView
+	shareSiteBrandMu  sync.RWMutex
+	shareSiteBrandCfg ShareSiteBrandingSettingsView
 	emailService      *EmailService
 }
 
@@ -132,10 +134,12 @@ func NewShareService(
 		managerEmailAllow: allow,
 		shareAuthCfg:      shareAuthCfg,
 		shareMediaCfg:     defaultShareMediaStorageSettingsView(),
+		shareSiteBrandCfg: defaultShareSiteBrandingSettingsView(),
 		emailService:      emailService,
 	}
 	service.loadShareAuthConfigFromDB()
 	service.loadShareMediaStorageSettingsFromDB()
+	service.loadShareSiteBrandingSettingsFromDB()
 	return service
 }
 
@@ -195,6 +199,28 @@ type ShareMediaStorageSettingsView struct {
 	CanUpdate            bool   `json:"canUpdate"`
 }
 
+type ShareSiteBrandingSettingsView struct {
+	SiteName             string `json:"siteName"`
+	SiteShortName        string `json:"siteShortName"`
+	SiteDescription      string `json:"siteDescription"`
+	SiteSubtitle         string `json:"siteSubtitle"`
+	ShowSiteSubtitle     bool   `json:"showSiteSubtitle"`
+	AuthSubtitle         string `json:"authSubtitle"`
+	ShowAuthSubtitle     bool   `json:"showAuthSubtitle"`
+	LogoText             string `json:"logoText"`
+	LogoBadgeText        string `json:"logoBadgeText"`
+	LogoImageSrc         string `json:"logoImageSrc"`
+	LogoOriginalFileName string `json:"logoOriginalFileName"`
+	LogoMimeType         string `json:"logoMimeType"`
+	FooterText           string `json:"footerText"`
+	DefaultDisplayName   string `json:"defaultDisplayName"`
+	DefaultCreatorName   string `json:"defaultCreatorName"`
+	DefaultCreatorHandle string `json:"defaultCreatorHandle"`
+	DefaultInitials      string `json:"defaultInitials"`
+	CreatorTagline       string `json:"creatorTagline"`
+	CanUpdate            bool   `json:"canUpdate"`
+}
+
 type ShareMediaStorageMigrationSummary struct {
 	CoversPending int64 `json:"coversPending"`
 	AssetsPending int64 `json:"assetsPending"`
@@ -245,6 +271,36 @@ type ShareUpdateAuthSettingsInput struct {
 	VerificationCodeTTLSeconds int
 	ResendIntervalSeconds      int
 	MaxVerifyAttempts          int
+}
+
+type ShareUpdateSiteBrandingSettingsInput struct {
+	OperatorID           string
+	SiteName             string
+	SiteShortName        string
+	SiteDescription      string
+	SiteSubtitle         string
+	ShowSiteSubtitle     bool
+	AuthSubtitle         string
+	ShowAuthSubtitle     bool
+	LogoText             string
+	LogoBadgeText        string
+	LogoImageSrc         string
+	LogoOriginalFileName string
+	LogoMimeType         string
+	FooterText           string
+	DefaultDisplayName   string
+	DefaultCreatorName   string
+	DefaultCreatorHandle string
+	DefaultInitials      string
+	CreatorTagline       string
+}
+
+type ShareUploadSiteBrandingLogoInput struct {
+	OperatorID  string
+	FileName    string
+	MimeType    string
+	FileReader  io.Reader
+	MaxFileSize int64
 }
 
 type ShareEmailHealthView struct {
@@ -955,7 +1011,7 @@ func defaultShareNicknameFromEmail(email string) string {
 	if err := validateShareNickname(base); err == nil {
 		return base
 	}
-	return "\u65b0\u7528\u6237"
+	return "新用户"
 }
 
 func validateShareNickname(nickname string) error {

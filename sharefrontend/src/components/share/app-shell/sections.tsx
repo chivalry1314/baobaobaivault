@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { AccountEntry } from "@/components/share/account-entry";
 import { isNavItemActive } from "@/components/share/app-shell/helpers";
+import { ShareSiteBrandMark } from "@/components/share/site-brand";
 import type { NavItem } from "@/components/share/app-shell/types";
 
 export function AppShellBackground() {
@@ -27,15 +28,7 @@ export function AppShellHeader(props: {
     <header className="relative z-10 px-4 pb-1 pt-4 sm:px-6">
       <div className="mx-auto flex w-full max-w-[var(--layout-max)] flex-col items-center justify-between gap-4 py-2 sm:flex-row">
         <Link href="/" className="flex items-center gap-3 self-start sm:self-auto">
-          <div className="flex h-12 w-12 -rotate-6 items-center justify-center rounded-xl border-[3px] border-[var(--outline)] bg-white">
-            <div className="h-8 w-8 rounded bg-gradient-to-tr from-purple-400 to-blue-300 ring-2 ring-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black leading-none tracking-tight text-[var(--foreground)]">
-              Dreamy
-            </h1>
-            <p className="text-sm font-extrabold text-[var(--foreground)]">Card Gallery</p>
-          </div>
+          <ShareSiteBrandMark />
         </Link>
 
         <DesktopNav currentPath={currentPath} navItems={navItems} />

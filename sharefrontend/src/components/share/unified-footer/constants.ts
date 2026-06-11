@@ -1,1 +1,3 @@
-export const DEFAULT_FOOTER_TEXT = "© 2026 Dreamy Card Gallery";
+import { shareSiteBrand } from "@/lib/site-config";
+
+export const DEFAULT_FOOTER_TEXT = shareSiteBrand.footerText;

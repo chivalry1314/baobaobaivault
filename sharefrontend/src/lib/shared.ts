@@ -200,6 +200,28 @@ export type ShareMediaStorageSettings = {
   canUpdate: boolean;
 };
 
+export type ShareSiteBrandingSettings = {
+  siteName: string;
+  siteShortName: string;
+  siteDescription: string;
+  siteSubtitle: string;
+  showSiteSubtitle: boolean;
+  authSubtitle: string;
+  showAuthSubtitle: boolean;
+  logoText: string;
+  logoBadgeText: string;
+  logoImageSrc: string;
+  logoOriginalFileName: string;
+  logoMimeType: string;
+  footerText: string;
+  defaultDisplayName: string;
+  defaultCreatorName: string;
+  defaultCreatorHandle: string;
+  defaultInitials: string;
+  creatorTagline: string;
+  canUpdate: boolean;
+};
+
 export type ShareMediaStorageMigrationSummary = {
   coversPending: number;
   assetsPending: number;
@@ -243,6 +265,11 @@ export type ShareMediaStorageSettingsResponse = {
   ok: true;
   settings: ShareMediaStorageSettings;
   migration: ShareMediaStorageMigrationPlan;
+};
+
+export type ShareSiteBrandingSettingsResponse = {
+  ok: true;
+  settings: ShareSiteBrandingSettings;
 };
 
 export type ShareMediaStorageMigrationRunResponse = {

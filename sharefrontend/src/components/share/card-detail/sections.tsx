@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AccessModeBadge } from "@/components/share/access-mode-badge";
 import { SLOT_LABEL_MAP } from "@/components/share/card-detail/constants";
 import { formatBytes, getInitials } from "@/components/share/card-detail/helpers";
+import { useShareSiteBrand } from "@/components/share/site-brand/provider";
 import type { CardViewModel } from "@/components/share/card-detail/types";
 import type { CardAsset, CardDetailResponse } from "@/lib/shared";
 
@@ -47,6 +48,7 @@ export function CardDetailContent(props: {
     setDownloadError,
     onAssetDownload,
   } = props;
+  const brand = useShareSiteBrand();
 
   return (
     <div className="fade-slide-in flex flex-col gap-8 lg:flex-row xl:gap-12">
@@ -74,7 +76,7 @@ export function CardDetailContent(props: {
               <h1 className="text-[2.5rem] font-black leading-[1.05] tracking-wide text-white drop-shadow-[0_8px_24px_rgba(0,0,0,0.5)] sm:text-5xl md:text-7xl">
                 {detail.card.title}
               </h1>
-              <p className="mt-3 text-lg font-black text-white/90 drop-shadow-[0_6px_18px_rgba(0,0,0,0.45)] md:text-2xl">CardShare</p>
+              <p className="mt-3 text-lg font-black text-white/90 drop-shadow-[0_6px_18px_rgba(0,0,0,0.45)] md:text-2xl">{brand.siteShortName}</p>
             </div>
           </div>
         </div>

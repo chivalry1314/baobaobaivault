@@ -1,4 +1,4 @@
-﻿import {
+import {
   slotLabelMap,
   slotOptions,
 } from "@/components/share/card-editor/constants";
@@ -9,6 +9,7 @@ import type {
   ExternalSessionUser,
   ShareReviewStatus,
 } from "@/lib/shared";
+import { shareSiteBrand } from "@/lib/site-config";
 
 export type SlotFileItem = {
   slot: CardContentSlot;
@@ -24,7 +25,7 @@ export function getDisplayName(user: ExternalSessionUser) {
   if (username) {
     return username;
   }
-  return user.email.split("@")[0]?.trim() || "Card Share";
+  return user.email.split("@")[0]?.trim() || shareSiteBrand.defaultDisplayName;
 }
 
 export function composeSearchableSummary(text: string) {

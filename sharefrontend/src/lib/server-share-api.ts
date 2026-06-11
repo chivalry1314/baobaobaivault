@@ -4,6 +4,7 @@ import type {
   DiscoverCardItem,
   DiscoverCardsPagination,
   SessionResponse,
+  ShareSiteBrandingSettingsResponse,
 } from "@/lib/shared";
 
 const backendOrigin =
@@ -83,6 +84,20 @@ export async function getServerDiscoverCards(input?: {
         revalidate: 60,
       },
     });
+  } catch {
+    return null;
+  }
+}
+
+export async function getServerSiteBrandingSettings() {
+  try {
+    const response = await requestServer<ShareSiteBrandingSettingsResponse>(
+      "/api/share/discover/site-branding",
+      {
+        cache: "no-store",
+      },
+    );
+    return response.settings;
   } catch {
     return null;
   }

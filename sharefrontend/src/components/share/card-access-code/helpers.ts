@@ -3,6 +3,7 @@ import type {
   CardDetailResponse,
   ExternalSessionUser,
 } from "@/lib/shared";
+import { shareSiteBrand } from "@/lib/site-config";
 
 import type { ExpireOption } from "@/components/share/card-access-code/types";
 
@@ -26,10 +27,10 @@ export function getDisplayName(
       return username;
     }
 
-    return user.email.split("@")[0]?.trim() || "CardShare";
+    return user.email.split("@")[0]?.trim() || shareSiteBrand.defaultDisplayName;
   }
 
-  return user.nickname.trim() || user.username.trim() || "CardShare";
+  return user.nickname.trim() || user.username.trim() || shareSiteBrand.defaultDisplayName;
 }
 
 export function generateAccessCode() {

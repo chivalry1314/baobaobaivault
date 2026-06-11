@@ -75,6 +75,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&model.ShareEmailVerification{},
 		&model.ShareAuthSettings{},
 		&model.ShareMediaStorageSettings{},
+		&model.ShareSiteBrandingSettings{},
 		&model.SharePlatformCard{},
 		&model.SharePlatformCardAsset{},
 		&model.SharePlatformDownloadLog{},

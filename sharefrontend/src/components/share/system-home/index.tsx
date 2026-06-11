@@ -31,7 +31,7 @@ export function ShareSystemHome() {
     <SystemWorkspace
       currentPath="/system"
       title="系统总览"
-      description="这里集中承载系统级后台能力。你可以从左侧菜单进入存储配置、命名空间、对象管理、操作审计、访问密钥、角色权限、用户管理和认证设置。"
+      description="这里集中承载系统级后台能力。你可以从左侧菜单进入存储配置、命名空间、对象管理、操作审计、访问密钥、角色权限、用户管理、站点品牌和认证设置。"
     >
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <SystemCard
@@ -68,6 +68,11 @@ export function ShareSystemHome() {
           title="用户管理"
           description="管理站点用户角色，并对违规或停用账号执行注销。"
           href="/system/users"
+        />
+        <SystemCard
+          title="站点品牌"
+          description="统一维护 logo、站点名称、页脚文案、默认显示名等前端品牌信息。"
+          href="/system/site-branding"
         />
         <SystemCard
           title="认证设置"

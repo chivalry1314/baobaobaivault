@@ -1,4 +1,5 @@
 import type { DashboardCard, ExternalSessionUser, PlatformCard } from "@/lib/shared";
+import { shareSiteBrand } from "@/lib/site-config";
 
 export const CARDS_PAGE_SIZE = 9;
 export const HISTORY_PAGE_SIZE = 8;
@@ -56,13 +57,13 @@ export function getDisplayName(user: ExternalSessionUser) {
   if (username) {
     return username;
   }
-  return user.email.split("@")[0]?.trim() || "Card Share";
+  return user.email.split("@")[0]?.trim() || shareSiteBrand.defaultDisplayName;
 }
 
 export function getInitials(name: string) {
   const clean = name.trim();
   if (!clean) {
-    return "CS";
+    return shareSiteBrand.defaultInitials;
   }
   return Array.from(clean).slice(0, 2).join("").toUpperCase();
 }
@@ -75,7 +76,7 @@ export function getUserTagline(user: ExternalSessionUser | null) {
   if (bio) {
     return bio;
   }
-  return "在 Card Share 展示你的创作，让更多人看见你的灵感。";
+  return shareSiteBrand.creatorTagline;
 }
 
 export function isImageCard(card: PlatformCard) {
