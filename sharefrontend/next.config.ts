@@ -3,6 +3,12 @@ import type { NextConfig } from "next";
 const backendOrigin = process.env.SHARE_BACKEND_ORIGIN ?? "http://127.0.0.1:8080";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Theme packages are validated by backend with a 20MB limit.
+    // Leave some headroom for multipart/form-data overhead when requests
+    // are proxied through Next.js rewrites.
+    proxyClientMaxBodySize: "32mb",
+  },
   async redirects() {
     return [
       {

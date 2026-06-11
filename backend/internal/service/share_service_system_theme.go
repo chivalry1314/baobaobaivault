@@ -17,6 +17,8 @@ const (
 	shareSystemThemeProtocol     = "baobaobaiphone.system-theme-package.v1"
 	shareSystemThemeMaxReadBytes = 24 * 1024 * 1024
 	shareSystemThemeMaxZipFiles  = 200
+	shareSystemThemeManifestMax  = shareSystemThemeMaxReadBytes
+	shareSystemThemeTokensMax    = shareSystemThemeMaxReadBytes
 )
 
 var (
@@ -85,6 +87,10 @@ type shareThemePackageDescriptor struct {
 	Wallpaper     string                    `json:"wallpaper"`
 	IconPack      map[string]string         `json:"iconPack"`
 	CustomFont    *shareThemePackageFontRef `json:"customFont"`
+	DesktopLayout json.RawMessage           `json:"desktopLayout"`
+	DesktopIcons  json.RawMessage           `json:"desktopIcons"`
+	SettingsPatch json.RawMessage           `json:"settingsPatch"`
+	ThemeTokens   json.RawMessage           `json:"themeTokens"`
 	Tokens        string                    `json:"tokens"`
 }
 
@@ -377,7 +383,7 @@ func inspectShareThemeZipPackage(data []byte) (shareThemePackageManifest, error)
 		return shareThemePackageManifest{}, ErrShareInvalidSystemThemePackage
 	}
 
-	manifestData, err := readZipFile(manifestFile, 512*1024)
+	manifestData, err := readZipFile(manifestFile, shareSystemThemeManifestMax)
 	if err != nil {
 		return shareThemePackageManifest{}, ErrShareInvalidSystemThemePackage
 	}
@@ -397,7 +403,7 @@ func inspectShareThemeZipPackage(data []byte) (shareThemePackageManifest, error)
 		if !exists {
 			return shareThemePackageManifest{}, ErrShareInvalidSystemThemePackage
 		}
-		tokenData, readErr := readZipFile(tokenFile, 512*1024)
+		tokenData, readErr := readZipFile(tokenFile, shareSystemThemeTokensMax)
 		if readErr != nil {
 			return shareThemePackageManifest{}, ErrShareInvalidSystemThemePackage
 		}
@@ -435,7 +441,14 @@ func readZipFile(file *zip.File, maxBytes int64) ([]byte, error) {
 		return nil, err
 	}
 	defer stream.Close()
-	return io.ReadAll(io.LimitReader(stream, maxBytes))
+	data, err := io.ReadAll(io.LimitReader(stream, maxBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > maxBytes {
+		return nil, ErrShareInvalidSystemThemePackage
+	}
+	return data, nil
 }
 
 func shareThemeDir(path string) string {
