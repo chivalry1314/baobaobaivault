@@ -107,6 +107,7 @@ func (s *ShareService) CreateCard(ctx context.Context, input ShareCreateCardInpu
 		CreatorExternalUserID:  strings.TrimSpace(input.CreatorID),
 		Title:                  strings.TrimSpace(input.Title),
 		Description:            strings.TrimSpace(input.Description),
+		TagsText:               encodeShareCardTags(input.Tags),
 		Visibility:             normalizeShareVisibility(input.Visibility),
 		Status:                 status,
 		AccessMode:             normalizeShareCardAccessMode(input.AccessMode),
@@ -300,6 +301,7 @@ func (s *ShareService) CreateCardBundle(ctx context.Context, input ShareCreateCa
 		CreatorExternalUserID:  creatorID,
 		Title:                  strings.TrimSpace(input.Title),
 		Description:            strings.TrimSpace(input.Description),
+		TagsText:               encodeShareCardTags(input.Tags),
 		Visibility:             normalizeShareVisibility(input.Visibility),
 		Status:                 status,
 		AccessMode:             normalizeShareCardAccessMode(input.AccessMode),
@@ -393,14 +395,17 @@ func (s *ShareService) UpdateCardByOwner(ctx context.Context, input ShareUpdateC
 
 		nextTitle := strings.TrimSpace(input.Title)
 		nextDescription := strings.TrimSpace(input.Description)
+		nextTagsText := encodeShareCardTags(input.Tags)
 		nextVisibility := normalizeShareVisibility(input.Visibility)
 		shouldResetReview := card.Title != nextTitle ||
 			card.Description != nextDescription ||
+			card.TagsText != nextTagsText ||
 			card.Visibility != nextVisibility ||
 			card.Status != status
 
 		card.Title = nextTitle
 		card.Description = nextDescription
+		card.TagsText = nextTagsText
 		card.Visibility = nextVisibility
 		card.Status = status
 		if strings.TrimSpace(input.AccessMode) != "" {

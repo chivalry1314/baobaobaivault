@@ -426,6 +426,7 @@ export const shareApi = {
   createCard(input: {
     title: string;
     description: string;
+    tags: string[];
     visibility: "private" | "public";
     status: "draft" | "published" | "archived";
     accessMode: ShareCardAccessMode;
@@ -435,6 +436,7 @@ export const shareApi = {
     const formData = new FormData();
     formData.append("title", input.title);
     formData.append("description", input.description);
+    formData.append("tags", JSON.stringify(input.tags));
     formData.append("visibility", input.visibility);
     formData.append("status", input.status);
     formData.append("accessMode", input.accessMode);
@@ -452,6 +454,7 @@ export const shareApi = {
   createCardBundle(input: {
     title: string;
     description: string;
+    tags: string[];
     visibility: "private" | "public";
     status: "draft" | "published" | "archived";
     accessMode: ShareCardAccessMode;
@@ -465,6 +468,7 @@ export const shareApi = {
     const payload = {
       title: input.title,
       description: input.description,
+      tags: input.tags,
       visibility: input.visibility,
       status: input.status,
       accessMode: input.accessMode,
@@ -493,6 +497,7 @@ export const shareApi = {
     input: {
       title: string;
       description: string;
+      tags: string[];
       visibility: "private" | "public";
       status: "draft" | "published" | "archived";
       accessMode?: ShareCardAccessMode;

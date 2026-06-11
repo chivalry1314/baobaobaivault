@@ -325,6 +325,7 @@ type ShareCardView struct {
 	CreatorID        string     `json:"creatorId"`
 	Title            string     `json:"title"`
 	Description      string     `json:"description"`
+	Tags             []string   `json:"tags"`
 	Visibility       string     `json:"visibility"`
 	Status           string     `json:"status"`
 	AccessMode       string     `json:"accessMode"`
@@ -416,6 +417,7 @@ type ShareCreateCardInput struct {
 	CreatorID     string
 	Title         string
 	Description   string
+	Tags          []string
 	Visibility    string
 	Status        string
 	AccessMode    string
@@ -439,6 +441,7 @@ type ShareCreateCardBundleInput struct {
 	CreatorID     string
 	Title         string
 	Description   string
+	Tags          []string
 	Visibility    string
 	Status        string
 	AccessMode    string
@@ -454,6 +457,7 @@ type ShareUpdateCardInput struct {
 	CardID      string
 	Title       string
 	Description string
+	Tags        []string
 	Visibility  string
 	Status      string
 	AccessMode  string
@@ -1385,6 +1389,7 @@ func toShareCardView(card *model.SharePlatformCard, assets []model.SharePlatform
 		CreatorID:        card.CreatorExternalUserID,
 		Title:            card.Title,
 		Description:      card.Description,
+		Tags:             decodeShareCardTags(card.TagsText),
 		Visibility:       card.Visibility,
 		Status:           card.Status,
 		AccessMode:       normalizeShareCardAccessMode(card.AccessMode),
@@ -1401,6 +1406,59 @@ func toShareCardView(card *model.SharePlatformCard, assets []model.SharePlatform
 		CreatedAt:        card.CreatedAt,
 		UpdatedAt:        card.UpdatedAt,
 	}
+}
+
+func normalizeShareCardTags(tags []string) []string {
+	if len(tags) == 0 {
+		return []string{}
+	}
+	seen := make(map[string]struct{}, len(tags))
+	result := make([]string, 0, len(tags))
+	for _, raw := range tags {
+		tag := strings.TrimSpace(raw)
+		if tag == "" {
+			continue
+		}
+		tag = strings.Join(strings.Fields(tag), " ")
+		if tag == "" {
+			continue
+		}
+		if len(tag) > 32 {
+			tag = strings.TrimSpace(tag[:32])
+		}
+		key := strings.ToLower(tag)
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		result = append(result, tag)
+		if len(result) >= 12 {
+			break
+		}
+	}
+	if len(result) == 0 {
+		return []string{}
+	}
+	return result
+}
+
+func encodeShareCardTags(tags []string) string {
+	normalized := normalizeShareCardTags(tags)
+	if len(normalized) == 0 {
+		return ""
+	}
+	return strings.Join(normalized, "\n")
+}
+
+func decodeShareCardTags(raw string) []string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return []string{}
+	}
+	parts := strings.FieldsFunc(trimmed, func(r rune) bool {
+		return r == '\n' || r == '\r' || r == ',' || r == '，' || r == ';' || r == '；'
+	})
+	return normalizeShareCardTags(parts)
 }
 
 func detectUploadMimeType(fileName, providedMimeType string) string {

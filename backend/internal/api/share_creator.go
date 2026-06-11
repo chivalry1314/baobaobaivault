@@ -203,6 +203,7 @@ func (h *Handler) shareCreateCard(c *gin.Context) {
 		CreatorID:     user.ID,
 		Title:         c.PostForm("title"),
 		Description:   c.PostForm("description"),
+		Tags:          parseShareCardTagsPayload(c.PostForm("tags")),
 		Visibility:    c.PostForm("visibility"),
 		Status:        c.PostForm("status"),
 		AccessMode:    c.PostForm("accessMode"),
@@ -251,6 +252,7 @@ func (h *Handler) shareCreateCardBundle(c *gin.Context) {
 	var payload struct {
 		Title       string `json:"title"`
 		Description string `json:"description"`
+		Tags        []string `json:"tags"`
 		Visibility  string `json:"visibility"`
 		Status      string `json:"status"`
 		AccessMode  string `json:"accessMode"`
@@ -321,6 +323,7 @@ func (h *Handler) shareCreateCardBundle(c *gin.Context) {
 		CreatorID:     user.ID,
 		Title:         payload.Title,
 		Description:   payload.Description,
+		Tags:          payload.Tags,
 		Visibility:    payload.Visibility,
 		Status:        payload.Status,
 		AccessMode:    payload.AccessMode,
@@ -357,6 +360,7 @@ func (h *Handler) shareUpdateCard(c *gin.Context) {
 	var req struct {
 		Title       string `json:"title"`
 		Description string `json:"description"`
+		Tags        []string `json:"tags"`
 		Visibility  string `json:"visibility"`
 		Status      string `json:"status"`
 		AccessMode  string `json:"accessMode"`
@@ -371,6 +375,7 @@ func (h *Handler) shareUpdateCard(c *gin.Context) {
 		CardID:      c.Param("cardId"),
 		Title:       req.Title,
 		Description: req.Description,
+		Tags:        req.Tags,
 		Visibility:  req.Visibility,
 		Status:      req.Status,
 		AccessMode:  req.AccessMode,
@@ -568,6 +573,56 @@ func (h *Handler) shareGetCardAccessCode(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"config": config})
+}
+
+func parseShareCardTagsPayload(raw string) []string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return []string{}
+	}
+	var items []string
+	if strings.HasPrefix(trimmed, "[") {
+		if err := json.Unmarshal([]byte(trimmed), &items); err == nil {
+			return normalizeShareCardTagsPayload(items)
+		}
+	}
+	return normalizeShareCardTagsPayload(strings.FieldsFunc(trimmed, func(r rune) bool {
+		return r == '\n' || r == '\r' || r == ',' || r == '，' || r == ';' || r == '；'
+	}))
+}
+
+func normalizeShareCardTagsPayload(tags []string) []string {
+	if len(tags) == 0 {
+		return []string{}
+	}
+	seen := make(map[string]struct{}, len(tags))
+	result := make([]string, 0, len(tags))
+	for _, raw := range tags {
+		tag := strings.TrimSpace(raw)
+		if tag == "" {
+			continue
+		}
+		tag = strings.Join(strings.Fields(tag), " ")
+		if tag == "" {
+			continue
+		}
+		if len(tag) > 32 {
+			tag = strings.TrimSpace(tag[:32])
+		}
+		key := strings.ToLower(tag)
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		result = append(result, tag)
+		if len(result) >= 12 {
+			break
+		}
+	}
+	if len(result) == 0 {
+		return []string{}
+	}
+	return result
 }
 
 func (h *Handler) shareUpdateCardAccessCode(c *gin.Context) {

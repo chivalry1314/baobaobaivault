@@ -190,6 +190,7 @@ export function useShareAccessCodeDashboard() {
       await shareApi.updateCard(item.card.id, {
         title: item.card.title,
         description: item.card.description,
+        tags: item.card.tags,
         visibility: "private",
         status: item.card.status,
         accessMode: item.card.accessMode,
@@ -219,6 +220,7 @@ export function useShareAccessCodeDashboard() {
         await shareApi.updateCard(item.card.id, {
           title: item.card.title,
           description: item.card.description,
+          tags: item.card.tags,
           visibility: "public",
           status: "published",
           accessMode: item.card.accessMode,

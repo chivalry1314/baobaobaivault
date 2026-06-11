@@ -89,6 +89,7 @@ type SharePlatformCard struct {
 	CreatorExternalUserID  string         `gorm:"type:uuid;not null;index:idx_share_platform_cards_creator_created,priority:1" json:"creator_external_user_id"`
 	Title                  string         `gorm:"type:varchar(200);not null" json:"title"`
 	Description            string         `gorm:"type:text;default:''" json:"description"`
+	TagsText               string         `gorm:"column:tags;type:text;default:''" json:"-"`
 	Visibility             string         `gorm:"type:varchar(20);not null;default:'private';index;index:idx_share_platform_cards_discover,priority:1" json:"visibility"`
 	Status                 string         `gorm:"type:varchar(20);not null;default:'published';index;index:idx_share_platform_cards_discover,priority:2" json:"status"`
 	ReviewStatus           string         `gorm:"type:varchar(20);not null;default:'unsubmitted';index;index:idx_share_platform_cards_discover,priority:3" json:"review_status"`

@@ -1,5 +1,5 @@
 ﻿import Link from "next/link";
-import { type ChangeEvent, type RefObject } from "react";
+import { type ChangeEvent, type KeyboardEvent, type RefObject } from "react";
 
 import { slotOptions } from "@/components/share/card-editor/constants";
 import { findAssetBySlot, getReviewStatusLabel, getSlotLabel, getStatusLabel, type SlotFileItem } from "@/components/share/card-editor/helpers";
@@ -247,10 +247,43 @@ export function CardAssetsPanel(props: {
 export function CardInfoPanel(props: {
   title: string;
   description: string;
+  tags: string[];
+  tagDraft: string;
   setTitle: (value: string) => void;
   setDescription: (value: string) => void;
+  handleTagDraftChange: (value: string) => void;
+  handleTagDraftBlur: () => void;
+  canAddTag: boolean;
+  tagLimitReached: boolean;
+  tagSlotsRemaining: number;
+  tagHelperText: string;
+  handleAddTag: () => void;
+  handleRemoveTag: (index: number) => void;
 }) {
-  const { title, description, setTitle, setDescription } = props;
+  const {
+    title,
+    description,
+    tags,
+    tagDraft,
+    setTitle,
+    setDescription,
+    handleTagDraftChange,
+    handleTagDraftBlur,
+    canAddTag,
+    tagLimitReached,
+    tagSlotsRemaining,
+    tagHelperText,
+    handleAddTag,
+    handleRemoveTag,
+  } = props;
+
+  function handleTagKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter") {
+      return;
+    }
+    event.preventDefault();
+    handleAddTag();
+  }
 
   return (
     <section className="dream-panel p-6 shadow-[4px_4px_0px_var(--line-strong)]">
@@ -278,6 +311,62 @@ export function CardInfoPanel(props: {
           placeholder="补充卡片说明..."
           className="w-full resize-y rounded-xl border-[2px] border-[var(--line-strong)] bg-white px-4 py-3 font-bold leading-7 text-[var(--foreground)] transition focus:ring-2 focus:ring-[var(--primary)]"
         />
+      </div>
+
+      <div>
+        <label className="mb-2 block text-xs font-black text-[var(--foreground)]/70">标签</label>
+        <div className="flex flex-col gap-3 rounded-[24px] border-[2px] border-[var(--line-strong)]/20 bg-[#f8fbff] p-4">
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <input
+              type="text"
+              value={tagDraft}
+              onChange={(event) => handleTagDraftChange(event.target.value)}
+              onBlur={handleTagDraftBlur}
+              onKeyDown={handleTagKeyDown}
+              placeholder={tagLimitReached ? "已达到标签上限" : "输入一个标签，例如：奶油风"}
+              disabled={tagLimitReached}
+              className="w-full rounded-full border-[2px] border-[var(--line-strong)] bg-white px-4 py-3 font-bold text-[var(--foreground)] transition focus:ring-2 focus:ring-[var(--primary)]"
+            />
+            <button
+              type="button"
+              onClick={handleAddTag}
+              disabled={!canAddTag}
+              className="btn-subtle rounded-full px-5 py-3 text-sm font-black shadow-[2px_2px_0px_var(--line-strong)] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-55"
+            >
+              添加标签
+            </button>
+          </div>
+
+          {tags.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {tags.map((tag, index) => (
+                <span
+                  key={`${tag}-${index}`}
+                  className="inline-flex items-center gap-2 rounded-full border-[2px] border-[var(--line-strong)] bg-white px-3 py-2 text-xs font-black text-[var(--foreground)] shadow-[2px_2px_0px_var(--line-strong)]"
+                >
+                  <span>{tag}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTag(index)}
+                    className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#ff9c9c] bg-[#fce4e4] text-[10px] leading-none text-[#ff6b6b]"
+                    aria-label={`删除标签 ${tag}`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs font-bold text-[var(--foreground)]/52">
+              还没有添加标签。最多 12 个，每个标签最多 32 个字。
+            </p>
+          )}
+        </div>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs font-bold">
+          <p className="text-[var(--foreground)]/60">{tagHelperText}</p>
+          <p className="text-[var(--foreground)]/45">还可添加 {tagSlotsRemaining} 个</p>
+        </div>
+        <p className="mt-2 text-xs font-bold text-[var(--foreground)]/60">这些标签会同步给 `baobaobaiphone` 的在线主题卡片，优先于主题包内 tags。</p>
       </div>
     </section>
   );

@@ -48,7 +48,15 @@ export function CardDetailContent(props: {
     setDownloadError,
     onAssetDownload,
   } = props;
+
   const brand = useShareSiteBrand();
+  const themeCardTitle = detail.card.title.trim() || detail.systemTheme?.name || "未命名系统主题";
+  const themeCardDescription =
+    detail.card.description.trim() ||
+    detail.systemTheme?.description ||
+    "当前主题包未提供额外说明，可直接按卡片规则下载后导入系统主题。";
+  const themePackageName = detail.systemTheme?.name.trim() || themeCardTitle;
+  const themePackageDescription = detail.systemTheme?.description.trim() || themeCardDescription;
 
   return (
     <div className="fade-slide-in flex flex-col gap-8 lg:flex-row xl:gap-12">
@@ -76,7 +84,9 @@ export function CardDetailContent(props: {
               <h1 className="text-[2.5rem] font-black leading-[1.05] tracking-wide text-white drop-shadow-[0_8px_24px_rgba(0,0,0,0.5)] sm:text-5xl md:text-7xl">
                 {detail.card.title}
               </h1>
-              <p className="mt-3 text-lg font-black text-white/90 drop-shadow-[0_6px_18px_rgba(0,0,0,0.45)] md:text-2xl">{brand.siteShortName}</p>
+              <p className="mt-3 text-lg font-black text-white/90 drop-shadow-[0_6px_18px_rgba(0,0,0,0.45)] md:text-2xl">
+                {brand.siteShortName}
+              </p>
             </div>
           </div>
         </div>
@@ -87,7 +97,11 @@ export function CardDetailContent(props: {
           <div className="mb-6 flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
               {detail.creator.avatar.trim() ? (
-                <img src={detail.creator.avatar} alt={viewModel.creatorName} className="h-14 w-14 shrink-0 rounded-full border-[3px] border-[var(--outline)] bg-[var(--primary)] object-cover" />
+                <img
+                  src={detail.creator.avatar}
+                  alt={viewModel.creatorName}
+                  className="h-14 w-14 shrink-0 rounded-full border-[3px] border-[var(--outline)] bg-[var(--primary)] object-cover"
+                />
               ) : (
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-[3px] border-[var(--outline)] bg-[var(--primary)] text-base font-black text-[var(--foreground)]">
                   {getInitials(viewModel.creatorName)}
@@ -101,7 +115,10 @@ export function CardDetailContent(props: {
             </div>
 
             {detail.canEdit ? (
-              <Link href="/creator" className="shrink-0 rounded-full border-[3px] border-[var(--outline)] bg-[var(--brand)] px-5 py-1.5 text-sm font-black text-[var(--foreground)]">
+              <Link
+                href="/creator"
+                className="shrink-0 rounded-full border-[3px] border-[var(--outline)] bg-[var(--brand)] px-5 py-1.5 text-sm font-black text-[var(--foreground)]"
+              >
                 我的卡片
               </Link>
             ) : null}
@@ -163,14 +180,12 @@ export function CardDetailContent(props: {
               </div>
 
               <div className="mt-4">
-                <p className="text-lg font-black text-[var(--foreground)]">{detail.systemTheme.name}</p>
+                <p className="text-lg font-black text-[var(--foreground)]">{themeCardTitle}</p>
                 <p className="mt-1 text-sm font-bold text-[var(--foreground)]/72">
                   {detail.systemTheme.author || "未知作者"}
                   {detail.systemTheme.version ? ` · ${detail.systemTheme.version}` : ""}
                 </p>
-                <p className="mt-3 text-sm font-bold leading-6 text-[var(--foreground)]/78">
-                  {detail.systemTheme.description || "当前主题包未提供额外说明，可直接按卡片规则下载后导入系统主题。"}
-                </p>
+                <p className="mt-3 text-sm font-bold leading-6 text-[var(--foreground)]/78">{themeCardDescription}</p>
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
@@ -186,6 +201,14 @@ export function CardDetailContent(props: {
                   {detail.systemTheme.fileName}
                 </span>
               </div>
+
+              {(themePackageName !== themeCardTitle || themePackageDescription !== themeCardDescription) && (
+                <div className="mt-4 rounded-[1.1rem] border-[3px] border-dashed border-[var(--outline)] bg-[#f8f9fa] p-3">
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-[var(--foreground)]/55">主题包内信息</p>
+                  <p className="mt-2 text-sm font-black text-[var(--foreground)]">{themePackageName}</p>
+                  <p className="mt-2 text-sm font-bold leading-6 text-[var(--foreground)]/72">{themePackageDescription}</p>
+                </div>
+              )}
             </div>
           </section>
         ) : null}
@@ -209,11 +232,7 @@ export function CardDetailContent(props: {
                 }
               }}
               disabled={!viewModel.isPaid}
-              placeholder={
-                viewModel.isPaid
-                  ? "请输入提取码（示例：SHARE2026）"
-                  : "当前卡片无需提取码"
-              }
+              placeholder={viewModel.isPaid ? "请输入提取码（示例：SHARE2026）" : "当前卡片无需提取码"}
               className="w-full rounded-2xl border-[3px] border-[var(--outline)] bg-white px-4 py-3 text-base font-bold text-[var(--foreground)] placeholder:text-[var(--text-subtle)] disabled:cursor-not-allowed disabled:bg-white/70"
             />
           </div>
@@ -233,18 +252,14 @@ export function CardDetailContent(props: {
             {detail.assets.map((asset) => {
               const pending = downloadPendingSlot === asset.slot;
               const canDownload =
-                detail.canDownload &&
-                (!viewModel.requiresAccessCode || Boolean(viewModel.normalizedUnlockCode));
+                detail.canDownload && (!viewModel.requiresAccessCode || Boolean(viewModel.normalizedUnlockCode));
+
               return (
                 <div key={asset.slot} className="rounded-xl border-[2px] border-[var(--outline)]/30 bg-[#f8f9fa] p-3">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-black text-[var(--foreground)]">
-                        {SLOT_LABEL_MAP[asset.slot]}
-                      </p>
-                      <p className="truncate text-xs font-bold text-[var(--foreground)]/70">
-                        {asset.originalFileName}
-                      </p>
+                      <p className="truncate text-sm font-black text-[var(--foreground)]">{SLOT_LABEL_MAP[asset.slot]}</p>
+                      <p className="truncate text-xs font-bold text-[var(--foreground)]/70">{asset.originalFileName}</p>
                       <p className="text-xs font-bold text-[var(--text-subtle)]">
                         {asset.mimeType} · {formatBytes(asset.size)}
                       </p>

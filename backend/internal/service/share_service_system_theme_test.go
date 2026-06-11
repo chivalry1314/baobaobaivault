@@ -83,6 +83,88 @@ func TestInspectShareThemePackage_AllowsLargeManifestWithDesktopLayout(t *testin
 	}
 }
 
+func TestMergeShareSystemThemeManifest_PrefersCardConfiguredContent(t *testing.T) {
+	base := ShareSystemThemeView{
+		Protocol:    shareSystemThemeProtocol,
+		ID:          "card-id",
+		Name:        "Card Title",
+		Description: "Card Description",
+		Tags:        []string{"exported", "current-system"},
+		FileName:    "theme.zip",
+	}
+	manifest := shareThemePackageManifest{
+		ID:          "theme-id",
+		Name:        "Package Title",
+		Author:      "Package Author",
+		Version:     "2.0.0",
+		Description: "Package Description",
+		Tags:        []string{"retro", "warm"},
+	}
+
+	merged := mergeShareSystemThemeManifest(base, manifest)
+	if merged.ID != "theme-id" {
+		t.Fatalf("expected manifest id to be applied, got %q", merged.ID)
+	}
+	if merged.Name != "Card Title" {
+		t.Fatalf("expected card title to win, got %q", merged.Name)
+	}
+	if merged.Description != "Card Description" {
+		t.Fatalf("expected card description to win, got %q", merged.Description)
+	}
+	if merged.Author != "Package Author" {
+		t.Fatalf("expected manifest author to be applied, got %q", merged.Author)
+	}
+	if merged.Version != "2.0.0" {
+		t.Fatalf("expected manifest version to be applied, got %q", merged.Version)
+	}
+	if len(merged.Tags) != 2 || merged.Tags[0] != "exported" || merged.Tags[1] != "current-system" {
+		t.Fatalf("expected card tags to win, got %#v", merged.Tags)
+	}
+	if !merged.Supported {
+		t.Fatal("expected supported to be true when manifest name exists")
+	}
+}
+
+func TestMergeShareSystemThemeManifest_UsesManifestAsFallback(t *testing.T) {
+	base := ShareSystemThemeView{
+		Protocol: shareSystemThemeProtocol,
+		ID:       "card-id",
+		Tags:     []string{},
+		FileName: "theme.zip",
+	}
+	manifest := shareThemePackageManifest{
+		ID:          "theme-id",
+		Name:        "Package Title",
+		Description: "Package Description",
+		Tags:        []string{"retro", "warm"},
+	}
+
+	merged := mergeShareSystemThemeManifest(base, manifest)
+	if merged.Name != "Package Title" {
+		t.Fatalf("expected manifest title fallback, got %q", merged.Name)
+	}
+	if merged.Description != "Package Description" {
+		t.Fatalf("expected manifest description fallback, got %q", merged.Description)
+	}
+	if len(merged.Tags) != 2 || merged.Tags[0] != "retro" || merged.Tags[1] != "warm" {
+		t.Fatalf("expected manifest tags fallback, got %#v", merged.Tags)
+	}
+}
+
+func TestEncodeDecodeShareCardTags(t *testing.T) {
+	encoded := encodeShareCardTags([]string{" exported ", "current-system", "Exported", "", "桌面  主题"})
+	if encoded == "" {
+		t.Fatal("expected encoded tags")
+	}
+	decoded := decodeShareCardTags(encoded)
+	if len(decoded) != 3 {
+		t.Fatalf("expected 3 tags after normalization, got %#v", decoded)
+	}
+	if decoded[0] != "exported" || decoded[1] != "current-system" || decoded[2] != "桌面 主题" {
+		t.Fatalf("unexpected decoded tags: %#v", decoded)
+	}
+}
+
 func buildThemeZipForTest(files map[string][]byte) ([]byte, error) {
 	var buffer bytes.Buffer
 	writer := zip.NewWriter(&buffer)

@@ -21,6 +21,16 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
     setTitle,
     description,
     setDescription,
+    tags,
+    tagDraft,
+    handleTagDraftChange,
+    handleTagDraftBlur,
+    canAddTag,
+    tagLimitReached,
+    tagSlotsRemaining,
+    tagHelperText,
+    handleAddTag,
+    handleRemoveTag,
     publicChecked,
     setPublicChecked,
     accessMode,
@@ -174,7 +184,22 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                 }}
               />
 
-              <CardInfoPanel title={title} description={description} setTitle={setTitle} setDescription={setDescription} />
+              <CardInfoPanel
+                title={title}
+                description={description}
+                tags={tags}
+                tagDraft={tagDraft}
+                setTitle={setTitle}
+                setDescription={setDescription}
+                handleTagDraftChange={handleTagDraftChange}
+                handleTagDraftBlur={handleTagDraftBlur}
+                canAddTag={canAddTag}
+                tagLimitReached={tagLimitReached}
+                tagSlotsRemaining={tagSlotsRemaining}
+                tagHelperText={tagHelperText}
+                handleAddTag={handleAddTag}
+                handleRemoveTag={handleRemoveTag}
+              />
             </div>
 
             <div className="w-full space-y-6 lg:w-[45%]">

@@ -59,6 +59,7 @@ export type PlatformCard = {
   creatorId: string;
   title: string;
   description: string;
+  tags: string[];
   visibility: "private" | "public";
   status: "draft" | "published" | "archived";
   accessMode: ShareCardAccessMode;

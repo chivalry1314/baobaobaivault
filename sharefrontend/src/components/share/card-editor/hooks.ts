@@ -41,6 +41,90 @@ const initialAssetPending: AssetPendingMap = {
   world_book: null,
 };
 
+function parseCardTagsInput(value: string): string[] {
+  const seen = new Set<string>();
+  return value
+    .split(/[\n,，;；]+/)
+    .map((item) => item.trim().replace(/\s+/g, " "))
+    .filter((item) => item.length > 0)
+    .filter((item) => {
+      const key = item.toLowerCase();
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 12)
+    .map((item) => item.slice(0, 32).trim())
+    .filter((item) => item.length > 0);
+}
+
+const MAX_CARD_TAGS = 12;
+const MAX_CARD_TAG_LENGTH = 32;
+
+function normalizeSingleTag(value: string): string {
+  return value.trim().replace(/\s+/g, " ").slice(0, MAX_CARD_TAG_LENGTH).trim();
+}
+
+function mergeCardTags(values: string[]): string[] {
+  const seen = new Set<string>();
+  const next: string[] = [];
+
+  for (const value of values) {
+    const normalized = normalizeSingleTag(value);
+    if (!normalized) {
+      continue;
+    }
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    next.push(normalized);
+    if (next.length >= MAX_CARD_TAGS) {
+      break;
+    }
+  }
+
+  return next;
+}
+
+function getPendingTagCandidates(currentTags: string[], draft: string): string[] {
+  const existingKeys = new Set(currentTags.map((item) => item.toLowerCase()));
+  const pendingKeys = new Set<string>();
+  const next: string[] = [];
+
+  for (const value of parseCardTagsInput(draft)) {
+    const normalized = normalizeSingleTag(value);
+    if (!normalized) {
+      continue;
+    }
+
+    const key = normalized.toLowerCase();
+    if (existingKeys.has(key) || pendingKeys.has(key)) {
+      continue;
+    }
+
+    pendingKeys.add(key);
+    next.push(normalized);
+
+    if (currentTags.length + next.length >= MAX_CARD_TAGS) {
+      break;
+    }
+  }
+
+  return next;
+}
+
+function sanitizeTagDraftInput(value: string): string {
+  return value.replace(/^\s+/, "").replace(/[，、]/g, ",");
+}
+
+function formatTagDraftForBlur(value: string): string {
+  return parseCardTagsInput(value).join(", ");
+}
+
 export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
   const router = useRouter();
   const { user: currentUser, sessionChecking } = useShareSession();
@@ -50,6 +134,8 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagDraft, setTagDraft] = useState("");
   const [publicChecked, setPublicChecked] = useState(true);
   const [accessMode, setAccessMode] = useState<ShareCardAccessMode>("free");
   const [createMode, setCreateMode] = useState<CreateMode>("single");
@@ -111,6 +197,7 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
         setLoadedCard(detail);
         setTitle(detail.card.title);
         setDescription(detail.card.description);
+        setTags(mergeCardTags(detail.card.tags || []));
         setPublicChecked(detail.card.visibility === "public");
         setAccessMode(detail.card.accessMode ?? "free");
       } catch (error) {
@@ -165,6 +252,29 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
       reviewStatus !== "pending",
   );
   const authorName = currentUser ? getDisplayName(currentUser) : shareSiteBrand.defaultDisplayName;
+  const tagLimitReached = tags.length >= MAX_CARD_TAGS;
+  const tagSlotsRemaining = Math.max(0, MAX_CARD_TAGS - tags.length);
+  const parsedTagDraft = useMemo(
+    () => mergeCardTags(parseCardTagsInput(tagDraft)),
+    [tagDraft],
+  );
+  const pendingTagCandidates = useMemo(
+    () => getPendingTagCandidates(tags, tagDraft),
+    [tagDraft, tags],
+  );
+  const canAddTag = !tagLimitReached && pendingTagCandidates.length > 0;
+  const tagHelperText = tagLimitReached
+    ? `已达到 ${MAX_CARD_TAGS} 个标签上限，可先删除已有标签再继续添加。`
+    : parsedTagDraft.length > 0 && pendingTagCandidates.length === 0
+      ? "这些标签已经添加过了，无需重复添加。"
+      : parsedTagDraft.length > pendingTagCandidates.length &&
+          pendingTagCandidates.length > 0
+        ? `将添加 ${pendingTagCandidates.length} 个标签，其余重复或超出上限的内容会自动忽略。`
+        : pendingTagCandidates.length > 0
+          ? `将添加 ${pendingTagCandidates.length} 个标签，添加后共 ${
+              tags.length + pendingTagCandidates.length
+            }/${MAX_CARD_TAGS} 个。`
+          : `已添加 ${tags.length}/${MAX_CARD_TAGS} 个标签，每个标签最多 ${MAX_CARD_TAG_LENGTH} 个字。`;
 
   const coverPreviewUrl = useMemo(() => {
     if (!coverFile) {
@@ -279,6 +389,27 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
     );
   }
 
+  function handleAddTag() {
+    if (!canAddTag) {
+      return;
+    }
+
+    setTags((current) => mergeCardTags([...current, ...pendingTagCandidates]));
+    setTagDraft("");
+  }
+
+  function handleTagDraftChange(value: string) {
+    setTagDraft(sanitizeTagDraftInput(value));
+  }
+
+  function handleTagDraftBlur() {
+    setTagDraft((current) => formatTagDraftForBlur(current));
+  }
+
+  function handleRemoveTag(index: number) {
+    setTags((current) => current.filter((_, currentIndex) => currentIndex !== index));
+  }
+
   function validateCreateInputs() {
     if (!title.trim()) {
       return "请输入卡片标题。";
@@ -319,6 +450,7 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
         const payload = await shareApi.updateCard(cardId, {
           title: title.trim(),
           description: description.trim(),
+          tags,
           visibility: publicChecked ? "public" : "private",
           status,
           accessMode,
@@ -360,6 +492,7 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
       await shareApi.createCardBundle({
         title: title.trim(),
         description: description.trim(),
+        tags,
         visibility: publicChecked ? "public" : "private",
         status,
         accessMode,
@@ -554,6 +687,16 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
     setTitle,
     description,
     setDescription,
+    tags,
+    tagDraft,
+    handleTagDraftChange,
+    handleTagDraftBlur,
+    canAddTag,
+    tagLimitReached,
+    tagSlotsRemaining,
+    tagHelperText,
+    handleAddTag,
+    handleRemoveTag,
     publicChecked,
     setPublicChecked,
     accessMode,

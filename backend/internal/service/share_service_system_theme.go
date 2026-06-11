@@ -228,10 +228,13 @@ func (s *ShareService) buildSystemThemeView(ctx context.Context, card *model.Sha
 		Author:      "",
 		Version:     "",
 		Description: strings.TrimSpace(card.Description),
-		Tags:        []string{"system_theme"},
+		Tags:        append([]string{}, decodeShareCardTags(card.TagsText)...),
 		FileName:    strings.TrimSpace(asset.OriginalFileName),
 		MimeType:    strings.TrimSpace(asset.MimeType),
 		Size:        asset.Size,
+	}
+	if len(view.Tags) == 0 {
+		view.Tags = []string{"system_theme"}
 	}
 
 	if card == nil || asset == nil {
@@ -259,22 +262,30 @@ func (s *ShareService) buildSystemThemeView(ctx context.Context, card *model.Sha
 		return view, nil
 	}
 
+	return mergeShareSystemThemeManifest(view, manifest), nil
+}
+
+func mergeShareSystemThemeManifest(view ShareSystemThemeView, manifest shareThemePackageManifest) ShareSystemThemeView {
 	view.Supported = strings.TrimSpace(manifest.Name) != ""
 	if themeID := strings.TrimSpace(manifest.ID); themeID != "" {
 		view.ID = themeID
 	}
-	if name := strings.TrimSpace(manifest.Name); name != "" {
+	if name := strings.TrimSpace(manifest.Name); name != "" && view.Name == "" {
 		view.Name = name
 	}
-	view.Author = strings.TrimSpace(manifest.Author)
-	view.Version = strings.TrimSpace(manifest.Version)
-	if description := strings.TrimSpace(manifest.Description); description != "" {
+	if author := strings.TrimSpace(manifest.Author); author != "" {
+		view.Author = author
+	}
+	if version := strings.TrimSpace(manifest.Version); version != "" {
+		view.Version = version
+	}
+	if description := strings.TrimSpace(manifest.Description); description != "" && view.Description == "" {
 		view.Description = description
 	}
-	if len(manifest.Tags) > 0 {
+	if len(manifest.Tags) > 0 && len(view.Tags) == 0 {
 		view.Tags = manifest.Tags
 	}
-	return view, nil
+	return view
 }
 
 func inspectShareThemePackage(fileName string, data []byte) (shareThemePackageManifest, error) {
