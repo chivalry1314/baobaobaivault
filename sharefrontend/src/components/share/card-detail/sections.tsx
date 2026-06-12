@@ -3,19 +3,21 @@ import Link from "next/link";
 import { AccessModeBadge } from "@/components/share/access-mode-badge";
 import { FavoriteButton } from "@/components/share/favorite-button";
 import { SLOT_LABEL_MAP } from "@/components/share/card-detail/constants";
-import { formatBytes, getInitials } from "@/components/share/card-detail/helpers";
-import { useShareSiteBrand } from "@/components/share/site-brand/provider";
+import { formatBytes, formatMetric, getInitials } from "@/components/share/card-detail/helpers";
 import type { CardViewModel } from "@/components/share/card-detail/types";
-import type { CardAsset, CardDetailResponse } from "@/lib/shared";
+import type { CardAsset, CardContentSlot, CardDetailResponse } from "@/lib/shared";
 
 export function CardDetailLoading() {
   return (
-    <div className="flex flex-col gap-8 lg:flex-row xl:gap-12">
-      <div className="h-[580px] w-full animate-pulse rounded-[2rem] border-[4px] border-[var(--outline)] bg-white/70 lg:h-[700px] lg:w-[58%]" />
-      <div className="w-full space-y-6 lg:w-[42%]">
-        <div className="h-[290px] animate-pulse rounded-[2rem] border-[4px] border-[var(--outline)] bg-white/70" />
-        <div className="h-[300px] animate-pulse rounded-[2rem] border-[4px] border-[var(--outline)] bg-white/70" />
-        <div className="h-[110px] animate-pulse rounded-[2rem] border-[4px] border-[var(--outline)] bg-white/70" />
+    <div className="flex flex-col gap-5 lg:flex-row">
+      <div className="w-full shrink-0 space-y-4 lg:w-[50%] xl:w-[52%]">
+        <div className="aspect-[3/4] w-full animate-pulse rounded-[1.4rem] border-2 border-[var(--outline)] bg-white/70" />
+        <div className="h-24 w-full animate-pulse rounded-[1.4rem] border-2 border-[var(--outline)] bg-white/70" />
+      </div>
+      <div className="w-full space-y-4 lg:w-[50%] xl:w-[48%]">
+        <div className="h-48 w-full animate-pulse rounded-[1.4rem] border-2 border-[var(--outline)] bg-white/70" />
+        <div className="h-56 w-full animate-pulse rounded-[1.4rem] border-2 border-[var(--outline)] bg-white/70" />
+        <div className="h-40 w-full animate-pulse rounded-[1.4rem] border-2 border-[var(--outline)] bg-white/70" />
       </div>
     </div>
   );
@@ -23,7 +25,7 @@ export function CardDetailLoading() {
 
 export function CardDetailError(props: { error: string }) {
   return (
-    <div className="mx-auto max-w-3xl rounded-3xl border-[4px] border-[var(--outline)] bg-[#ffe6de] px-6 py-5 text-sm font-bold text-[#8a2a14]">
+    <div className="mx-auto max-w-3xl rounded-3xl border-2 border-[var(--outline)] bg-[#ffe6de] px-6 py-5 text-sm font-bold text-[#8a2a14]">
       {props.error}
     </div>
   );
@@ -52,7 +54,6 @@ export function CardDetailContent(props: {
     onToggleFavorite,
   } = props;
 
-  const brand = useShareSiteBrand();
   const themeCardTitle = detail.card.title.trim() || detail.systemTheme?.name || "未命名系统主题";
   const themeCardDescription =
     detail.card.description.trim() ||
@@ -62,230 +63,344 @@ export function CardDetailContent(props: {
   const themePackageDescription = detail.systemTheme?.description.trim() || themeCardDescription;
 
   return (
-    <div className="fade-slide-in flex flex-col gap-8 lg:flex-row xl:gap-12">
-      <section className="w-full shrink-0 lg:w-[55%] xl:w-[60%]">
-        <div className="group relative h-[600px] overflow-hidden rounded-[2rem] border-[4px] border-[var(--outline)] bg-[var(--secondary)] p-3 md:h-[700px]">
-          <Link href="/" className="btn-subtle absolute left-6 top-6 z-20 rounded-full px-4 py-2 font-black">
-            返回
-          </Link>
-
-          <div className="absolute right-6 top-6 z-20 flex items-center gap-2">
-            <FavoriteButton
-              cardId={detail.card.id}
-              initialFavorited={detail.isFavorited}
-              initialCount={detail.stats.favoriteCount}
-              onToggle={onToggleFavorite}
-            />
-          </div>
-
-          <div className="relative h-full w-full overflow-hidden rounded-[1.3rem] border-[3px] border-[var(--outline)] bg-[var(--outline)]">
+    <div className="fade-slide-in flex flex-col gap-5 lg:flex-row lg:items-stretch">
+      <section className="flex w-full flex-col lg:w-[50%] xl:w-[52%]">
+        <div className="flex h-full flex-col overflow-hidden rounded-[1.4rem] border-2 border-[var(--outline)] bg-white shadow-sm">
+          <div className="relative aspect-[3/4] w-full overflow-hidden bg-[var(--secondary)] lg:aspect-auto lg:flex-1">
             {viewModel.heroImageUrl ? (
-              <img src={viewModel.heroImageUrl} alt={detail.card.title} className="h-full w-full object-cover opacity-86" />
+              <img
+                src={viewModel.heroImageUrl}
+                alt={detail.card.title}
+                className="h-full w-full object-cover"
+              />
             ) : (
-              <div className="flex h-full w-full items-center justify-center bg-[var(--outline)] px-8 text-center text-2xl font-black text-white/90">
+              <div className="flex h-full w-full items-center justify-center bg-[var(--secondary)] px-8 text-center text-2xl font-black text-[var(--foreground)]/50">
                 {viewModel.heroFallbackText}
               </div>
             )}
 
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
-              <h1 className="text-[2.5rem] font-black leading-[1.05] tracking-wide text-white drop-shadow-[0_8px_24px_rgba(0,0,0,0.5)] sm:text-5xl md:text-7xl">
+            <div className="absolute left-4 top-4 z-10">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1 rounded-full border border-[var(--outline)]/15 bg-white/90 px-3 py-1.5 text-xs font-black text-[var(--foreground)] shadow-sm backdrop-blur-sm transition hover:bg-white hover:-translate-y-0.5"
+              >
+                <ArrowLeftIcon className="h-3.5 w-3.5" />
+                返回
+              </Link>
+            </div>
+
+            <div className="absolute right-4 top-4 z-10">
+              <FavoriteButton
+                cardId={detail.card.id}
+                initialFavorited={detail.isFavorited}
+                initialCount={detail.stats.favoriteCount}
+                className="px-3 py-1.5 text-xs"
+                onToggle={onToggleFavorite}
+              />
+            </div>
+          </div>
+
+          <div className="p-4 sm:p-5">
+            <div className="flex items-start justify-between gap-3">
+              <h1 className="text-xl font-black leading-tight tracking-tight text-[var(--foreground)] sm:text-2xl">
                 {detail.card.title}
               </h1>
-              <p className="mt-3 text-lg font-black text-white/90 drop-shadow-[0_6px_18px_rgba(0,0,0,0.45)] md:text-2xl">
-                {brand.siteShortName}
-              </p>
+              <AccessModeBadge mode={detail.card.accessMode} />
+            </div>
+            <p className="mt-1.5 text-xs font-bold text-[var(--foreground)]/60">
+              {detail.card.description.trim() || "暂无卡片副标题"}
+            </p>
+
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <StatPill icon={<DownloadIcon className="h-3.5 w-3.5" />} label="下载" value={formatMetric(detail.stats.downloadCount)} />
+              <StatPill icon={<HeartIcon className="h-3.5 w-3.5" />} label="收藏" value={formatMetric(detail.stats.favoriteCount)} />
+              {detail.stats.lastDownloadedAt ? (
+                <span className="text-xs font-bold text-[var(--foreground)]/45">
+                  最近下载 {new Date(detail.stats.lastDownloadedAt).toLocaleDateString("zh-CN")}
+                </span>
+              ) : null}
             </div>
           </div>
         </div>
       </section>
 
-      <aside className="w-full space-y-6 lg:w-[45%] xl:w-[40%]">
-        <section className="rounded-[1.8rem] border-[4px] border-[var(--outline)] bg-white p-6 sm:p-7">
-          <div className="mb-6 flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-              {detail.creator.avatar.trim() ? (
-                <img
-                  src={detail.creator.avatar}
-                  alt={viewModel.creatorName}
-                  className="h-14 w-14 shrink-0 rounded-full border-[3px] border-[var(--outline)] bg-[var(--primary)] object-cover"
-                />
-              ) : (
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-[3px] border-[var(--outline)] bg-[var(--primary)] text-base font-black text-[var(--foreground)]">
-                  {getInitials(viewModel.creatorName)}
-                </div>
-              )}
-
-              <div className="min-w-0">
-                <h2 className="truncate text-xl font-black text-[var(--foreground)]">{viewModel.creatorName}</h2>
-                <p className="text-sm font-bold text-[var(--foreground)]/70">{viewModel.creatorHandle}</p>
+      <aside className="w-full space-y-4 lg:w-[50%] xl:w-[48%]">
+        <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex items-center gap-3">
+            {detail.creator.avatar.trim() ? (
+              <img
+                src={detail.creator.avatar}
+                alt={viewModel.creatorName}
+                className="h-11 w-11 shrink-0 rounded-full border-2 border-[var(--outline)]/15 bg-[var(--primary)] object-cover"
+              />
+            ) : (
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-[var(--outline)]/15 bg-[var(--primary)] text-sm font-black text-[var(--foreground)]">
+                {getInitials(viewModel.creatorName)}
               </div>
+            )}
+
+            <div className="min-w-0 flex-1">
+              <h2 className="truncate text-base font-black text-[var(--foreground)]">{viewModel.creatorName}</h2>
+              <p className="truncate text-[11px] font-bold text-[var(--foreground)]/55">{viewModel.creatorHandle}</p>
             </div>
 
             {detail.canEdit ? (
               <Link
                 href="/creator"
-                className="shrink-0 rounded-full border-[3px] border-[var(--outline)] bg-[var(--brand)] px-5 py-1.5 text-sm font-black text-[var(--foreground)]"
+                className="shrink-0 rounded-full bg-[var(--button-primary)] px-3.5 py-1.5 text-[11px] font-black text-[var(--foreground)] shadow-sm transition hover:bg-[var(--button-primary-hover)]"
               >
                 我的卡片
               </Link>
             ) : null}
           </div>
 
-          <h3 className="type-h2 text-[var(--foreground)]">卡片描述</h3>
-          <div className="mt-3">
-            <AccessModeBadge mode={detail.card.accessMode} />
-          </div>
-          <p className="type-body mt-3 font-bold text-[var(--foreground)]/80">
-            {detail.card.description.trim() || "这是一张公开分享卡片，你可以预览内容并按规则下载分类文件。"}
-          </p>
+          <div className="mt-4 rounded-[1rem] bg-[var(--surface-container)] p-3">
+            <p className="text-xs font-bold leading-relaxed text-[var(--foreground)]/78">
+              {detail.card.description.trim() || "这是一张公开分享卡片，你可以预览内容并按规则下载分类文件。"}
+            </p>
 
-          <div className="mt-6 flex flex-wrap gap-2.5">
-            {viewModel.tags.map((tag, index) => (
-              <span
-                key={`${tag}-${index}`}
-                className={`inline-flex rounded-full border-[3px] border-[var(--outline)] px-4 py-1.5 text-sm font-black text-[var(--foreground)] ${
-                  index % 4 === 0
-                    ? "bg-[var(--secondary)]"
-                    : index % 4 === 1
-                      ? "bg-[var(--primary)]"
-                      : index % 4 === 2
-                        ? "bg-[var(--tertiary)]"
-                        : "bg-[var(--accent)]"
-                }`}
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        </section>
-
-        {detail.systemTheme ? (
-          <section className="rounded-[1.8rem] border-[4px] border-[var(--outline)] bg-[var(--secondary)] p-6 sm:p-7">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h3 className="type-h2 text-[var(--foreground)]">系统主题协议</h3>
-                <p className="mt-2 text-sm font-bold text-[var(--foreground)]/78">
-                  这个卡片挂载了可供 `baobaobaiphone` 安装的系统主题包，下载时仍然遵循当前卡片的提取码规则。
-                </p>
-              </div>
-              <span className="rounded-full border-[3px] border-[var(--outline)] bg-white px-4 py-1 text-xs font-black text-[var(--foreground)]">
-                {detail.systemTheme.supported ? "已识别协议" : "待校验协议"}
-              </span>
-            </div>
-
-            <div className="mt-5 rounded-[1.4rem] border-[3px] border-[var(--outline)] bg-white p-4">
-              <div className="flex flex-wrap gap-2">
-                <span className="inline-flex rounded-full border-[3px] border-[var(--outline)] bg-[var(--accent)] px-3 py-1 text-xs font-black text-[var(--foreground)]">
-                  {detail.systemTheme.protocol}
-                </span>
-                <span className="inline-flex rounded-full border-[3px] border-[var(--outline)] bg-[var(--primary)] px-3 py-1 text-xs font-black text-[var(--foreground)]">
-                  {detail.systemTheme.format.toUpperCase()}
-                </span>
-                <span className="inline-flex rounded-full border-[3px] border-[var(--outline)] bg-[var(--tertiary)] px-3 py-1 text-xs font-black text-[var(--foreground)]">
-                  {formatBytes(detail.systemTheme.size)}
-                </span>
-              </div>
-
-              <div className="mt-4">
-                <p className="text-lg font-black text-[var(--foreground)]">{themeCardTitle}</p>
-                <p className="mt-1 text-sm font-bold text-[var(--foreground)]/72">
-                  {detail.systemTheme.author || "未知作者"}
-                  {detail.systemTheme.version ? ` · ${detail.systemTheme.version}` : ""}
-                </p>
-                <p className="mt-3 text-sm font-bold leading-6 text-[var(--foreground)]/78">{themeCardDescription}</p>
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                {detail.systemTheme.tags.map((tag) => (
+            {viewModel.tags.length > 0 ? (
+              <div className="mt-2.5 flex flex-wrap gap-1.5">
+                {viewModel.tags.map((tag, index) => (
                   <span
-                    key={tag}
-                    className="inline-flex rounded-full border-[3px] border-[var(--outline)] bg-[#f8f9fa] px-3 py-1 text-xs font-black text-[var(--foreground)]"
+                    key={`${tag}-${index}`}
+                    className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-black text-[var(--foreground)] ${
+                      index % 4 === 0
+                        ? "bg-[var(--secondary)]"
+                        : index % 4 === 1
+                          ? "bg-[var(--primary)]"
+                          : index % 4 === 2
+                            ? "bg-[var(--tertiary)]"
+                            : "bg-[var(--accent)]"
+                    }`}
                   >
                     {tag}
                   </span>
                 ))}
-                <span className="inline-flex rounded-full border-[3px] border-[var(--outline)] bg-[#f8f9fa] px-3 py-1 text-xs font-black text-[var(--foreground)]">
-                  {detail.systemTheme.fileName}
-                </span>
+              </div>
+            ) : null}
+          </div>
+        </section>
+
+        {detail.systemTheme ? (
+          <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--secondary)] text-base">📦</span>
+                <div>
+                  <h3 className="text-sm font-black text-[var(--foreground)]">系统主题协议</h3>
+                  <p className="text-[10px] font-bold text-[var(--foreground)]/55">baobaobaiphone 可安装</p>
+                </div>
+              </div>
+              <span
+                className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-black ${
+                  detail.systemTheme.supported
+                    ? "bg-[var(--secondary)] text-[var(--foreground)]"
+                    : "bg-[var(--accent)] text-[var(--foreground)]"
+                }`}
+              >
+                {detail.systemTheme.supported ? "已识别协议" : "待校验协议"}
+              </span>
+            </div>
+
+            <div className="mt-3 rounded-[1rem] border border-[var(--outline)]/12 bg-[var(--surface-container)] p-3">
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-lg bg-white px-2.5 py-2">
+                  <p className="text-[10px] font-bold text-[var(--foreground)]/50">协议</p>
+                  <p className="mt-0.5 truncate font-mono font-black text-[var(--foreground)]/90">{detail.systemTheme.protocol}</p>
+                </div>
+                <div className="rounded-lg bg-white px-2.5 py-2">
+                  <p className="text-[10px] font-bold text-[var(--foreground)]/50">格式</p>
+                  <p className="mt-0.5 font-black text-[var(--foreground)]/90">{detail.systemTheme.format.toUpperCase()}</p>
+                </div>
+                <div className="rounded-lg bg-white px-2.5 py-2">
+                  <p className="text-[10px] font-bold text-[var(--foreground)]/50">大小</p>
+                  <p className="mt-0.5 font-black text-[var(--foreground)]/90">{formatBytes(detail.systemTheme.size)}</p>
+                </div>
+                <div className="rounded-lg bg-white px-2.5 py-2">
+                  <p className="text-[10px] font-bold text-[var(--foreground)]/50">版本</p>
+                  <p className="mt-0.5 font-black text-[var(--foreground)]/90">
+                    {detail.systemTheme.version ? `v${detail.systemTheme.version}` : "—"}
+                  </p>
+                </div>
               </div>
 
+              <div className="mt-2 rounded-lg bg-white px-2.5 py-2">
+                <p className="text-[10px] font-bold text-[var(--foreground)]/50">文件名</p>
+                <p className="mt-0.5 truncate font-mono font-black text-[var(--foreground)]/90">{detail.systemTheme.fileName}</p>
+              </div>
+
+              {detail.systemTheme.tags.length > 0 ? (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {detail.systemTheme.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-[var(--foreground)]/75"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+
               {(themePackageName !== themeCardTitle || themePackageDescription !== themeCardDescription) && (
-                <div className="mt-4 rounded-[1.1rem] border-[3px] border-dashed border-[var(--outline)] bg-[#f8f9fa] p-3">
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-[var(--foreground)]/55">主题包内信息</p>
-                  <p className="mt-2 text-sm font-black text-[var(--foreground)]">{themePackageName}</p>
-                  <p className="mt-2 text-sm font-bold leading-6 text-[var(--foreground)]/72">{themePackageDescription}</p>
+                <div className="mt-2 rounded-[0.7rem] border border-dashed border-[var(--outline)]/20 bg-white p-2.5">
+                  <p className="text-[10px] font-black uppercase tracking-[0.1em] text-[var(--foreground)]/50">
+                    主题包内信息
+                  </p>
+                  <p className="mt-1 text-xs font-black text-[var(--foreground)]">{themePackageName}</p>
+                  <p className="mt-0.5 text-[10px] font-bold leading-relaxed text-[var(--foreground)]/70">
+                    {themePackageDescription}
+                  </p>
                 </div>
               )}
             </div>
           </section>
         ) : null}
 
-        <section className="relative overflow-hidden rounded-[1.8rem] border-[4px] border-[var(--outline)] bg-[var(--tertiary)] p-6 text-center sm:p-7">
-          <h3 className="type-h2 text-[var(--foreground)]">下载分享卡片</h3>
-          <p className="mt-2 text-sm font-bold text-[var(--foreground)]/78">
-            {viewModel.isPaid
-              ? "付费卡片需输入提取码后下载，支持系统主题、微信主题、App、角色人设、世界书。"
-              : "免费卡片可直接下载，支持系统主题、微信主题、App、角色人设、世界书。"}
-          </p>
-
-          <div className="relative mt-6">
-            <input
-              type="text"
-              value={unlockCode}
-              onChange={(event) => {
-                setUnlockCode(event.target.value.toUpperCase());
-                if (downloadError) {
-                  setDownloadError("");
-                }
-              }}
-              disabled={!viewModel.isPaid}
-              placeholder={viewModel.isPaid ? "请输入提取码（示例：SHARE2026）" : "当前卡片无需提取码"}
-              className="w-full rounded-2xl border-[3px] border-[var(--outline)] bg-white px-4 py-3 text-base font-bold text-[var(--foreground)] placeholder:text-[var(--text-subtle)] disabled:cursor-not-allowed disabled:bg-white/70"
-            />
+        <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--tertiary)] text-base">⬇️</span>
+            <div>
+              <h3 className="text-sm font-black text-[var(--foreground)]">下载分享卡片</h3>
+              <p className="text-[10px] font-bold text-[var(--foreground)]/55">
+                {viewModel.isPaid ? "需提取码" : "免费"} · 支持多种内容类型
+              </p>
+            </div>
           </div>
 
+          {viewModel.isPaid ? (
+            <div className="relative mt-3">
+              <KeyIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--foreground)]/40" />
+              <input
+                type="text"
+                value={unlockCode}
+                onChange={(event) => {
+                  setUnlockCode(event.target.value.toUpperCase());
+                  if (downloadError) {
+                    setDownloadError("");
+                  }
+                }}
+                placeholder="请输入提取码（示例：SHARE2026）"
+                className="w-full rounded-xl border-2 border-[var(--primary)]/30 bg-white px-3.5 py-3 pl-10 text-sm font-black text-[var(--foreground)] placeholder:text-[var(--text-subtle)] transition focus:border-[var(--primary)] focus:outline-none focus:ring-4 focus:ring-[var(--primary)]/20"
+              />
+            </div>
+          ) : (
+            <div className="mt-3 flex items-center gap-2 rounded-xl border border-[var(--outline)]/12 bg-[var(--surface-container)] px-3.5 py-2.5">
+              <span className="flex h-2 w-2 rounded-full bg-[#2fbf71]" />
+              <span className="text-xs font-bold text-[var(--foreground)]/70">当前卡片无需提取码，可直接下载</span>
+            </div>
+          )}
+
           {downloadError ? (
-            <p className="mt-4 rounded-xl border-[3px] border-[#e59273] bg-[#ffe8dd] px-4 py-2 text-sm font-bold text-[#8a2a14]">
+            <p className="mt-2.5 rounded-xl border border-[#e59273] bg-[#ffe8dd] px-3.5 py-2 text-xs font-bold text-[#8a2a14]">
               {downloadError}
             </p>
           ) : null}
 
-          <p className="mt-4 text-xs font-bold text-[var(--foreground)]/72">{viewModel.downloadHint}</p>
-        </section>
+          <div className="mt-4">
+            <h4 className="text-[11px] font-black uppercase tracking-[0.12em] text-[var(--foreground)]/50">分类文件</h4>
+            <div className="mt-2 space-y-2">
+              {detail.assets.map((asset) => {
+                const pending = downloadPendingSlot === asset.slot;
+                const canDownload =
+                  detail.canDownload && (!viewModel.requiresAccessCode || Boolean(viewModel.normalizedUnlockCode));
 
-        <section className="rounded-[1.8rem] border-[4px] border-[var(--outline)] bg-white p-5">
-          <p className="text-sm font-black text-[var(--foreground)]/78">分类文件</p>
-          <div className="mt-3 space-y-3">
-            {detail.assets.map((asset) => {
-              const pending = downloadPendingSlot === asset.slot;
-              const canDownload =
-                detail.canDownload && (!viewModel.requiresAccessCode || Boolean(viewModel.normalizedUnlockCode));
-
-              return (
-                <div key={asset.slot} className="rounded-xl border-[2px] border-[var(--outline)]/30 bg-[#f8f9fa] p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-black text-[var(--foreground)]">{SLOT_LABEL_MAP[asset.slot]}</p>
-                      <p className="truncate text-xs font-bold text-[var(--foreground)]/70">{asset.originalFileName}</p>
-                      <p className="text-xs font-bold text-[var(--text-subtle)]">
-                        {asset.mimeType} · {formatBytes(asset.size)}
-                      </p>
+                return (
+                  <div
+                    key={asset.slot}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-[var(--outline)]/10 bg-[var(--surface-container)] p-2.5"
+                  >
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--primary)]/30 text-sm">
+                        {SLOT_EMOJI_MAP[asset.slot] ?? "📄"}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-black text-[var(--foreground)]">{SLOT_LABEL_MAP[asset.slot]}</p>
+                        <p className="truncate text-[10px] font-bold text-[var(--foreground)]/55">{asset.originalFileName}</p>
+                        <p className="text-[10px] font-bold text-[var(--text-subtle)]">
+                          {asset.mimeType} · {formatBytes(asset.size)}
+                        </p>
+                      </div>
                     </div>
                     <button
                       type="button"
-                      className="btn-primary shrink-0 rounded-full px-4 py-2 text-xs font-black disabled:cursor-not-allowed disabled:opacity-60"
+                      className="shrink-0 rounded-full bg-[var(--button-primary)] px-3 py-1.5 text-[10px] font-black text-[var(--foreground)] shadow-sm transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                       disabled={pending || !canDownload}
                       onClick={() => onAssetDownload(asset)}
                     >
                       {pending ? "下载中..." : "下载"}
                     </button>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
+
+          {viewModel.isPaid && !viewModel.normalizedUnlockCode ? (
+            <p className="mt-3 text-[11px] font-bold text-[var(--foreground)]/55">
+              请先输入提取码，验证通过后下方“下载”按钮才会启用。
+            </p>
+          ) : null}
         </section>
       </aside>
     </div>
+  );
+}
+
+const SLOT_EMOJI_MAP: Record<CardContentSlot, string> = {
+  system_theme: "🎨",
+  wechat_theme: "💬",
+  app: "📱",
+  character_persona: "🧸",
+  world_book: "📖",
+};
+
+function StatPill(props: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--surface-container-high)] px-2.5 py-1 text-[11px] font-black text-[var(--foreground)]/80">
+      {props.icon}
+      <span>
+        {props.label} {props.value}
+      </span>
+    </span>
+  );
+}
+
+function ArrowLeftIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 12H5" />
+      <path d="m12 19-7-7 7-7" />
+    </svg>
+  );
+}
+
+function DownloadIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" x2="12" y1="15" y2="3" />
+    </svg>
+  );
+}
+
+function HeartIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+    </svg>
+  );
+}
+
+function KeyIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="7.5" cy="12.5" r="3.5" />
+      <path d="M11 12.5h10" />
+      <path d="M17 12.5v3" />
+      <path d="M14 12.5v2" />
+    </svg>
   );
 }

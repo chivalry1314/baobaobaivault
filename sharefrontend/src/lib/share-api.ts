@@ -133,7 +133,7 @@ const shareApiErrorMessages: Record<string, string> = {
   "cannot downgrade your own role": "不能降低自己的管理员权限",
   "invalid card content slot": "分类槽位不正确",
   "invalid card access mode": "卡片状态不正确",
-  "paid access mode required": "请先把卡片切换为付费模式后再保存提取码",
+  "paid access mode required": "请先把卡片切换为需提取码模式后再保存提取码",
   "card must keep at least one category file": "卡片至少保留一个分类文件",
   "invalid system theme package": "系统主题包无法按 baobaobaiphone 当前解析规则导入，请检查 zip/json 结构、manifest 和资源路径",
   "system theme package exceeds 20mb": "系统主题包不能超过 20MB",

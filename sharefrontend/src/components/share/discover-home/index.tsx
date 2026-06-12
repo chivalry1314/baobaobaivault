@@ -46,16 +46,18 @@ export function DiscoverHome({ initialDiscover }: DiscoverHomeProps) {
     <AppShell currentPath="/">
       <section className="relative z-10 mx-auto mt-3 w-full max-w-[var(--layout-max)] px-4 pb-6 md:px-6">
         <main className="mt-4 w-full">
-          <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-6 xl:mx-0">
+          <div className="mx-auto flex w-full max-w-[var(--layout-max)] flex-col gap-6">
             <DiscoverSearchBar query={query} setQuery={setQuery} />
-            <DiscoverChips
-              activeChip={activeChip}
-              setActiveChip={setActiveChip}
-            />
-            <DiscoverAccessModeFilters
-              value={accessModeFilter}
-              onChange={setAccessModeFilter}
-            />
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <DiscoverChips
+                activeChip={activeChip}
+                setActiveChip={setActiveChip}
+              />
+              <DiscoverAccessModeFilters
+                value={accessModeFilter}
+                onChange={setAccessModeFilter}
+              />
+            </div>
 
             {error ? <DiscoverError error={error} /> : null}
 

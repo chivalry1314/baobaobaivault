@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import {
   expireOptions,
   getDisplayName,
-  getRarityLabel,
   getSubmitButtonLabel,
   getUsageHelperText,
 } from "@/components/share/card-access-code/helpers";
@@ -16,19 +15,19 @@ import type {
 
 export function AccessCodeWizardSteps() {
   return (
-    <div className="dream-panel-soft mb-8 flex flex-wrap items-center gap-4 px-5 py-4">
+    <div className="mb-5 flex flex-wrap items-center gap-3 rounded-[1.2rem] border-2 border-[var(--outline)] bg-white px-4 py-3 shadow-sm">
       <StepPill
         active={false}
         label="STEP 01"
         title="选择卡片"
-        icon={<HeartIcon className="h-5 w-5" />}
+        icon={<HeartIcon className="h-4 w-4" />}
       />
-      <div className="hidden h-px w-12 bg-[rgba(190,216,228,0.9)] lg:block" />
+      <div className="hidden h-px w-8 bg-[var(--outline)]/30 lg:block" />
       <StepPill
         active
         label="STEP 02"
         title="配置提取码"
-        icon={<SettingsIcon className="h-5 w-5" />}
+        icon={<SettingsIcon className="h-4 w-4" />}
       />
     </div>
   );
@@ -37,20 +36,20 @@ export function AccessCodeWizardSteps() {
 export function AccessCodeHero(props: { backHref: string }) {
   const { backHref } = props;
   return (
-    <div className="flex items-start gap-4">
+    <div className="flex items-start gap-3">
       <Link
         href={backHref}
-        className="btn-subtle inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full"
+        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-[var(--outline)] bg-white text-[var(--foreground)]/75 shadow-sm transition hover:bg-[var(--surface-container)]"
       >
-        <BackIcon className="h-6 w-6" />
+        <BackIcon className="h-5 w-5" />
       </Link>
 
       <div>
-        <h1 className="mt-1 text-[2.2rem] font-semibold tracking-tight text-[var(--foreground)] sm:text-4xl lg:text-5xl">
+        <h1 className="text-xl font-black tracking-tight text-[var(--foreground)] sm:text-2xl">
           卡片提取码设置
         </h1>
-        <p className="mt-3 text-base text-[var(--foreground)]/62 sm:text-lg">
-          你可以把卡片设置为免费或付费，付费模式下可配置提取码规则。
+        <p className="mt-1 text-xs font-bold text-[var(--foreground)]/58 sm:text-sm">
+          你可以把卡片设置为免费或需提取码，需提取码模式下可配置提取码规则。
         </p>
       </div>
     </div>
@@ -59,9 +58,9 @@ export function AccessCodeHero(props: { backHref: string }) {
 
 export function AccessCodeLoadingSkeleton() {
   return (
-    <div className="mt-10 grid gap-8 xl:grid-cols-[380px_minmax(0,1fr)]">
-      <div className="h-[620px] animate-pulse rounded-[38px] border border-white/80 bg-white/72" />
-      <div className="h-[620px] animate-pulse rounded-[38px] border border-white/80 bg-white/72" />
+    <div className="mt-8 grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[340px_minmax(0,1fr)]">
+      <div className="h-[420px] animate-pulse rounded-[1.4rem] border border-[var(--outline)]/15 bg-[var(--surface-container)]" />
+      <div className="h-[540px] animate-pulse rounded-[1.4rem] border border-[var(--outline)]/15 bg-[var(--surface-container)]" />
     </div>
   );
 }
@@ -77,39 +76,36 @@ export function AccessCodeError(props: { message: string }) {
 export function AccessCodeCardPreview(props: { detail: CardDetailResponse }) {
   const { detail } = props;
   return (
-    <section className="dream-panel p-6">
-      <div className="flex items-center gap-3 text-[1.15rem] font-medium text-[var(--foreground)]">
-        <CardIcon className="h-6 w-6 text-[var(--primary)]" />
+    <section className="h-fit rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex items-center gap-2 text-sm font-black text-[var(--foreground)]">
+        <CardIcon className="h-4 w-4 text-[var(--primary)]" />
         <span>目标卡片</span>
       </div>
 
-      <div className="dream-panel-soft mt-6 rounded-[32px] bg-[#f8fcff] p-5">
-        <div className="relative overflow-hidden rounded-[34px] bg-[linear-gradient(145deg,#121826_0%,#1c2434_100%)]">
-          {detail.card.mimeType.startsWith("image/") ? (
-            <img
-              src={detail.card.previewUrl}
-              alt={detail.card.title}
-              className="h-[476px] w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-[476px] items-center justify-center px-6 text-center text-2xl font-medium text-white/88">
-              {detail.card.title}
-            </div>
-          )}
-
-          <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(20,14,18,0)_0%,rgba(20,14,18,0.82)_100%)] px-6 pb-6 pt-20">
-            <div className="mb-4 inline-flex rounded-full bg-white/88 px-3 py-1 text-sm font-semibold text-[#f59e0b]">
-              {getRarityLabel(detail.stats.downloadCount)}
-            </div>
-            <h2 className="text-[1.9rem] font-semibold tracking-tight text-white sm:text-3xl lg:text-4xl">
-              {detail.card.title}
-            </h2>
+      <div className="mt-4 overflow-hidden rounded-[1.1rem] border border-[var(--outline)]/15 bg-[var(--surface-container)]">
+        {detail.card.mimeType.startsWith("image/") ? (
+          <img
+            src={detail.card.previewUrl}
+            alt={detail.card.title}
+            className="aspect-[3/2] w-full object-cover"
+          />
+        ) : (
+          <div className="flex aspect-[3/2] w-full items-center justify-center px-4 text-center text-sm font-medium text-[var(--foreground)]/72">
+            {detail.card.title}
           </div>
-        </div>
+        )}
 
-        <div className="mt-5 flex items-center justify-between text-lg text-[var(--foreground)]/72">
-          <span>下载 {detail.stats.downloadCount} 次</span>
-          <span>作者：{detail.creator.username || getDisplayName(detail.creator)}</span>
+        <div className="border-t border-[var(--outline)]/10 p-3">
+          <h2 className="line-clamp-2 text-sm font-black leading-tight text-[var(--foreground)]">
+            {detail.card.title}
+          </h2>
+          <div className="mt-2 flex items-center justify-between text-[10px] font-bold text-[var(--foreground)]/58">
+            <span className="inline-flex items-center gap-1">
+              <DownloadMiniIcon className="h-3 w-3" />
+              {detail.stats.downloadCount}
+            </span>
+            <span className="truncate">@{detail.creator.username || getDisplayName(detail.creator)}</span>
+          </div>
         </div>
       </div>
     </section>
@@ -155,40 +151,24 @@ export function AccessCodeFormPanel(props: {
   const isPaid = accessMode === "paid";
 
   return (
-    <section className="dream-panel p-8 sm:p-10">
+    <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
       {success ? (
-        <div className="rounded-[22px] border border-[#b5dfc8] bg-[#f0fff4] px-4 py-3 text-sm text-[#166534]">
+        <div className="rounded-xl border border-[#b5dfc8] bg-[#f0fff4] px-3 py-2 text-xs font-black text-[#166534]">
           {success}
         </div>
       ) : null}
 
-      <div className={success ? "mt-6" : ""}>
-        <label className="block text-2xl font-medium text-[var(--foreground)]">
-          卡片状态<span className="text-[#d74b75]">*</span>
+      <div className={success ? "mt-4" : ""}>
+        <label className="block text-sm font-black text-[var(--foreground)]">
+          卡片状态<span className="text-[var(--brand-strong)]">*</span>
         </label>
-        <div className="mt-5 flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => setAccessMode("free")}
-            className={`rounded-full border-[3px] px-6 py-3 text-lg font-semibold transition ${
-              accessMode === "free"
-                ? "border-[var(--line-strong)] bg-[#eef8ff]"
-                : "border-[rgba(46,40,86,0.26)] bg-white"
-            }`}
-          >
+        <div className="mt-3 flex flex-wrap gap-2">
+          <AccessModeOption active={accessMode === "free"} onClick={() => setAccessMode("free")}>
             免费（无需提取码）
-          </button>
-          <button
-            type="button"
-            onClick={() => setAccessMode("paid")}
-            className={`rounded-full border-[3px] px-6 py-3 text-lg font-semibold transition ${
-              accessMode === "paid"
-                ? "border-[var(--line-strong)] bg-[#eef8ff]"
-                : "border-[rgba(46,40,86,0.26)] bg-white"
-            }`}
-          >
-            付费（需要提取码）
-          </button>
+          </AccessModeOption>
+          <AccessModeOption active={accessMode === "paid"} onClick={() => setAccessMode("paid")}>
+            需提取码
+          </AccessModeOption>
         </div>
       </div>
 
@@ -197,47 +177,48 @@ export function AccessCodeFormPanel(props: {
           isPaid ? "opacity-100" : "pointer-events-none opacity-45"
         }`}
       >
-        <div className="dream-divider mt-10 h-px border-t border-dashed" />
+        <div className="mt-5 border-t border-dashed border-[var(--outline)]/20" />
 
-        <div className="mt-10">
-          <label className="block text-2xl font-medium text-[var(--foreground)]">
-            提取码<span className="text-[#d74b75]">*</span>
+        <div className="mt-5">
+          <label className="block text-sm font-black text-[var(--foreground)]">
+            提取码<span className="text-[var(--brand-strong)]">*</span>
           </label>
 
-          <div className="mt-5 flex flex-col gap-4 lg:flex-row">
-            <input
-              type="text"
-              value={code}
-              onChange={(event) => setCode(event.target.value.toUpperCase())}
-              className="dream-input min-w-0 flex-1 px-7 py-5 text-[2rem] tracking-[0.16em] placeholder:text-[var(--foreground)]/28"
-              placeholder="例如 ABC-9KD-7QX"
-              disabled={!isPaid}
-            />
+          <div className="mt-2.5 flex flex-col gap-2 sm:flex-row">
+            <div className="relative min-w-0 flex-1">
+              <KeyIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--foreground)]/40" />
+              <input
+                type="text"
+                value={code}
+                onChange={(event) => setCode(event.target.value.toUpperCase())}
+                className="w-full rounded-xl border-2 border-[var(--outline)]/30 bg-white py-2.5 pl-9 pr-3 text-sm font-black tracking-[0.12em] text-[var(--foreground)] placeholder:text-[var(--foreground)]/30 focus:border-[var(--primary)] focus:outline-none focus:ring-4 focus:ring-[var(--primary)]/15 disabled:cursor-not-allowed disabled:bg-white/70"
+                placeholder="例如 ABC-9KD-7QX"
+                disabled={!isPaid}
+              />
+            </div>
 
             <button
               type="button"
               onClick={setCodeRandom}
               disabled={!isPaid}
-              className="btn-subtle inline-flex items-center justify-center gap-3 rounded-full px-7 py-5 text-xl font-black disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border-2 border-[var(--outline)]/20 bg-white px-4 py-2.5 text-xs font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <RefreshIcon className="h-6 w-6" />
+              <RefreshIcon className="h-3.5 w-3.5" />
               <span>随机生成</span>
             </button>
           </div>
 
-          <p className="mt-4 text-lg text-[var(--foreground)]/62">
+          <p className="mt-2 text-[10px] font-bold text-[var(--foreground)]/50">
             建议使用字母和数字组合，便于手动输入与分享。
           </p>
         </div>
 
-        <div className="dream-divider mt-10 h-px border-t border-dashed" />
+        <div className="mt-5 border-t border-dashed border-[var(--outline)]/20" />
 
-        <div className="mt-10">
-          <h3 className="text-[2rem] font-medium text-[var(--foreground)]">
-            有效期
-          </h3>
+        <div className="mt-5">
+          <h3 className="text-sm font-black text-[var(--foreground)]">有效期</h3>
 
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
+          <div className="mt-3 grid grid-cols-3 gap-2">
             {expireOptions.map((option) => {
               const active = option.value === expireDays;
               return (
@@ -246,19 +227,16 @@ export function AccessCodeFormPanel(props: {
                   type="button"
                   onClick={() => setExpireDays(option.value)}
                   disabled={!isPaid}
-                  className={`relative rounded-[28px] border-[3px] px-6 py-6 text-center transition ${
+                  className={`relative rounded-xl border-2 px-2 py-3 text-center transition disabled:cursor-not-allowed disabled:opacity-60 ${
                     active
-                      ? "border-[var(--line-strong)] bg-[#eef8ff] shadow-[0_4px_0_rgba(46,40,86,0.2)]"
-                      : "border-[rgba(46,40,86,0.26)] bg-white hover:border-[var(--line-strong)]"
-                  } disabled:cursor-not-allowed disabled:opacity-60`}
+                      ? "border-[var(--primary)] bg-[var(--primary)]/8"
+                      : "border-[var(--outline)]/20 bg-white hover:border-[var(--outline)]/40"
+                  }`}
                 >
-                  {active ? (
-                    <HeartMiniIcon className="absolute right-4 top-4 h-5 w-5 text-[var(--brand-strong)]" />
-                  ) : null}
-                  <div className="text-[2rem] font-semibold text-[var(--foreground)]">
+                  <div className={`text-sm font-black ${active ? "text-[var(--foreground)]" : "text-[var(--foreground)]/78"}`}>
                     {option.label}
                   </div>
-                  <div className="mt-2 text-lg text-[var(--text-muted)]">
+                  <div className="mt-0.5 text-[10px] font-bold text-[var(--foreground)]/55">
                     {option.description}
                   </div>
                 </button>
@@ -267,69 +245,84 @@ export function AccessCodeFormPanel(props: {
           </div>
         </div>
 
-        <div className="mt-10">
-          <div className="flex items-center justify-between gap-4">
-            <h3 className="text-[2rem] font-medium text-[var(--foreground)]">
-              使用次数上限
-            </h3>
+        <div className="mt-5">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-sm font-black text-[var(--foreground)]">使用次数上限</h3>
 
-            <label className="inline-flex items-center gap-3 text-lg text-[var(--foreground)]/68">
+            <label className="inline-flex items-center gap-2 text-xs font-bold text-[var(--foreground)]/68">
               <span>不限次数</span>
               <button
                 type="button"
                 onClick={() => setUnlimited((current) => !current)}
                 disabled={!isPaid}
-                className={`relative h-9 w-16 rounded-full border-[2px] border-[var(--line-strong)] transition ${
-                  unlimited ? "bg-[#b3e4f6]" : "bg-[#e4ecf1]"
+                className={`relative h-6 w-11 rounded-full border-2 border-[var(--outline)] transition ${
+                  unlimited ? "bg-[var(--primary)]" : "bg-[var(--surface-container-high)]"
                 } disabled:cursor-not-allowed disabled:opacity-60`}
                 aria-pressed={unlimited}
               >
                 <span
-                  className={`absolute top-1 h-7 w-7 rounded-full bg-white shadow-[0_8px_16px_-12px_rgba(0,0,0,0.45)] transition ${
-                    unlimited ? "left-8" : "left-1"
+                  className={`absolute top-0.5 h-4.5 w-4.5 rounded-full bg-white shadow-sm transition ${
+                    unlimited ? "left-[calc(100%-1.25rem-0.125rem)]" : "left-0.5"
                   }`}
                 />
               </button>
             </label>
           </div>
 
-          <div className="relative mt-5">
-            <PeopleIcon className="pointer-events-none absolute left-6 top-1/2 h-7 w-7 -translate-y-1/2 text-[var(--foreground)]/36" />
+          <div className="relative mt-2.5">
+            <PeopleIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--foreground)]/40" />
             <input
               type="number"
               min={1}
               disabled={!isPaid || unlimited}
               value={usageLimit}
               onChange={(event) => setUsageLimit(event.target.value)}
-              className="dream-input w-full px-16 py-5 pr-16 text-[2rem] disabled:cursor-not-allowed disabled:bg-[#f8f3f5] disabled:text-[var(--foreground)]/36"
+              className="w-full rounded-xl border-2 border-[var(--outline)]/30 bg-white py-2.5 pl-9 pr-10 text-sm font-black text-[var(--foreground)] placeholder:text-[var(--foreground)]/30 focus:border-[var(--primary)] focus:outline-none focus:ring-4 focus:ring-[var(--primary)]/15 disabled:cursor-not-allowed disabled:bg-white/70 disabled:text-[var(--foreground)]/40"
             />
-            <span className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 text-2xl text-[var(--text-muted)]">
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-black text-[var(--foreground)]/50">
               次
             </span>
           </div>
 
           {usageText ? (
-            <p className="mt-4 text-base text-[var(--text-muted)]">
+            <p className="mt-2 text-[10px] font-bold text-[var(--foreground)]/55">
               {usageText}
             </p>
           ) : null}
         </div>
       </div>
 
-      <div className="dream-divider mt-10 h-px border-t border-dashed" />
+      <div className="mt-6 border-t border-dashed border-[var(--outline)]/20" />
 
-      <div className="mt-8 flex justify-end">
+      <div className="mt-4 flex justify-end">
         <button
           type="button"
           disabled={pending}
           onClick={onSubmit}
-          className="btn-primary inline-flex min-w-[320px] items-center justify-center gap-3 rounded-full px-8 py-6 text-[2rem] font-black disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex min-w-[10rem] items-center justify-center gap-1.5 rounded-full bg-[var(--button-primary)] px-6 py-2.5 text-sm font-black text-[var(--foreground)] shadow-sm transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           <span>{getSubmitButtonLabel(pending)}</span>
-          <CheckIcon className="h-7 w-7" />
+          <CheckIcon className="h-4 w-4" />
         </button>
       </div>
     </section>
+  );
+}
+
+function AccessModeOption(props: { active: boolean; onClick: () => void; children: ReactNode }) {
+  const { active, onClick, children } = props;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full border-2 px-4 py-2 text-xs font-black transition ${
+        active
+          ? "border-[var(--primary)] bg-[var(--primary)]/8 text-[var(--foreground)]"
+          : "border-[var(--outline)]/25 bg-white text-[var(--foreground)]/72 hover:border-[var(--outline)]/50"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -388,11 +381,19 @@ function CheckIcon({ className = "h-5 w-5" }: { className?: string }) {
   );
 }
 
-function HeartMiniIcon({ className = "h-5 w-5" }: { className?: string }) {
+function DownloadMiniIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <path d="M11.25 4.5h1.5v8.19l2.97-2.97 1.06 1.06L12 15.56l-4.78-4.78 1.06-1.06 2.97 2.97V4.5ZM5.25 17.25h13.5v1.5H5.25v-1.5Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function KeyIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
       <path
-        d="M12 20.3 4.94 13.6a4.67 4.67 0 0 1 6.6-6.6L12 7.45l.46-.45a4.67 4.67 0 0 1 6.6 6.6L12 20.3Z"
+        d="M15.72 2.22a4.46 4.46 0 0 1 5.97 5.97l-.36.36a4.46 4.46 0 0 1-5.97 0l-7.85 7.85a3.001 3.001 0 1 1-1.06-1.06l7.85-7.85a4.46 4.46 0 0 1 1.42-5.27Zm2.12 2.12a2.21 2.21 0 0 0-2.83.26 2.21 2.21 0 0 0 .26 3.31l.35.35.47-.47a1.125 1.125 0 1 1 1.59 1.59l-.47.47.35.35a2.21 2.21 0 0 0 3.31.26 2.21 2.21 0 0 0 .26-3.31l-1.29-2.81Zm-12.3 13.3a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Z"
         fill="currentColor"
       />
     </svg>
@@ -429,23 +430,23 @@ function StepPill(props: {
 }) {
   const { active, label, title, icon } = props;
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2">
       <div
-        className={`flex h-12 w-12 items-center justify-center rounded-full border text-[var(--brand-strong)] shadow-[0_18px_36px_-30px_rgba(120,85,94,0.35)] ${
+        className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-[var(--brand-strong)] ${
           active
-            ? "border-[#e9a2b8] bg-[#ffe9f0]"
-            : "border-white/85 bg-white/80 text-[var(--text-muted)]"
+            ? "border-[var(--brand)]/30 bg-[var(--brand)]/10"
+            : "border-[var(--outline)]/20 bg-white text-[var(--foreground)]/45"
         }`}
       >
         {icon}
       </div>
       <div>
-        <div className="text-xs uppercase tracking-[0.18em] text-[var(--text-subtle)]">
+        <div className="text-[9px] font-black uppercase tracking-[0.12em] text-[var(--foreground)]/45">
           {label}
         </div>
         <div
-          className={`text-base font-medium ${
-            active ? "text-[var(--foreground)]" : "text-[var(--text-subtle)]"
+          className={`text-xs font-black ${
+            active ? "text-[var(--foreground)]" : "text-[var(--foreground)]/50"
           }`}
         >
           {title}

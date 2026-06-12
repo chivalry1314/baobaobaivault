@@ -62,14 +62,13 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
 
   return (
     <AppShell currentPath="/creator">
-      <div className="relative overflow-hidden bg-[linear-gradient(180deg,#f4fbff_0%,#f8fdff_48%,#f2faff_100%)]">
+      <div className="relative overflow-hidden">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute left-[-10%] top-[10%] h-[28rem] w-[28rem] rounded-full bg-[rgba(176,232,249,0.38)] blur-[120px]" />
-          <div className="absolute right-[-8%] top-[14%] h-[24rem] w-[24rem] rounded-full bg-[rgba(203,234,249,0.34)] blur-[120px]" />
-          <div className="absolute left-[18%] bottom-[8%] h-[24rem] w-[24rem] rounded-full bg-[rgba(248,219,230,0.22)] blur-[120px]" />
+          <div className="absolute left-[-8%] top-[12%] h-[18rem] w-[18rem] rounded-full bg-[rgba(176,232,249,0.34)] blur-[100px]" />
+          <div className="absolute right-[-6%] top-[20%] h-[16rem] w-[16rem] rounded-full bg-[rgba(248,219,230,0.28)] blur-[100px]" />
         </div>
 
-        <section className="relative z-10 mx-auto max-w-[var(--layout-max)] px-4 pb-14 pt-8 sm:px-6 sm:pb-16 sm:pt-10">
+        <section className="relative z-10 mx-auto max-w-[var(--layout-max)] px-4 pb-16 pt-8 sm:px-6 sm:pb-20 sm:pt-10">
           {isWizardFlow ? <AccessCodeWizardSteps /> : null}
           <AccessCodeHero backHref={backHref} />
 
@@ -77,7 +76,7 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
           {!loading && error ? <AccessCodeError message={error} /> : null}
 
           {!loading && detail ? (
-            <div className="mt-10 grid gap-8 xl:grid-cols-[380px_minmax(0,1fr)]">
+            <div className="mt-8 grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[340px_minmax(0,1fr)]">
               <AccessCodeCardPreview detail={detail} />
               <AccessCodeFormPanel
                 accessMode={accessMode}

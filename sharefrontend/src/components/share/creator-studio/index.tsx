@@ -73,7 +73,7 @@ export function CreatorStudio() {
   if (sessionChecking) {
     return (
       <div className="min-h-screen bg-[var(--background)] px-4 py-10 sm:px-6">
-        <div className="dream-panel mx-auto max-w-7xl px-6 py-14 text-center text-[var(--foreground)]/72">
+        <div className="mx-auto max-w-7xl rounded-[1.4rem] border-2 border-[var(--outline)] bg-white px-6 py-14 text-center text-[var(--foreground)]/72 shadow-sm">
           正在加载创作中心...
         </div>
       </div>
@@ -87,53 +87,53 @@ export function CreatorStudio() {
   const isManager = currentUser.role === "manager";
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[linear-gradient(180deg,#f4fbff_0%,#f9fdff_45%,#f2faff_100%)]">
+    <div className="relative min-h-screen overflow-x-hidden bg-[var(--background)]">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 overflow-hidden"
       >
-        <div className="absolute left-[-120px] top-12 h-80 w-80 rounded-full bg-[rgba(172,228,247,0.36)] blur-3xl" />
-        <div className="absolute right-[-80px] top-52 h-80 w-80 rounded-full bg-[rgba(200,233,248,0.3)] blur-3xl" />
-        <div className="absolute bottom-[-120px] left-1/3 h-96 w-96 rounded-full bg-[rgba(248,219,230,0.26)] blur-3xl" />
+        <div className="absolute left-[-120px] top-12 h-72 w-72 rounded-full bg-[rgba(172,228,247,0.3)] blur-3xl" />
+        <div className="absolute right-[-80px] top-52 h-72 w-72 rounded-full bg-[rgba(250,205,244,0.24)] blur-3xl" />
+        <div className="absolute bottom-[-120px] left-1/3 h-80 w-80 rounded-full bg-[rgba(248,219,230,0.22)] blur-3xl" />
       </div>
 
-      <div className="relative z-10 mx-auto grid max-w-[var(--layout-max)] gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[290px_minmax(0,1fr)]">
-        <aside className="dream-panel p-6 lg:sticky lg:top-6 lg:self-start">
-          <div className="flex flex-col gap-10 lg:min-h-[calc(100vh-3rem)]">
+      <div className="relative z-10 mx-auto grid max-w-[var(--layout-max)] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <aside className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm lg:sticky lg:top-5 lg:self-start">
+          <div className="flex flex-col gap-6 lg:min-h-[calc(100vh-2.5rem)]">
             <div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 <Avatar user={currentUser} size="sm" />
                 <div className="min-w-0">
-                  <p className="type-h3 truncate text-[var(--foreground)]">
+                  <p className="text-base font-black text-[var(--foreground)]">
                     {displayName}
                   </p>
-                  <p className="type-body-sm mt-1 text-[var(--text-muted)]">
+                  <p className="mt-0.5 text-[11px] font-bold text-[var(--text-muted)]">
                     UID: {formatUid(currentUser.id)}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-10 space-y-3">
-                <SidebarButton href="/" icon={<HomeIcon className="h-5 w-5" />}>
+              <div className="mt-6 space-y-1.5">
+                <SidebarButton href="/" icon={<HomeIcon className="h-4 w-4" />}>
                   返回首页
                 </SidebarButton>
                 <SidebarButton
                   active={activeSection === "dashboard"}
                   onClick={() => setActiveSection("dashboard")}
-                  icon={<CardIcon className="h-5 w-5" />}
+                  icon={<CardIcon className="h-4 w-4" />}
                 >
                   卡片管理
                 </SidebarButton>
                 <SidebarButton
                   href="/creator/access-codes"
-                  icon={<KeyIcon className="h-5 w-5" />}
+                  icon={<KeyIcon className="h-4 w-4" />}
                 >
                   提取码管理
                 </SidebarButton>
                 {isManager ? (
                   <SidebarButton
                     href="/creator/reviews"
-                    icon={<ReviewIcon className="h-5 w-5" />}
+                    icon={<ReviewIcon className="h-4 w-4" />}
                   >
                     审核中心
                   </SidebarButton>
@@ -141,7 +141,7 @@ export function CreatorStudio() {
                 <SidebarButton
                   active={activeSection === "settings"}
                   onClick={() => setActiveSection("settings")}
-                  icon={<SettingsIcon className="h-5 w-5" />}
+                  icon={<SettingsIcon className="h-4 w-4" />}
                 >
                   个人资料设置
                 </SidebarButton>
@@ -151,21 +151,21 @@ export function CreatorStudio() {
             <button
               type="button"
               onClick={handleLogout}
-              className="btn-subtle rounded-full px-4 py-3 text-sm font-black text-[var(--foreground)]/68 lg:mt-auto"
+              className="mt-auto rounded-full border-2 border-[var(--outline)] bg-white px-3 py-2 text-xs font-black text-[var(--foreground)]/68 shadow-sm transition hover:bg-[var(--surface-container)] lg:mt-auto"
             >
               退出登录
             </button>
           </div>
         </aside>
 
-        <main className="space-y-6">
+        <main className="space-y-5">
           {loadError ? (
-            <div className="dream-panel-soft flex flex-col gap-3 border-[#f3c8ad] bg-[#fff6ef] px-5 py-4 text-sm text-[#9a3412] sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 rounded-[1.2rem] border border-[#e59273] bg-[#fff6ef] px-4 py-3 text-sm text-[#9a3412] sm:flex-row sm:items-center sm:justify-between">
               <span>{loadError}</span>
               <button
                 type="button"
                 onClick={() => void handleReload()}
-                className="btn-subtle w-fit rounded-full border-[#f1b18a] px-4 py-2 text-sm"
+                className="w-fit rounded-full border border-[#f1b18a] bg-white px-3 py-1.5 text-xs font-black shadow-sm"
               >
                 重新加载
               </button>
@@ -174,40 +174,40 @@ export function CreatorStudio() {
 
           {activeSection === "dashboard" ? (
             <>
-              <section className="dream-panel overflow-hidden p-3">
+              <section className="overflow-hidden rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-2 shadow-sm">
                 <div
-                  className="relative overflow-hidden rounded-[36px] bg-[linear-gradient(135deg,rgba(255,255,255,0.94) 0%,rgba(233,247,252,0.86) 52%,rgba(246,252,255,0.95) 100%)] px-6 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-12"
+                  className="relative overflow-hidden rounded-[1.2rem] bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(233,247,252,0.86)_52%,rgba(246,252,255,0.95)_100%)] px-5 py-6 sm:px-6 sm:py-8"
                   style={heroSurfaceStyle}
                 >
-                  <div className="relative flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
-                    <div className="flex flex-col gap-6 sm:flex-row sm:items-end">
-                      <div className="rounded-full border-[6px] border-white/90 bg-white/85 p-1 shadow-[0_22px_54px_-34px_rgba(120,85,94,0.45)]">
+                  <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+                      <div className="rounded-full border-4 border-white/90 bg-white/85 p-0.5 shadow-[0_16px_36px_-24px_rgba(120,85,94,0.35)]">
                         <Avatar user={currentUser} />
                       </div>
                       <div className="max-w-2xl">
-                        <p className="type-overline text-[var(--primary)]/55">
+                        <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[var(--primary)]/70">
                           {brand.siteShortName}
                         </p>
-                        <h1 className="type-hero mt-3 text-[var(--foreground)]">
+                        <h1 className="mt-1.5 text-2xl font-black text-[var(--foreground)] sm:text-3xl">
                           {displayName}
                         </h1>
-                        <p className="type-h3 mt-3 text-[var(--foreground)]/68">
+                        <p className="mt-1 text-sm font-bold text-[var(--foreground)]/68">
                           {getUserTagline(currentUser)}
                         </p>
-                        <p className="type-body-sm mt-4 text-[var(--text-subtle)]">
+                        <p className="mt-1.5 text-xs font-bold text-[var(--text-subtle)]">
                           {accountLabel}
                         </p>
                       </div>
                     </div>
 
-                    <div className="dream-panel-soft grid gap-3 p-4 sm:grid-cols-3">
+                    <div className="grid gap-2 rounded-[1rem] border-2 border-[var(--outline)]/15 bg-white/80 p-2 backdrop-blur-sm sm:grid-cols-3">
                       {heroStats.map((item) => (
                         <div
                           key={item.label}
-                          className="min-w-[112px] rounded-[22px] px-4 py-4 text-center"
+                          className="min-w-[96px] rounded-[0.7rem] px-3 py-2.5 text-center"
                         >
                           <div
-                            className={`type-h2 ${
+                            className={`text-lg font-black ${
                               item.accent
                                 ? "text-[var(--brand-strong)]"
                                 : "text-[var(--foreground)]"
@@ -216,7 +216,7 @@ export function CreatorStudio() {
                             {item.value}
                           </div>
                           <div
-                            className={`type-body-sm mt-1 ${
+                            className={`mt-0.5 text-[11px] font-bold ${
                               item.accent
                                 ? "text-[var(--brand)]"
                                 : "text-[var(--foreground)]/62"
@@ -231,9 +231,9 @@ export function CreatorStudio() {
                 </div>
               </section>
 
-              <section className="dream-panel px-6 py-6 sm:px-8 sm:py-8">
-                <div className="flex flex-col gap-4 border-b border-[rgba(220,173,187,0.35)] pb-4 sm:flex-row sm:items-end sm:justify-between">
-                  <div className="flex flex-wrap gap-6">
+              <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-5 shadow-sm sm:p-6">
+                <div className="flex flex-col gap-4 border-b border-[var(--outline)]/12 pb-4 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="flex flex-wrap gap-5">
                     <TabButton
                       active={activeTab === "cards"}
                       onClick={() => {
@@ -263,24 +263,17 @@ export function CreatorStudio() {
                   <button
                     type="button"
                     onClick={openCreatePanel}
-                    className="btn-primary inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-black"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-full border-2 border-[var(--outline)] bg-[var(--button-primary)] px-3.5 py-2 text-xs font-black text-[var(--foreground)] shadow-sm transition hover:bg-[var(--button-primary-hover)]"
                   >
-                    <PlusIcon className="h-4 w-4" />
+                    <PlusIcon className="h-3.5 w-3.5" />
                     新建卡片
                   </button>
                 </div>
 
-                <div className="pt-6">
+                <div className="pt-5">
                   {activeTab !== "collections" ? (
-                    <div className="mb-5 flex flex-col gap-3 rounded-[22px] border-[3px] border-[var(--outline-variant)] bg-[rgba(248,252,255,0.92)] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <div className="text-sm font-black text-[var(--foreground)]">
-                          访问方式筛选
-                        </div>
-                        <div className="mt-1 text-xs font-bold text-[var(--foreground)]/56">
-                          只看免费卡片，或只看需要提取码的卡片。
-                        </div>
-                      </div>
+                    <div className="mb-4 flex flex-wrap items-center gap-3">
+                      <span className="text-[11px] font-black text-[var(--foreground)]/55">筛选</span>
                       <AccessModeFilterPills
                         value={accessModeFilter}
                         onChange={setAccessModeFilter}
@@ -290,7 +283,7 @@ export function CreatorStudio() {
 
                   {activeTab === "cards" ? (
                     cards.length > 0 ? (
-                      <div className="space-y-5">
+                      <div className="space-y-4">
                         <div className="grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                           {pagedCards.map((item) => (
                             <CreatorCard key={item.card.id} item={item} />
@@ -322,18 +315,18 @@ export function CreatorStudio() {
                         正在加载收藏...
                       </div>
                     ) : favoritesError ? (
-                      <div className="dream-panel-soft flex flex-col gap-3 border-[#f3c8ad] bg-[#fff6ef] px-5 py-4 text-sm text-[#9a3412] sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex flex-col gap-3 rounded-[1.2rem] border border-[#e59273] bg-[#fff6ef] px-4 py-3 text-sm text-[#9a3412] sm:flex-row sm:items-center sm:justify-between">
                         <span>{favoritesError}</span>
                         <button
                           type="button"
                           onClick={() => void loadFavoritesPage(favoritesPage)}
-                          className="btn-subtle w-fit rounded-full border-[#f1b18a] px-4 py-2 text-sm"
+                          className="w-fit rounded-full border border-[#f1b18a] bg-white px-3 py-1.5 text-xs font-black shadow-sm"
                         >
                           重新加载
                         </button>
                       </div>
                     ) : favorites.length > 0 ? (
-                      <div className="space-y-5">
+                      <div className="space-y-4">
                         <div className="grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                           {favorites.map((item) => (
                             <FavoriteCard
@@ -361,8 +354,8 @@ export function CreatorStudio() {
 
                   {activeTab === "history" ? (
                     historyItems.length > 0 ? (
-                      <div className="space-y-5">
-                        <div className="space-y-4">
+                      <div className="space-y-4">
+                        <div className="space-y-3">
                           {pagedHistoryItems.map((item) => (
                             <HistoryItem key={item.card.id} item={item} />
                           ))}

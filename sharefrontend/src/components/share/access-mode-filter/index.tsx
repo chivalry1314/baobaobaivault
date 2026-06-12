@@ -10,7 +10,7 @@ const ACCESS_MODE_OPTIONS: Array<{
   {
     value: "all",
     label: "全部",
-    activeClassName: "border-[var(--line-strong)] bg-[rgba(221,241,250,0.96)] text-[var(--primary)]",
+    activeClassName: "border-[var(--line-strong)]/30 bg-[var(--surface-container-high)] text-[var(--foreground)]",
   },
   {
     value: "free",
@@ -19,7 +19,7 @@ const ACCESS_MODE_OPTIONS: Array<{
   },
   {
     value: "paid",
-    label: "付费",
+    label: "需提取码",
     activeClassName: "border-[#d67a33] bg-[#fff1df] text-[#8d4708]",
   },
 ];
@@ -44,10 +44,10 @@ export function AccessModeFilterPills(props: {
             key={option.value}
             type="button"
             onClick={() => onChange(option.value)}
-            className={`rounded-full border-[3px] px-4 py-2 text-sm font-black transition ${
+            className={`rounded-full border px-2.5 py-1 text-[11px] font-black transition ${
               active
                 ? option.activeClassName
-                : "border-[var(--line-strong)] bg-white text-[var(--foreground)]/68 hover:-translate-y-0.5 hover:bg-[#f8fbff]"
+                : "border-[var(--line-strong)]/20 bg-white text-[var(--foreground)]/68 hover:-translate-y-0.5 hover:bg-[var(--surface-container)]"
             }`}
           >
             {option.label}

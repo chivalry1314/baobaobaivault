@@ -24,8 +24,6 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
     <AppShell currentPath="/">
       <div className="relative overflow-hidden">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="doodle-cloud left-[5%] top-[8%] h-[46px] w-[170px] opacity-50" />
-          <div className="doodle-cloud right-[8%] top-[20%] h-[52px] w-[190px] opacity-40" />
           <div className="sparkle-orb left-[-8%] top-[18%] h-[16rem] w-[16rem] bg-[rgba(174,231,217,0.46)]" />
           <div className="sparkle-orb right-[-10%] top-[42%] h-[20rem] w-[20rem] bg-[rgba(250,205,244,0.34)]" />
         </div>

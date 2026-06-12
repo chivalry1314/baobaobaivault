@@ -87,11 +87,14 @@ export function ShareSystemHome() {
 function SystemCard(props: { title: string; description: string; href: string }) {
   const { title, description, href } = props;
   return (
-    <article className="dream-panel-soft rounded-[28px] px-5 py-5">
-      <h3 className="text-lg font-black text-[var(--foreground)]">{title}</h3>
-      <p className="mt-3 text-sm font-bold leading-7 text-[var(--foreground)]/68">{description}</p>
-      <div className="mt-5">
-        <Link href={href} className="btn-primary inline-flex rounded-full px-4 py-2 text-sm font-black">
+    <article className="group flex h-full flex-col rounded-[1.1rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+      <h3 className="text-sm font-black text-[var(--foreground)]">{title}</h3>
+      <p className="mt-1.5 flex-1 text-xs font-bold leading-relaxed text-[var(--foreground)]/58">{description}</p>
+      <div className="mt-4">
+        <Link
+          href={href}
+          className="inline-flex items-center rounded-full bg-[var(--button-primary)] px-3 py-1.5 text-xs font-black shadow-sm transition hover:bg-[var(--button-primary-hover)]"
+        >
           进入
         </Link>
       </div>
@@ -103,7 +106,7 @@ function SystemStateView(props: { currentPath: string; text: string; title?: str
   const { currentPath, text, title = "系统管理" } = props;
   return (
     <SystemWorkspace currentPath={currentPath} title={title} description={text}>
-      <div className="dream-panel px-6 py-8 text-sm font-bold text-[var(--foreground)]/70">{text}</div>
+      <div className="rounded-[1.2rem] border-2 border-[var(--outline)] bg-white px-5 py-6 text-sm font-bold text-[var(--foreground)]/70 shadow-sm">{text}</div>
     </SystemWorkspace>
   );
 }

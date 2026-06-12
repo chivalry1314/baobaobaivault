@@ -29,22 +29,22 @@ export function Avatar({
   size?: "sm" | "lg";
 }) {
   const name = getDisplayName(user);
-  const dimension = size === "sm" ? "h-14 w-14" : "h-28 w-28";
-  const inner = size === "sm" ? "text-lg" : "text-3xl";
+  const dimension = size === "sm" ? "h-11 w-11" : "h-20 w-20";
+  const inner = size === "sm" ? "text-sm" : "text-xl";
 
   if (user.avatar.trim()) {
     return (
       <img
         src={user.avatar}
         alt={name}
-        className={`${dimension} rounded-full object-cover shadow-[0_16px_36px_-24px_rgba(120,85,94,0.5)]`}
+        className={`${dimension} rounded-full object-cover shadow-[0_12px_28px_-20px_rgba(120,85,94,0.45)]`}
       />
     );
   }
 
   return (
     <div
-      className={`${dimension} btn-subtle flex items-center justify-center rounded-full font-black shadow-[0_16px_36px_-24px_rgba(55,98,120,0.35)] ${inner}`}
+      className={`${dimension} flex items-center justify-center rounded-full border-2 border-[var(--outline)] bg-[var(--primary)] font-black text-[var(--foreground)] shadow-[0_12px_28px_-20px_rgba(55,98,120,0.35)] ${inner}`}
     >
       {getInitials(name)}
     </div>
@@ -64,10 +64,10 @@ export function SidebarButton({
   icon: ReactNode;
   children: ReactNode;
 }) {
-  const className = `flex w-full items-center gap-3 rounded-full px-5 py-4 text-base font-black transition ${
+  const className = `flex w-full items-center gap-2.5 rounded-full px-3.5 py-2.5 text-xs font-black transition ${
     active
-      ? "btn-subtle text-[var(--primary)] shadow-[0_18px_36px_-26px_rgba(57,124,153,0.35)]"
-      : "text-[var(--foreground)]/74 hover:bg-white/78 hover:text-[var(--primary)]"
+      ? "bg-[var(--surface-container-high)] text-[var(--foreground)] shadow-sm"
+      : "text-[var(--foreground)]/74 hover:bg-[var(--surface-container)] hover:text-[var(--foreground)]"
   }`;
   if (href) {
     return (
@@ -98,7 +98,7 @@ export function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`type-h3 border-b-2 pb-4 transition ${
+      className={`border-b-2 pb-3 text-sm font-black transition ${
         active
           ? "border-[var(--primary)] text-[var(--foreground)]"
           : "border-transparent text-[var(--text-muted)] hover:text-[var(--foreground)]"
@@ -123,15 +123,15 @@ export function EmptyState({
   onAction?: () => void;
 }) {
   return (
-    <div className="dream-panel px-6 py-14 text-center">
-      <p className="type-h2 text-[var(--foreground)]">{title}</p>
-      <p className="type-body-sm mx-auto mt-3 max-w-xl text-[var(--foreground)]/62">
+    <div className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white px-6 py-12 text-center shadow-sm">
+      <p className="text-lg font-black text-[var(--foreground)]">{title}</p>
+      <p className="mx-auto mt-2 max-w-xl text-xs font-bold text-[var(--foreground)]/62">
         {description}
       </p>
       {actionLabel && actionHref ? (
         <Link
           href={actionHref}
-          className="btn-primary mt-6 inline-flex rounded-full px-6 py-3 text-sm font-black"
+          className="mt-5 inline-flex rounded-full border-2 border-[var(--outline)] bg-[var(--button-primary)] px-5 py-2 text-xs font-black text-[var(--foreground)] shadow-sm transition hover:bg-[var(--button-primary-hover)]"
         >
           {actionLabel}
         </Link>
@@ -140,7 +140,7 @@ export function EmptyState({
         <button
           type="button"
           onClick={onAction}
-          className="btn-primary mt-6 rounded-full px-6 py-3 text-sm font-black"
+          className="mt-5 rounded-full border-2 border-[var(--outline)] bg-[var(--button-primary)] px-5 py-2 text-xs font-black text-[var(--foreground)] shadow-sm transition hover:bg-[var(--button-primary-hover)]"
         >
           {actionLabel}
         </button>
@@ -162,83 +162,75 @@ export function CreatorCard({ item }: { item: DashboardCard }) {
       : "未配置";
 
   return (
-    <article className="dream-panel-soft flex h-full flex-col overflow-hidden rounded-[18px] p-1.5 shadow-[0_14px_30px_-26px_rgba(71,102,129,0.24)]">
-      <div className="relative overflow-hidden rounded-[14px] bg-[rgba(244,249,252,0.94)] p-2">
-        <div className="absolute inset-x-2.5 top-2 flex items-center justify-between">
-          <span
-            className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-black ${rank.className}`}
-          >
+    <article className="group flex h-full flex-col overflow-hidden rounded-[1.1rem] border border-[var(--outline)]/20 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+      <Link href={editHref} className="relative block aspect-[3/2] w-full overflow-hidden bg-[var(--surface-container)]">
+        {isImageCard(item.card) ? (
+          <img
+            src={item.card.previewUrl}
+            alt={item.card.title}
+            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
+          />
+        ) : (
+          <div className="flex h-full items-end p-3">
+            <p className="line-clamp-2 text-[10px] leading-4 text-[var(--foreground)]/66">
+              {defaultCardDescription(item.card)}
+            </p>
+          </div>
+        )}
+
+        <div className="absolute left-2.5 top-2.5 flex items-center gap-1.5">
+          <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-black ${rank.className}`}>
             {rank.label}
           </span>
-          <div className="flex gap-2">
-            <span className="inline-flex rounded-full bg-white/88 px-2 py-0.5 text-[9px] font-black text-[var(--foreground)]/62">
-              #{formatCardCode(item.card.id)}
-            </span>
-          </div>
         </div>
+        <span className="absolute right-2.5 top-2.5 rounded-full bg-[rgba(0,0,0,0.55)] px-2 py-0.5 text-[9px] font-black text-white/95 backdrop-blur-sm">
+          #{formatCardCode(item.card.id)}
+        </span>
+      </Link>
 
-        <div className="pt-5">
-          {isImageCard(item.card) ? (
-            <div className="overflow-hidden rounded-[12px] border border-white/80 bg-white shadow-[0_14px_30px_-28px_rgba(83,110,122,0.4)]">
-              <img
-                src={item.card.previewUrl}
-                alt={item.card.title}
-                className="h-20 w-full object-cover"
-              />
-            </div>
-          ) : (
-            <div className="flex h-20 items-end rounded-[12px] border border-dashed border-[var(--outline-variant)] bg-[linear-gradient(135deg,rgba(209,234,247,0.36),rgba(246,223,233,0.34))] p-2">
-              <p className="max-w-[12rem] text-[9px] leading-3.5 text-[var(--foreground)]/66">
-                {defaultCardDescription(item.card)}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="flex flex-1 flex-col px-1 pb-1 pt-1.5">
+      <div className="flex flex-1 flex-col p-3">
         <div className="min-w-0">
-          <h2 className="line-clamp-1 text-[13px] font-black leading-[1.15] text-[var(--foreground)]">
-            {item.card.title}
+          <h2 className="line-clamp-1 text-sm font-black text-[var(--foreground)]">
+            <Link href={editHref}>{item.card.title}</Link>
           </h2>
-          <p className="sr-only">
-            {defaultCardDescription(item.card)}
-          </p>
+          <p className="sr-only">{defaultCardDescription(item.card)}</p>
         </div>
 
-        <div className="mt-1.5 flex flex-wrap gap-1">
+        <div className="mt-1.5 flex flex-wrap items-center gap-1">
           <AccessModeBadge mode={item.card.accessMode} compact />
           <StatusBadge>{getVisibilityLabel(item.card.visibility)}</StatusBadge>
           <StatusBadge>{getStatusLabel(item.card.status)}</StatusBadge>
           <StatusBadge>{getReviewStatusLabel(item.card.reviewStatus)}</StatusBadge>
         </div>
 
-        <dl className="mt-2 grid grid-cols-3 gap-1">
-          <StatCard label="下载" value={String(item.stats.downloadCount)} />
-          <StatCard
-            label="更新"
-            value={formatDate(item.card.updatedAt)}
-            compact
-          />
-          <StatCard
-            label="提取码"
-            value={accessCodeValue}
+        <div className="mt-2.5 flex items-center gap-3 text-[10px] font-bold text-[var(--foreground)]/60">
+          <span className="inline-flex items-center gap-1">
+            <DownloadMiniIcon className="h-3 w-3" />
+            {item.stats.downloadCount}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <CalendarMiniIcon className="h-3 w-3" />
+            {formatDate(item.card.updatedAt)}
+          </span>
+          <span
+            className="inline-flex items-center gap-1"
             title={hasInlineAccessCode ? accessCode : accessCodeValue}
-            compact
-            mono={hasInlineAccessCode}
-          />
-        </dl>
+          >
+            <KeyMiniIcon className="h-3 w-3" />
+            <span className={hasInlineAccessCode ? "font-mono tracking-wide" : ""}>{accessCodeValue}</span>
+          </span>
+        </div>
 
-        <div className="mt-auto flex flex-wrap gap-1 pt-2">
+        <div className="mt-auto flex flex-wrap gap-1.5 pt-3">
           <Link
             href={editHref}
-            className="btn-primary inline-flex min-h-[32px] flex-1 items-center justify-center rounded-full px-2 py-1 text-[10px] font-black"
+            className="inline-flex min-h-[28px] flex-1 items-center justify-center rounded-full bg-[var(--button-primary)] px-2 py-1 text-[10px] font-black text-[var(--foreground)] shadow-sm transition hover:bg-[var(--button-primary-hover)]"
           >
             编辑卡片
           </Link>
           <Link
             href={accessCodeHref}
-            className="btn-subtle inline-flex min-h-[32px] flex-1 items-center justify-center rounded-full px-2 py-1 text-[10px] font-black text-[var(--foreground)]/74"
+            className="inline-flex min-h-[28px] flex-1 items-center justify-center rounded-full border border-[var(--outline)]/15 bg-white px-2 py-1 text-[10px] font-black text-[var(--foreground)]/74 shadow-sm transition hover:bg-[var(--surface-container)]"
           >
             管理提取码
           </Link>
@@ -256,63 +248,60 @@ export function FavoriteCard({
   onUnfavorited?: () => void;
 }) {
   const cardHref = `/cards/${encodeURIComponent(item.card.id)}`;
+  const isPaid = item.card.accessMode === "paid";
 
   return (
-    <article className="dream-panel-soft flex h-full flex-col overflow-hidden rounded-[18px] p-1.5 shadow-[0_14px_30px_-26px_rgba(71,102,129,0.24)]">
-      <div className="relative overflow-hidden rounded-[14px] bg-[rgba(244,249,252,0.94)] p-2">
-        <div className="absolute inset-x-2.5 top-2 flex items-center justify-between">
-          <AccessModeBadge mode={item.card.accessMode} compact />
-          <div className="flex gap-2">
-            <span className="inline-flex rounded-full bg-white/88 px-2 py-0.5 text-[9px] font-black text-[var(--foreground)]/62">
-              #{formatCardCode(item.card.id)}
-            </span>
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-[1.1rem] border border-[var(--outline)]/20 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+      <Link href={cardHref} className="relative block aspect-[3/2] w-full overflow-hidden bg-[var(--surface-container)]">
+        {isImageCard(item.card) ? (
+          <img
+            src={item.card.previewUrl}
+            alt={item.card.title}
+            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
+          />
+        ) : (
+          <div className="flex h-full items-end p-3">
+            <p className="line-clamp-2 text-[10px] leading-4 text-[var(--foreground)]/66">
+              {defaultCardDescription(item.card)}
+            </p>
           </div>
+        )}
+
+        <div className="absolute left-2.5 top-2.5 flex items-center gap-1.5 rounded-full bg-[rgba(0,0,0,0.55)] px-2 py-0.5 text-[9px] font-black text-white/95 backdrop-blur-sm">
+          <span className={`h-1.5 w-1.5 rounded-full ${isPaid ? "bg-[#f59e0b]" : "bg-[#2fbf71]"}`} />
+          {isPaid ? "需提取码" : "免费"}
         </div>
 
-        <div className="pt-5">
-          {isImageCard(item.card) ? (
-            <div className="overflow-hidden rounded-[12px] border border-white/80 bg-white shadow-[0_14px_30px_-28px_rgba(83,110,122,0.4)]">
-              <img
-                src={item.card.previewUrl}
-                alt={item.card.title}
-                className="h-20 w-full object-cover"
-              />
-            </div>
-          ) : (
-            <div className="flex h-20 items-end rounded-[12px] border border-dashed border-[var(--outline-variant)] bg-[linear-gradient(135deg,rgba(209,234,247,0.36),rgba(246,223,233,0.34))] p-2">
-              <p className="max-w-[12rem] text-[9px] leading-3.5 text-[var(--foreground)]/66">
-                {defaultCardDescription(item.card)}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
+        <span className="absolute right-2.5 top-2.5 rounded-full bg-[rgba(0,0,0,0.55)] px-2 py-0.5 text-[9px] font-black text-white/95 backdrop-blur-sm">
+          #{formatCardCode(item.card.id)}
+        </span>
+      </Link>
 
-      <div className="flex flex-1 flex-col px-1 pb-1 pt-1.5">
+      <div className="flex flex-1 flex-col p-3">
         <div className="min-w-0">
-          <h2 className="line-clamp-1 text-[13px] font-black leading-[1.15] text-[var(--foreground)]">
-            {item.card.title}
+          <h2 className="line-clamp-1 text-sm font-black text-[var(--foreground)]">
+            <Link href={cardHref}>{item.card.title}</Link>
           </h2>
           <p className="sr-only">{defaultCardDescription(item.card)}</p>
         </div>
 
-        <div className="mt-2 grid grid-cols-2 gap-1">
-          <StatCard label="下载" value={String(item.stats.downloadCount)} />
-          <StatCard label="收藏" value={String(item.stats.favoriteCount)} />
+        <div className="mt-1.5 flex items-center gap-3 text-[10px] font-bold text-[var(--foreground)]/60">
+          <span className="inline-flex items-center gap-1">
+            <DownloadMiniIcon className="h-3 w-3" />
+            {item.stats.downloadCount}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <HeartMiniIcon className="h-3 w-3" />
+            {item.stats.favoriteCount}
+          </span>
         </div>
 
-        <div className="mt-auto flex flex-wrap gap-1 pt-2">
-          <Link
-            href={cardHref}
-            className="btn-primary inline-flex min-h-[32px] flex-1 items-center justify-center rounded-full px-2 py-1 text-[10px] font-black"
-          >
-            查看卡片
-          </Link>
+        <div className="mt-auto pt-3">
           <FavoriteButton
             cardId={item.card.id}
             initialFavorited
             initialCount={item.stats.favoriteCount}
-            size="compact"
+            className="!w-full !justify-center !rounded-full !border !border-[var(--outline)]/15 !bg-[var(--surface-container)] !px-3 !py-1.5 !text-[10px] !font-black !text-[var(--brand)] !shadow-sm hover:!bg-[var(--tertiary)]/60"
             onToggle={(nextFavorited) => {
               if (!nextFavorited) {
                 onUnfavorited?.();
@@ -326,66 +315,82 @@ export function FavoriteCard({
 }
 
 export function HistoryItem({ item }: { item: DashboardCard }) {
+  const editHref = `/creator/cards/${encodeURIComponent(item.card.id)}/edit`;
+
   return (
-    <div className="dream-panel-soft flex flex-col gap-4 rounded-[24px] p-5 sm:flex-row sm:items-center sm:justify-between">
+    <Link
+      href={editHref}
+      className="flex flex-col gap-3 rounded-[1rem] border border-[var(--outline)]/20 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
+    >
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-lg font-black text-[var(--foreground)]">
+          <h3 className="text-sm font-black text-[var(--foreground)]">
             {item.card.title}
           </h3>
           <AccessModeBadge mode={item.card.accessMode} />
         </div>
-        <p className="mt-2 text-sm text-[var(--foreground)]/62">
+        <p className="mt-1 text-[11px] font-bold text-[var(--foreground)]/62">
           最近更新于 {formatDate(item.card.updatedAt)}
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <StatusBadge>{getVisibilityLabel(item.card.visibility)}</StatusBadge>
-        <StatusBadge>{getStatusLabel(item.card.status)}</StatusBadge>
-        <StatusBadge>{getReviewStatusLabel(item.card.reviewStatus)}</StatusBadge>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap gap-1">
+          <StatusBadge>{getVisibilityLabel(item.card.visibility)}</StatusBadge>
+          <StatusBadge>{getStatusLabel(item.card.status)}</StatusBadge>
+          <StatusBadge>{getReviewStatusLabel(item.card.reviewStatus)}</StatusBadge>
+        </div>
+        <ChevronRightIcon className="hidden h-4 w-4 text-[var(--foreground)]/30 sm:block" />
       </div>
-    </div>
+    </Link>
   );
 }
 
 function StatusBadge({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex whitespace-nowrap rounded-full bg-white/86 px-1.5 py-0.5 text-[8px] font-black text-[var(--foreground)]/66">
+    <span className="inline-flex whitespace-nowrap rounded-full bg-[var(--surface-container-high)] px-1.5 py-0.5 text-[9px] font-black text-[var(--foreground)]/70">
       {children}
     </span>
   );
 }
 
-function StatCard({
-  label,
-  value,
-  title,
-  compact = false,
-  mono = false,
-}: {
-  label: string;
-  value: string;
-  title?: string;
-  compact?: boolean;
-  mono?: boolean;
-}) {
+function ChevronRightIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (
-    <div className="flex min-h-[54px] flex-col justify-between rounded-[11px] bg-white/78 px-1 py-1.5 text-center">
-      <dt className="text-[8px] font-black uppercase tracking-[0.06em] text-[var(--foreground)]/42">
-        {label}
-      </dt>
-      <dd
-        title={title}
-        className={`mt-2 font-black text-[var(--foreground)] ${
-          compact ? "text-[9px] leading-3.5" : "text-[13px]"
-        } ${mono ? "font-mono tracking-[0.04em]" : ""}`}
-      >
-        <span className="block truncate">
-          {value}
-        </span>
-      </dd>
-    </div>
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <path d="m9.47 5.47 1.06-1.06 6.28 6.28-6.28 6.28-1.06-1.06L14.13 12 9.47 7.34Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function DownloadMiniIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <path d="M11.25 4.5h1.5v8.19l2.97-2.97 1.06 1.06L12 15.56l-4.78-4.78 1.06-1.06 2.97 2.97V4.5ZM5.25 17.25h13.5v1.5H5.25v-1.5Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function CalendarMiniIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <path d="M7.5 3.75h1.5v1.5h6v-1.5h1.5v1.5h1.5a2.25 2.25 0 0 1 2.25 2.25v10.5A2.25 2.25 0 0 1 18 20.25H6a2.25 2.25 0 0 1-2.25-2.25V7.5A2.25 2.25 0 0 1 6 5.25h1.5v-1.5ZM6 9.75v8.25c0 .41.34.75.75.75h10.5a.75.75 0 0 0 .75-.75V9.75H6Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function KeyMiniIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <path d="M13.5 6a4.5 4.5 0 1 0 3.96 6.64l4.79.01v1.5h-1.5v1.5h-1.5v1.5h-2.25V15.9h-1.33A4.5 4.5 0 0 0 13.5 6Zm0 1.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function HeartMiniIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <path d="M12 20.3 4.94 13.6a4.67 4.67 0 0 1 6.6-6.6L12 7.45l.46-.45a4.67 4.67 0 0 1 6.6 6.6L12 20.3Z" fill="currentColor" />
+    </svg>
   );
 }
 

@@ -147,7 +147,7 @@ export function useShareCardAccessCode({
       );
       setSuccess(
         accessMode === "paid"
-          ? "付费卡片提取码已保存。"
+          ? "已保存为需提取码模式，提取码已生效。"
           : "已切换为免费卡片，无需提取码。",
       );
     } catch (submitError) {

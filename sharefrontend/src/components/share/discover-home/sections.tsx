@@ -1,10 +1,7 @@
 import Link from "next/link";
 import type { VirtualItem, Virtualizer } from "@tanstack/react-virtual";
 
-import {
-  AccessModeFilterPills,
-  type ShareAccessModeFilter,
-} from "@/components/share/access-mode-filter";
+import type { ShareAccessModeFilter } from "@/components/share/access-mode-filter";
 import { AccessModeBadge } from "@/components/share/access-mode-badge";
 import { FavoriteButton } from "@/components/share/favorite-button";
 import {
@@ -33,7 +30,7 @@ export function DiscoverSearchBar(props: {
       <button
         type="button"
         aria-label="搜索"
-        className="absolute bottom-1.5 right-1.5 top-1.5 flex h-12 w-12 items-center justify-center rounded-full border-[4px] border-[var(--outline)] bg-[#cdb4f3] transition-all hover:opacity-90"
+        className="absolute bottom-1.5 right-1.5 top-1.5 flex h-12 w-12 items-center justify-center rounded-full bg-[#cdb4f3] shadow-sm transition-all hover:opacity-90"
       >
         <SearchIcon />
       </button>
@@ -48,50 +45,30 @@ export function DiscoverChips(props: {
   const { activeChip, setActiveChip } = props;
 
   return (
-    <div className="no-scrollbar flex items-end justify-between gap-3 overflow-x-auto px-1 py-1 lg:gap-5">
-      {FILTER_CHIPS.map((chip) => {
-        const active = chip === activeChip;
-        return (
-          <button
-            key={chip}
-            type="button"
-            onClick={() => setActiveChip(chip)}
-            className={`group shrink-0 cursor-pointer rounded-[1.6rem] border-[3px] px-3 py-2 transition-all ${
-              active
-                ? "border-[var(--outline)] bg-white shadow-[0_8px_0_rgba(46,40,86,0.18)]"
-                : "border-transparent bg-transparent hover:border-[var(--outline)]/20 hover:bg-white/35"
-            }`}
-          >
-            <span className="flex flex-col items-center gap-2">
-              <span
-                className={`flex h-12 w-12 items-center justify-center rounded-[1.1rem] border-[4px] border-[var(--outline)] xl:h-14 xl:w-14 ${
-                  CHIP_VISUALS[chip].className
-                } ${
-                  active
-                    ? "shadow-[0_10px_18px_-12px_rgba(46,40,86,0.75)]"
-                    : "group-hover:-translate-y-0.5"
-                } transition-all group-hover:opacity-90`}
-              >
+    <div className="relative">
+      <div className="no-scrollbar flex items-center gap-2 overflow-x-auto px-1 py-1">
+        {FILTER_CHIPS.map((chip) => {
+          const active = chip === activeChip;
+          return (
+            <button
+              key={chip}
+              type="button"
+              onClick={() => setActiveChip(chip)}
+              className={`group shrink-0 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-black transition-all ${
+                active
+                  ? `${CHIP_VISUALS[chip].className} border-transparent text-[var(--foreground)] shadow-sm`
+                  : "border-[var(--outline)]/40 bg-white/60 text-[var(--foreground)]/75 hover:border-[var(--outline)] hover:bg-white"
+              }`}
+            >
+              <span className={`flex h-5 w-5 items-center justify-center rounded-md ${active ? "bg-white/40" : CHIP_VISUALS[chip].className}`}>
                 <ChipIcon chip={chip} />
               </span>
-              <span
-                className={`text-sm font-extrabold xl:text-base ${
-                  active ? "text-[var(--foreground)]" : "text-[var(--foreground)]/82"
-                }`}
-              >
-                {CHIP_LABELS[chip]}
-              </span>
-              <span
-                className={`block rounded-full transition-all ${
-                  active
-                    ? "h-1.5 w-8 bg-[var(--brand-strong)]"
-                    : "h-1.5 w-3 bg-transparent group-hover:bg-[var(--foreground)]/18"
-                }`}
-              />
-            </span>
-          </button>
-        );
-      })}
+              <span>{CHIP_LABELS[chip]}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[var(--background)] to-transparent" />
     </div>
   );
 }
@@ -100,17 +77,31 @@ export function DiscoverAccessModeFilters(props: {
   value: ShareAccessModeFilter;
   onChange: (value: ShareAccessModeFilter) => void;
 }) {
+  const options: Array<{ value: ShareAccessModeFilter; label: string }> = [
+    { value: "all", label: "全部" },
+    { value: "free", label: "免费" },
+    { value: "paid", label: "需提取码" },
+  ];
+
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] border-[4px] border-[var(--outline)] bg-white px-4 py-3">
-      <div>
-        <div className="text-sm font-black text-[var(--foreground)]">
-          访问方式
-        </div>
-        <div className="mt-1 text-xs font-bold text-[var(--foreground)]/56">
-          快速筛选免费卡片或需要提取码的卡片
-        </div>
-      </div>
-      <AccessModeFilterPills value={props.value} onChange={props.onChange} />
+    <div className="inline-flex items-center rounded-full border-2 border-[var(--outline)] bg-white p-1 shadow-sm">
+      {options.map((option) => {
+        const active = option.value === props.value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => props.onChange(option.value)}
+            className={`relative rounded-full px-4 py-1.5 text-sm font-black transition-all ${
+              active
+                ? "bg-[var(--foreground)] text-white shadow-sm"
+                : "text-[var(--foreground)]/70 hover:bg-[var(--foreground)]/5"
+            }`}
+          >
+            {option.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -142,15 +133,18 @@ export function DiscoverGridSkeleton(props: {
 
 export function DiscoverNoResult(props: { onReset: () => void }) {
   return (
-    <div className="rounded-3xl border-[4px] border-[var(--outline)] bg-white px-5 py-9 text-center text-[var(--foreground)]">
-      <p className="text-2xl font-black">没有找到匹配内容</p>
-      <p className="mt-3 font-bold">
-        当前筛选无结果，请尝试切换分类或关键词。
+    <div className="flex flex-col items-center justify-center rounded-[2rem] border-2 border-[var(--outline)] bg-white px-6 py-14 text-center shadow-sm">
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-[var(--outline)] bg-[var(--secondary)]">
+        <SearchIcon />
+      </div>
+      <p className="mt-5 text-xl font-black text-[var(--foreground)]">没有找到匹配内容</p>
+      <p className="mt-2 max-w-xs text-sm font-bold text-[var(--foreground)]/62">
+        当前筛选无结果，试试切换分类、调整访问方式或换个关键词。
       </p>
       <button
         type="button"
         onClick={props.onReset}
-        className="btn-primary mt-4 rounded-full px-5 py-2.5 font-black"
+        className="btn-primary mt-5 rounded-full px-5 py-2.5 text-sm font-black"
       >
         重置筛选
       </button>
@@ -232,25 +226,30 @@ export function DiscoverMetrics(props: {
 }) {
   const { loading, filteredCount, sourceCount, loadingMore, hasMore } = props;
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-4 text-xs font-bold text-[var(--foreground)]/50">
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--outline)] border-t-[var(--primary)]" />
+        正在加载...
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-wrap gap-2 text-sm">
-      <span className="metric-pill rounded-full px-3 py-1.5 font-black">
-        {loading ? "加载中..." : `已展示 ${filteredCount} 条`}
-      </span>
-      {!loading && filteredCount !== sourceCount ? (
-        <span className="metric-pill rounded-full px-3 py-1.5 font-black">
-          共加载 ${sourceCount} 条
-        </span>
-      ) : null}
+    <div className="flex flex-col items-center gap-1 py-4 text-xs font-bold text-[var(--foreground)]/50">
+      <div className="flex items-center gap-2">
+        <span>已展示 {filteredCount} 条</span>
+        {filteredCount !== sourceCount ? (
+          <>
+            <span className="h-1 w-1 rounded-full bg-[var(--foreground)]/30" />
+            <span>共 {sourceCount} 条</span>
+          </>
+        ) : null}
+      </div>
       {loadingMore ? (
-        <span className="metric-pill rounded-full px-3 py-1.5 font-black">
-          正在加载更多...
-        </span>
-      ) : null}
-      {!loading && !hasMore ? (
-        <span className="metric-pill rounded-full px-3 py-1.5 font-black">
-          已全部加载
-        </span>
+        <span className="text-[var(--primary)]">正在加载更多...</span>
+      ) : !hasMore ? (
+        <span>已全部加载</span>
       ) : null}
     </div>
   );
@@ -260,48 +259,60 @@ function CardItem({ card, index }: { card: HomeFeedCard; index: number }) {
   return (
     <Link
       href={card.href}
-      className={`${card.bgClass} dream-card card-hover-lift fade-slide-in flex h-full flex-col p-3.5`}
+      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border-2 border-[var(--outline)] bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md"
       style={{ animationDelay: `${(index % 12) * 45}ms` }}
     >
-      <div className="relative mb-2.5">
+      <div className="relative aspect-[3/2] overflow-hidden bg-[#f4f6ff]">
         <div className="absolute left-2 top-2 z-10">
-          <span className="rounded-full border-[3px] border-[var(--outline)] bg-white px-3 py-0.5 text-xs font-black text-[var(--foreground)]">
+          <span className="rounded-full border border-white/50 bg-white/90 px-2 py-0.5 text-[10px] font-black text-[var(--foreground)] backdrop-blur-sm">
             #{CHIP_LABELS[card.tags[0] ?? "all"]}
           </span>
         </div>
-        <div className="aspect-[4/3] overflow-hidden rounded-2xl border-[3px] border-[var(--outline)] bg-white">
-          {card.imageUrl ? (
-            <img
-              src={card.imageUrl}
-              className="h-full w-full object-cover object-center"
-              alt={card.title}
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-[#ecefff] text-sm font-bold text-[var(--text-subtle)]">
-              暂无封面
-            </div>
-          )}
+
+        <div className="absolute right-2 top-2 z-10">
+          <AccessModeBadge
+            mode={card.accessMode}
+            compact
+            className="border border-white/50 shadow-sm"
+          />
         </div>
+
+        <div className="absolute bottom-2 right-2 z-10">
+          <FavoriteButton
+            cardId={card.id}
+            initialFavorited={card.isFavorited}
+            initialCount={card.favoriteCount}
+            size="compact"
+          />
+        </div>
+
+        {card.imageUrl ? (
+          <img
+            src={card.imageUrl}
+            className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+            alt={card.title}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-sm font-bold text-[var(--text-subtle)]">
+            暂无封面
+          </div>
+        )}
       </div>
 
-      <h4 className="px-1 text-[1.5rem] font-black text-[var(--foreground)]">
-        {card.title}
-      </h4>
-      <p className="mt-1.5 line-clamp-2 text-sm font-bold text-[var(--on-surface-variant)]">
-        {card.description}
-      </p>
-      <div className="mt-2.5 flex items-center justify-between px-1 text-xs font-bold text-[var(--foreground)]/68">
-        <span>{card.creatorName}</span>
-        <span>{card.metric}</span>
-      </div>
-      <div className="mt-2 flex items-center justify-between px-1">
-        <AccessModeBadge mode={card.accessMode} compact />
-        <FavoriteButton
-          cardId={card.id}
-          initialFavorited={card.isFavorited}
-          initialCount={card.favoriteCount}
-          size="compact"
-        />
+      <div className="flex flex-1 flex-col p-3">
+        <h4 className="line-clamp-1 text-base font-black text-[var(--foreground)]">
+          {card.title}
+        </h4>
+        <p className="mt-1 line-clamp-2 text-xs font-bold leading-relaxed text-[var(--foreground)]/60">
+          {card.description}
+        </p>
+        <div className="mt-auto flex items-center justify-between gap-2 pt-2 text-[11px] font-bold text-[var(--foreground)]/55">
+          <span className="truncate">{card.creatorName}</span>
+          <span className="inline-flex shrink-0 items-center gap-1">
+            <DownloadIcon className="h-3 w-3" />
+            {card.metric}
+          </span>
+        </div>
       </div>
     </Link>
   );
@@ -309,14 +320,16 @@ function CardItem({ card, index }: { card: HomeFeedCard; index: number }) {
 
 function CardSkeleton() {
   return (
-    <div className="dream-card animate-pulse bg-white p-3.5">
-      <div className="aspect-[4/3] rounded-2xl border-[3px] border-[var(--outline)] bg-[#ecefff]" />
-      <div className="mt-3 h-5 rounded-full bg-[#d9d3ee]" />
-      <div className="mt-2 h-4 rounded-full bg-[#ecefff]" />
-      <div className="mt-1.5 h-4 w-4/5 rounded-full bg-[#ecefff]" />
-      <div className="mt-3 flex items-center justify-between">
-        <div className="h-3.5 w-24 rounded-full bg-[#d9d3ee]" />
-        <div className="h-3.5 w-12 rounded-full bg-[#d9d3ee]" />
+    <div className="animate-pulse overflow-hidden rounded-2xl border-2 border-[var(--outline)] bg-white shadow-sm">
+      <div className="aspect-[3/2] bg-[#ecefff]" />
+      <div className="p-3">
+        <div className="h-4 rounded-full bg-[#d9d3ee]" />
+        <div className="mt-2 h-3 rounded-full bg-[#ecefff]" />
+        <div className="mt-1.5 h-3 w-4/5 rounded-full bg-[#ecefff]" />
+        <div className="mt-3 flex items-center justify-between">
+          <div className="h-3 w-20 rounded-full bg-[#d9d3ee]" />
+          <div className="h-3 w-10 rounded-full bg-[#ecefff]" />
+        </div>
       </div>
     </div>
   );
@@ -443,3 +456,22 @@ function MountainIcon() {
     </svg>
   );
 }
+
+function DownloadIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+

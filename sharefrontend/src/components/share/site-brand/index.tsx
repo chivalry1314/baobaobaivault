@@ -14,7 +14,7 @@ function BrandBadge({ className }: { className?: string }) {
       <img
         src={shareSiteBrand.logoImageSrc}
         alt={shareSiteBrand.siteShortName}
-        className={className}
+        className={`${className} object-cover`}
       />
     );
   }
@@ -45,7 +45,7 @@ export function ShareSiteBrandMark({
       <BrandBadge
         className={
           iconClassName ??
-          "relative flex h-12 w-12 -rotate-6 items-center justify-center rounded-xl border-[3px] border-[var(--outline)] bg-white text-sm font-black text-[var(--foreground)]"
+          "relative flex h-14 w-14 -rotate-6 items-center justify-center overflow-hidden rounded-2xl border-2 border-[var(--outline)] bg-white text-sm font-black text-[var(--foreground)] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
         }
       />
       <div>

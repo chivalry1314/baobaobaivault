@@ -13,9 +13,10 @@ export function FavoriteButton(props: {
   initialFavorited?: boolean;
   initialCount?: number;
   size?: FavoriteButtonSize;
+  className?: string;
   onToggle?: (nextFavorited: boolean, nextCount: number) => void;
 }) {
-  const { cardId, initialFavorited = false, initialCount = 0, size = "default", onToggle } = props;
+  const { cardId, initialFavorited = false, initialCount = 0, size = "default", className = "", onToggle } = props;
   const router = useRouter();
   const { user } = useShareSession();
 
@@ -69,9 +70,9 @@ export function FavoriteButton(props: {
         type="button"
         onClick={handleClick}
         disabled={pending}
-        className={`inline-flex items-center gap-1 rounded-full border-[3px] border-[var(--outline)] bg-white px-2 py-1 text-xs font-black transition-all ${
+        className={`inline-flex items-center gap-1 rounded-full border-2 border-[var(--outline)] bg-white px-2 py-1 text-xs font-black shadow-sm transition-all ${
           favorited ? "text-[var(--brand)]" : "text-[var(--foreground)]/70"
-        } disabled:opacity-60`}
+        } disabled:opacity-60 ${className}`}
         aria-label={favorited ? "取消收藏" : "收藏"}
       >
         <HeartIcon filled={favorited} className="h-3.5 w-3.5" />
@@ -85,9 +86,9 @@ export function FavoriteButton(props: {
       type="button"
       onClick={handleClick}
       disabled={pending}
-      className={`inline-flex items-center gap-2 rounded-full border-[3px] border-[var(--outline)] bg-white px-4 py-2 text-base font-black transition-all ${
+      className={`inline-flex items-center gap-2 rounded-full border-2 border-[var(--outline)] bg-white px-4 py-2 text-base font-black shadow-sm transition-all ${
         favorited ? "text-[var(--brand)]" : "text-[var(--foreground)]"
-      } disabled:opacity-60`}
+      } disabled:opacity-60 ${className}`}
       aria-label={favorited ? "取消收藏" : "收藏"}
     >
       <HeartIcon filled={favorited} className="h-5 w-5" />

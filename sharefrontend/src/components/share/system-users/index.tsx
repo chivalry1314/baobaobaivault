@@ -206,55 +206,55 @@ export function ShareSystemUsersPage() {
       {actionError ? <ErrorNotice message={actionError} /> : null}
       {actionNotice ? <SuccessNotice message={actionNotice} /> : null}
 
-      <section className="dream-panel px-6 py-6 sm:px-8">
-        <div className="flex flex-col gap-4 border-b border-[rgba(220,173,187,0.35)] pb-4">
-          <div>
-            <h2 className="text-xl font-black text-[var(--foreground)]">站点用户</h2>
-            <p className="mt-2 text-sm font-bold text-[var(--foreground)]/65">
-              第 {safePage} / {totalPages} 页，共 {total} 个匹配用户
-            </p>
-          </div>
-
-          <form className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_auto]" onSubmit={handleSubmitFilters}>
-            <label className="block">
-              <span className="mb-2 block text-sm font-black text-[var(--foreground)]/72">搜索用户</span>
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="按邮箱、用户名、昵称或角色搜索"
-                className="dream-input w-full px-4 py-3"
-              />
-            </label>
-
-            <label className="block">
-              <span className="mb-2 block text-sm font-black text-[var(--foreground)]/72">角色筛选</span>
-              <select
-                value={roleFilter}
-                onChange={(event) => setRoleFilter(event.target.value as "all" | ShareUserRole)}
-                className="dream-input w-full px-4 py-3"
-              >
-                <option value="all">全部角色</option>
-                <option value="viewer">浏览者</option>
-                <option value="creator">创作者</option>
-                <option value="manager">管理员</option>
-              </select>
-            </label>
-
-            <div className="flex items-end">
-              <button type="submit" className="btn-primary w-full rounded-full px-5 py-3 text-sm font-black lg:w-auto">
-                应用筛选
-              </button>
-            </div>
-          </form>
+      <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
+        <div className="border-b border-[var(--outline)]/20 pb-3">
+          <h2 className="text-base font-black text-[var(--foreground)]">站点用户</h2>
+          <p className="mt-0.5 text-[10px] font-bold text-[var(--foreground)]/55">
+            第 {safePage} / {totalPages} 页，共 {total} 个匹配用户
+          </p>
         </div>
 
-        <div className="mt-5 divide-y divide-dashed divide-[var(--outline-variant)]/65">
+        <form className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_auto]" onSubmit={handleSubmitFilters}>
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-black text-[var(--foreground)]/65">搜索用户</span>
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="按邮箱、用户名、昵称或角色搜索"
+              className="w-full rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-2 text-xs font-bold text-[var(--foreground)] placeholder:text-[var(--foreground)]/35 focus:border-[var(--outline)] focus:bg-white focus:outline-none"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-black text-[var(--foreground)]/65">角色筛选</span>
+            <select
+              value={roleFilter}
+              onChange={(event) => setRoleFilter(event.target.value as "all" | ShareUserRole)}
+              className="w-full rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-2 text-xs font-bold text-[var(--foreground)] focus:border-[var(--outline)] focus:bg-white focus:outline-none"
+            >
+              <option value="all">全部角色</option>
+              <option value="viewer">浏览者</option>
+              <option value="creator">创作者</option>
+              <option value="manager">管理员</option>
+            </select>
+          </label>
+
+          <div className="flex items-end">
+            <button type="submit" className="w-full rounded-full bg-[var(--button-primary)] px-4 py-2 text-xs font-black shadow-sm transition hover:bg-[var(--button-primary-hover)] lg:w-auto">
+              应用筛选
+            </button>
+          </div>
+        </form>
+
+        <div className="mt-3 space-y-2">
           {loading ? (
-            <p className="py-4 text-sm font-bold text-[var(--foreground)]/65">正在加载用户列表...</p>
+            <p className="text-xs font-bold text-[var(--foreground)]/55">正在加载用户列表...</p>
           ) : items.length === 0 ? (
-            <p className="py-4 text-sm font-bold text-[var(--foreground)]/65">
-              {submittedSearch || submittedRoleFilter !== "all" ? "没有符合筛选条件的用户。" : "暂时没有可管理用户。"}
-            </p>
+            <div className="rounded-[1.2rem] border-2 border-dashed border-[var(--outline)]/25 bg-[var(--surface-container)] px-4 py-5 text-center">
+              <p className="text-xs font-black text-[var(--foreground)]/60">
+                {submittedSearch || submittedRoleFilter !== "all" ? "没有符合筛选条件的用户。" : "暂时没有可管理用户。"}
+              </p>
+            </div>
           ) : (
             items.map((item) => {
               const displayName = item.nickname.trim() || item.username.trim() || item.email;
@@ -265,69 +265,74 @@ export function ShareSystemUsersPage() {
               const actionPending = updating || deleting || resetting;
 
               return (
-                <div key={item.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate text-[1.05rem] font-black text-[var(--foreground)]">
-                        {displayName}
-                        {isSelf ? "（我）" : ""}
-                      </p>
-                      <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[var(--foreground)]/72">
-                        {roleLabel(item.role)}
-                      </span>
-                      {item.forcePasswordChange ? (
-                        <span className="rounded-full border border-[#f3c8ad] bg-[#fff4ec] px-3 py-1 text-xs font-black text-[#9a3412]">
-                          下次登录需改密
+                <article key={item.id} className="rounded-[1.1rem] border-2 border-[var(--outline)] bg-white p-3 shadow-sm transition hover:shadow-md">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className="truncate text-sm font-black text-[var(--foreground)]">
+                          {displayName}
+                          {isSelf ? "（我）" : ""}
+                        </p>
+                        <span className="rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-1.5 py-0.5 text-[10px] font-black text-[var(--foreground)]/72">
+                          {roleLabel(item.role)}
                         </span>
-                      ) : null}
+                        {item.forcePasswordChange ? (
+                          <span className="rounded-full border border-[#f3c8ad] bg-[#fff4ec] px-1.5 py-0.5 text-[10px] font-black text-[#9a3412]">
+                            下次登录需改密
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 text-[10px] font-bold text-[var(--foreground)]/50">
+                        <span className="truncate">{item.email}</span>
+                        <span className="text-[var(--outline)]">·</span>
+                        <span>@{item.username || "-"}</span>
+                        <span className="text-[var(--outline)]">·</span>
+                        <span>{item.status || "active"}</span>
+                      </div>
                     </div>
-                    <p className="mt-1 truncate text-xs text-[var(--foreground)]/58">{item.email}</p>
-                    <p className="mt-1 text-xs font-bold text-[var(--foreground)]/52">
-                      用户名：{item.username || "-"} · 状态：{item.status || "active"}
-                    </p>
-                  </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <RoleChip active={item.role === "viewer"} disabled={actionPending || isSelf} onClick={() => void handleUpdateRole(item, "viewer")}>
-                      浏览者
-                    </RoleChip>
-                    <RoleChip active={item.role === "creator"} disabled={actionPending || isSelf} onClick={() => void handleUpdateRole(item, "creator")}>
-                      创作者
-                    </RoleChip>
-                    <RoleChip active={item.role === "manager"} disabled={actionPending} onClick={() => void handleUpdateRole(item, "manager")}>
-                      管理员
-                    </RoleChip>
-                    {!isSelf ? (
-                      <>
-                        <button
-                          type="button"
-                          disabled={actionPending}
-                          onClick={() => void handleResetPassword(item)}
-                          className="rounded-full border border-[rgba(120,77,255,0.18)] bg-[rgba(120,77,255,0.08)] px-3.5 py-2 text-xs font-black text-[var(--foreground)] transition hover:bg-[rgba(120,77,255,0.14)] disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {resetting ? "重置中..." : "重置密码"}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={actionPending}
-                          onClick={() => void handleDeleteUser(item)}
-                          className="rounded-full border border-[#ef9a9a] bg-[#fff2f1] px-3.5 py-2 text-xs font-black text-[#b42318] transition hover:bg-[#ffe5e3] disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {deleting ? "注销中..." : "注销用户"}
-                        </button>
-                      </>
-                    ) : (
-                      <span className="text-xs font-bold text-[var(--foreground)]/55">本人不可降级、重置或注销</span>
-                    )}
-                    {updating ? <span className="text-xs font-bold text-[var(--foreground)]/55">更新中...</span> : null}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <RoleChip active={item.role === "viewer"} disabled={actionPending || isSelf} onClick={() => void handleUpdateRole(item, "viewer")}>
+                        浏览者
+                      </RoleChip>
+                      <RoleChip active={item.role === "creator"} disabled={actionPending || isSelf} onClick={() => void handleUpdateRole(item, "creator")}>
+                        创作者
+                      </RoleChip>
+                      <RoleChip active={item.role === "manager"} disabled={actionPending} onClick={() => void handleUpdateRole(item, "manager")}>
+                        管理员
+                      </RoleChip>
+                      {!isSelf ? (
+                        <>
+                          <button
+                            type="button"
+                            disabled={actionPending}
+                            onClick={() => void handleResetPassword(item)}
+                            className="rounded-full border border-[rgba(120,77,255,0.18)] bg-[rgba(120,77,255,0.08)] px-2.5 py-1 text-[10px] font-black text-[var(--foreground)] transition hover:bg-[rgba(120,77,255,0.14)] disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {resetting ? "重置中..." : "重置密码"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={actionPending}
+                            onClick={() => void handleDeleteUser(item)}
+                            className="rounded-full border border-[#ef9a9a] bg-[#fff2f1] px-2.5 py-1 text-[10px] font-black text-[#b42318] transition hover:bg-[#ffe5e3] disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {deleting ? "注销中..." : "注销用户"}
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-[10px] font-bold text-[var(--foreground)]/55">本人不可降级、重置或注销</span>
+                      )}
+                      {updating ? <span className="text-[10px] font-bold text-[var(--foreground)]/55">更新中...</span> : null}
+                    </div>
                   </div>
-                </div>
+                </article>
               );
             })
           )}
         </div>
 
-        <PaginationControls page={safePage} totalPages={totalPages} onPageChange={(nextPage) => void handlePageChange(nextPage)} className="mt-6" />
+        <PaginationControls page={safePage} totalPages={totalPages} onPageChange={(nextPage) => void handlePageChange(nextPage)} className="mt-4" />
       </section>
     </SystemWorkspace>
   );
@@ -351,8 +356,10 @@ function RoleChip(props: { active: boolean; disabled: boolean; onClick: () => vo
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`rounded-full px-3.5 py-2 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${
-        active ? "bg-[var(--foreground)] text-white" : "btn-subtle text-[var(--foreground)]/72"
+      className={`rounded-full px-2 py-1 text-[10px] font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${
+        active
+          ? "bg-[var(--button-primary)] text-[var(--foreground)] shadow-sm"
+          : "border border-[var(--outline)]/20 bg-white text-[var(--foreground)]/72 hover:bg-[var(--surface-container)]"
       }`}
     >
       {children}
@@ -363,7 +370,7 @@ function RoleChip(props: { active: boolean; disabled: boolean; onClick: () => vo
 function SystemLoadingPage({ currentPath, text }: { currentPath: string; text: string }) {
   return (
     <SystemWorkspace currentPath={currentPath} title="系统管理" description={text}>
-      <div className="dream-panel px-6 py-8 text-sm font-bold text-[var(--foreground)]/70">{text}</div>
+      <div className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white px-5 py-7 text-sm font-bold text-[var(--foreground)]/70 shadow-sm">{text}</div>
     </SystemWorkspace>
   );
 }
@@ -371,7 +378,7 @@ function SystemLoadingPage({ currentPath, text }: { currentPath: string; text: s
 function SystemForbiddenPage({ currentPath }: { currentPath: string }) {
   return (
     <SystemWorkspace currentPath={currentPath} title="系统管理" description="当前账号不是系统初始化超级管理员，无法访问此页面。">
-      <div className="dream-panel px-6 py-8">
+      <div className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white px-5 py-7 shadow-sm">
         <p className="text-sm font-bold leading-7 text-[var(--foreground)]/70">当前账号不是系统初始化超级管理员，无法访问此页面。</p>
       </div>
     </SystemWorkspace>
@@ -379,9 +386,9 @@ function SystemForbiddenPage({ currentPath }: { currentPath: string }) {
 }
 
 function ErrorNotice({ message }: { message: string }) {
-  return <p className="dream-panel-soft border-[#f3c8ad] bg-[#fff4ec] px-5 py-4 text-sm font-bold text-[#9a3412]">{message}</p>;
+  return <p className="rounded-[1.1rem] border border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-xs font-black text-[#9a3412]">{message}</p>;
 }
 
 function SuccessNotice({ message }: { message: string }) {
-  return <p className="dream-panel-soft border-[#b7dfc8] bg-[#effaf3] px-5 py-4 text-sm font-bold text-[#166534]">{message}</p>;
+  return <p className="rounded-[1.1rem] border border-[#b7dfc8] bg-[#effaf3] px-4 py-3 text-xs font-black text-[#166534]">{message}</p>;
 }

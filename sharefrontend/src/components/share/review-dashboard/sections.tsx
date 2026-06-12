@@ -10,16 +10,11 @@ import type { ReviewDashboardItem } from "@/lib/shared";
 
 export function ReviewHeader() {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[rgba(220,173,187,0.35)] pb-4">
-      <div>
-        <h1 className="text-2xl font-black text-[var(--foreground)]">审核中心</h1>
-        <p className="mt-1 text-sm font-bold text-[var(--text-muted)]">
-          审批创作者提交的卡片，审核通过后才会在首页公开展示。
-        </p>
-      </div>
-      <Link href="/creator" className="btn-subtle rounded-full px-4 py-2 text-sm font-black">
-        返回创作中心
-      </Link>
+    <div className="border-b border-[var(--outline)]/20 pb-3">
+      <h1 className="text-xl font-black text-[var(--foreground)]">审核中心</h1>
+      <p className="mt-0.5 text-xs font-bold text-[var(--foreground)]/58">
+        审批创作者提交的卡片，审核通过后才会在首页公开展示。
+      </p>
     </div>
   );
 }
@@ -29,43 +24,39 @@ export function ReviewFilterBar(props: {
   handleFilter: (nextFilter: ReviewFilter) => void;
 }) {
   const { statusFilter, handleFilter } = props;
+  const options: { value: ReviewFilter; label: string; activeClassName: string }[] = [
+    { value: "", label: "全部待处理", activeClassName: "border-[var(--primary)] bg-[var(--primary)]/8 text-[var(--foreground)]" },
+    { value: "pending", label: "待审核", activeClassName: "border-[#d67a33] bg-[#fff1df] text-[#8d4708]" },
+    { value: "rejected", label: "已驳回", activeClassName: "border-[#cf425d] bg-[#fff5f7] text-[#a31d3c]" },
+    { value: "approved", label: "已通过", activeClassName: "border-[#2d8d62] bg-[#e9fff2] text-[#11613f]" },
+  ];
+
   return (
-    <div className="mt-4 flex flex-wrap items-center gap-2">
-      <button
-        type="button"
-        onClick={() => handleFilter("")}
-        className={`rounded-full px-4 py-2 text-xs font-black ${statusFilter === "" ? "btn-primary" : "btn-subtle"}`}
-      >
-        全部待处理
-      </button>
-      <button
-        type="button"
-        onClick={() => handleFilter("pending")}
-        className={`rounded-full px-4 py-2 text-xs font-black ${statusFilter === "pending" ? "btn-primary" : "btn-subtle"}`}
-      >
-        待审核
-      </button>
-      <button
-        type="button"
-        onClick={() => handleFilter("rejected")}
-        className={`rounded-full px-4 py-2 text-xs font-black ${statusFilter === "rejected" ? "btn-primary" : "btn-subtle"}`}
-      >
-        已驳回
-      </button>
-      <button
-        type="button"
-        onClick={() => handleFilter("approved")}
-        className={`rounded-full px-4 py-2 text-xs font-black ${statusFilter === "approved" ? "btn-primary" : "btn-subtle"}`}
-      >
-        已通过
-      </button>
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      {options.map((option) => {
+        const active = statusFilter === option.value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => handleFilter(option.value)}
+            className={`rounded-full border-2 px-3 py-1.5 text-xs font-black transition ${
+              active
+                ? option.activeClassName
+                : "border-[var(--outline)]/25 bg-white text-[var(--foreground)]/72 hover:border-[var(--outline)]/50"
+            }`}
+          >
+            {option.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
 export function ReviewErrorNotice(props: { message: string }) {
   return (
-    <p className="mt-4 rounded-xl border border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-sm text-[#9a3412]">
+    <p className="mt-3 rounded-xl border border-[#f3c8ad] bg-[#fff4ec] px-3 py-2 text-xs font-black text-[#9a3412]">
       {props.message}
     </p>
   );
@@ -73,11 +64,11 @@ export function ReviewErrorNotice(props: { message: string }) {
 
 export function ReviewLoadingGrid() {
   return (
-    <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {Array.from({ length: 6 }).map((_, index) => (
         <div
           key={index}
-          className="h-56 animate-pulse rounded-2xl border border-white/80 bg-white/70"
+          className="h-64 animate-pulse rounded-[1.1rem] border border-[var(--outline)]/15 bg-[var(--surface-container)]"
         />
       ))}
     </div>
@@ -86,7 +77,7 @@ export function ReviewLoadingGrid() {
 
 export function ReviewEmptyState() {
   return (
-    <div className="mt-8 rounded-2xl border-[2px] border-dashed border-[var(--line-strong)]/30 bg-white/75 px-6 py-12 text-center text-sm font-bold text-[var(--text-muted)]">
+    <div className="mt-6 rounded-[1.2rem] border-2 border-dashed border-[var(--outline)]/30 bg-[var(--surface-container)] px-5 py-10 text-center text-xs font-black text-[var(--foreground)]/60">
       当前筛选下暂无审核数据。
     </div>
   );
@@ -112,65 +103,76 @@ export function ReviewGrid(props: {
   } = props;
 
   return (
-    <div className="mt-6 space-y-5">
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+    <div className="mt-5 space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {pagedItems.map((item) => {
           const status = item.card.reviewStatus;
           const disabled = Boolean(pendingCardId) && pendingCardId === item.card.id;
+          const hideActions = status === "approved" || status === "rejected";
           return (
-            <article key={item.card.id} className="dream-panel p-4">
+            <article key={item.card.id} className="group flex h-full flex-col overflow-hidden rounded-[1.1rem] border-2 border-[var(--outline)] bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
               <Link
                 href={`/cards/${encodeURIComponent(item.card.id)}`}
-                className="block overflow-hidden rounded-2xl bg-[#f8f9fa]"
+                className="relative block aspect-[3/2] w-full overflow-hidden rounded-[0.8rem] bg-[var(--surface-container)]"
               >
                 {item.card.mimeType.startsWith("image/") ? (
                   <img
                     src={item.card.previewUrl}
                     alt={item.card.title}
-                    className="h-44 w-full object-cover"
+                    className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
                   />
                 ) : (
-                  <div className="flex h-44 items-center justify-center px-4 text-center text-sm font-black text-[var(--foreground)]">
+                  <div className="flex h-full items-center justify-center px-4 text-center text-sm font-black text-[var(--foreground)]/72">
                     {item.card.title}
                   </div>
                 )}
               </Link>
-              <div className="mt-4">
-                <h2 className="truncate text-lg font-black text-[var(--foreground)]">
-                  {item.card.title}
-                </h2>
-                <p className="mt-1 text-xs text-[var(--text-muted)]">
-                  作者：{item.creator.nickname || item.creator.username}
-                </p>
-                <p className="mt-1 text-xs text-[var(--text-muted)]">
-                  提交时间：{formatDateTime(item.submittedAt || item.card.submittedAt)}
-                </p>
-                <p className="mt-1 text-xs text-[var(--text-muted)]">
-                  审核状态：{getReviewStatusLabel(status)}
-                </p>
+
+              <div className="mt-3 flex flex-1 flex-col">
+                <div className="flex items-start justify-between gap-2">
+                  <h2 className="min-w-0 flex-1 truncate text-sm font-black text-[var(--foreground)]">
+                    {item.card.title}
+                  </h2>
+                  <ReviewStatusBadge status={status} />
+                </div>
+
+                <div className="mt-2 space-y-0.5 text-[10px] font-bold text-[var(--foreground)]/55">
+                  <p>作者：{item.creator.nickname || item.creator.username}</p>
+                  <p>提交时间：{formatDateTime(item.submittedAt || item.card.submittedAt)}</p>
+                </div>
+
                 {item.card.reviewReason ? (
-                  <p className="mt-1 text-xs text-[#9a3412]">
+                  <p className="mt-2 truncate text-[10px] font-bold text-[#9a3412]">
                     驳回原因：{item.card.reviewReason}
                   </p>
                 ) : null}
-              </div>
-              <div className="mt-4 flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={disabled || status === "approved"}
-                  onClick={() => void handleApprove(item.card.id)}
-                  className="btn-primary flex-1 rounded-full py-2 text-xs font-black disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  通过
-                </button>
-                <button
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => void handleReject(item.card.id)}
-                  className="rounded-full border-[2px] border-[#ff9c9c] bg-[#fce4e4] px-4 py-2 text-xs font-black text-[#ff6b6b] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  驳回
-                </button>
+
+                {!hideActions ? (
+                  <div className="mt-auto flex items-center gap-2 pt-3">
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => void handleApprove(item.card.id)}
+                      className="inline-flex flex-1 items-center justify-center rounded-full bg-[var(--button-primary)] px-3 py-1.5 text-xs font-black shadow-sm transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      通过
+                    </button>
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => void handleReject(item.card.id)}
+                      className="inline-flex items-center justify-center rounded-full border border-[#f1c5cc] bg-white px-3 py-1.5 text-xs font-black text-[#cf425d] shadow-sm transition hover:border-[#cf425d] hover:bg-[#fff7f8] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      驳回
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-auto pt-3">
+                    <span className="inline-flex w-full items-center justify-center rounded-full border border-[var(--outline)]/15 bg-[var(--surface-container)] px-3 py-1.5 text-[10px] font-black text-[var(--foreground)]/55">
+                      已{status === "approved" ? "通过" : "驳回"}，无需操作
+                    </span>
+                  </div>
+                )}
               </div>
             </article>
           );
@@ -184,5 +186,21 @@ export function ReviewGrid(props: {
         }
       />
     </div>
+  );
+}
+
+function ReviewStatusBadge({ status }: { status: ReviewDashboardItem["card"]["reviewStatus"] }) {
+  const label = getReviewStatusLabel(status);
+  const tone =
+    status === "approved"
+      ? "border-[#2d8d62] bg-[#e9fff2] text-[#11613f]"
+      : status === "rejected"
+        ? "border-[#cf425d] bg-[#fff5f7] text-[#a31d3c]"
+        : "border-[#d67a33] bg-[#fff1df] text-[#8d4708]";
+
+  return (
+    <span className={`shrink-0 rounded-full border-2 px-2 py-0.5 text-[10px] font-black ${tone}`}>
+      {label}
+    </span>
   );
 }

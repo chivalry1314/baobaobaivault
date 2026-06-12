@@ -471,11 +471,11 @@ export function PublishActionsPanel(props: {
               accessMode === "paid" ? "bg-[var(--button-primary)]" : "bg-white"
             }`}
           >
-            付费（需提取码）
+            需提取码
           </button>
         </div>
         <p className="mt-2 text-xs font-bold text-[var(--text-subtle)]">
-          说明：付费模式会要求用户输入提取码，免费模式可直接下载分类文件。
+          说明：需提取码模式会要求用户输入提取码，免费模式可直接下载分类文件。
         </p>
       </div>
 

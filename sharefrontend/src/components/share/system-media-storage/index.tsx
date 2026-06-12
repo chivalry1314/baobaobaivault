@@ -146,26 +146,26 @@ export function ShareSystemMediaStoragePage() {
     >
       {loadError ? <ErrorNotice message={loadError} /> : null}
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_360px]">
-        <section className="space-y-5">
-          <section className="dream-panel overflow-hidden px-6 py-6 sm:px-8">
-            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[rgba(220,173,187,0.35)] pb-5">
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_320px]">
+        <section className="space-y-4">
+          <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--outline)]/20 pb-3">
               <div className="max-w-2xl">
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-[var(--foreground)]/40">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--foreground)]/40">
                   Share Media Control
                 </p>
-                <h2 className="mt-3 text-2xl font-black text-[var(--foreground)]">媒体存储控制台</h2>
-                <p className="mt-3 text-sm font-bold leading-7 text-[var(--foreground)]/68">
-                  这里分成两个工作区：一个负责决定新文件怎么写入，另一个负责把历史本地文件逐步搬到 OSS。
+                <h2 className="mt-1 text-lg font-black text-[var(--foreground)]">媒体存储控制台</h2>
+                <p className="mt-1 text-xs font-bold leading-5 text-[var(--foreground)]/60">
+                  一个工作区决定新文件写入方式，另一个负责把历史本地文件逐步迁移到 OSS。
                 </p>
               </div>
-              <div className="rounded-[24px] bg-[rgba(250,245,247,0.94)] px-4 py-4 text-sm font-bold leading-7 text-[var(--foreground)]/68">
-                <p>当前写入模式：{settings?.storageMode === "object_storage" ? "对象存储 / OSS" : "本地存储"}</p>
-                <p>本地回退读取：{settings?.localFallbackEnabled ? "已开启" : "已关闭"}</p>
+              <div className="rounded-[1rem] border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-2 text-xs font-bold leading-5 text-[var(--foreground)]/65">
+                <p>写入：{settings?.storageMode === "object_storage" ? "对象存储 / OSS" : "本地存储"}</p>
+                <p>回退：{settings?.localFallbackEnabled ? "已开启" : "已关闭"}</p>
               </div>
             </div>
 
-            <div className="mt-6 grid gap-4 md:grid-cols-4">
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               <HighlightCard
                 label="待迁移历史文件"
                 value={`${migration?.summary.totalPending ?? 0}`}
@@ -174,7 +174,7 @@ export function ShareSystemMediaStoragePage() {
               <HighlightCard
                 label="缺失本地文件"
                 value={`${migration?.summary.totalMissing ?? 0}`}
-                hint="数据库里有记录，但本地文件已不存在"
+                hint="数据库有记录，但本地文件已不存在"
               />
               <HighlightCard
                 label="封面命名空间"
@@ -198,7 +198,7 @@ export function ShareSystemMediaStoragePage() {
               />
             </div>
 
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-3 flex flex-wrap gap-2">
               <TabButton
                 active={activeTab === "settings"}
                 label="存储开关配置"
@@ -215,14 +215,14 @@ export function ShareSystemMediaStoragePage() {
           </section>
 
           {activeTab === "settings" ? (
-            <section className="dream-panel px-6 py-6 sm:px-8">
+            <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
               <SectionHeader
                 eyebrow="Storage Settings"
                 title="新文件写入配置"
                 description="这里的开关只影响后续新上传的卡片封面和附件，历史文件不会因为切换而失效。"
               />
 
-              <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div className="mt-3 grid items-end gap-2 md:grid-cols-2">
                 <SelectField
                   label="新文件存储方式"
                   value={draft?.storageMode || "local"}
@@ -272,44 +272,44 @@ export function ShareSystemMediaStoragePage() {
                 />
               </div>
 
-              <div className="mt-6 rounded-[24px] bg-[rgba(248,252,255,0.88)] px-4 py-4 text-sm font-bold leading-7 text-[var(--foreground)]/68">
+              <div className="mt-2 rounded-[1rem] border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-1.5 text-xs font-bold leading-4 text-[var(--foreground)]/55">
                 推荐先准备好对象存储配置和命名空间，再切换到对象存储模式，并先保留本地回退读取开启。
               </div>
 
-              <div className="mt-5 flex flex-wrap items-center gap-3">
+              <div className="mt-2 flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => void handleSave()}
                   disabled={!draft?.canUpdate || saving}
-                  className="btn-primary rounded-full px-6 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-full bg-[var(--button-primary)] px-3 py-1.5 text-xs font-black shadow-sm transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {saving ? "保存中..." : "保存媒体存储设置"}
                 </button>
                 {message ? (
-                  <span className="text-sm font-bold text-[var(--foreground)]/72">{message}</span>
+                  <span className="text-xs font-bold text-[var(--foreground)]/60">{message}</span>
                 ) : null}
               </div>
             </section>
           ) : (
-            <section className="dream-panel px-6 py-6 sm:px-8">
+            <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
               <SectionHeader
                 eyebrow="Migration"
                 title="历史本地文件迁移"
                 description="建议按小批次逐步执行，先确认 OSS 访问链路稳定，再决定是否删除本地副本。"
               />
 
-              <div className="mt-6 grid gap-4 md:grid-cols-4">
+              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 <MetricCard label="待迁移封面" value={`${migration?.summary.coversPending ?? 0} 个`} />
                 <MetricCard label="待迁移附件" value={`${migration?.summary.assetsPending ?? 0} 个`} />
                 <MetricCard label="缺失封面" value={`${migration?.summary.coversMissing ?? 0} 个`} />
                 <MetricCard label="缺失附件" value={`${migration?.summary.assetsMissing ?? 0} 个`} />
               </div>
 
-              <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-                <section className="rounded-[28px] border border-[rgba(220,173,187,0.34)] bg-[rgba(255,252,250,0.96)] px-5 py-5">
-                  <div className="grid gap-4 md:grid-cols-2">
+              <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,1fr)_280px]">
+                <section className="rounded-[1.2rem] border border-[var(--outline)]/20 bg-[var(--surface-container)] p-3">
+                  <div className="grid gap-3 md:grid-cols-2">
                     <label className="block">
-                      <span className="mb-2 block text-sm font-black text-[var(--foreground)]/72">单次迁移数量</span>
+                      <span className="mb-1.5 block text-xs font-black text-[var(--foreground)]/65">单次迁移数量</span>
                       <input
                         type="number"
                         min={1}
@@ -317,17 +317,17 @@ export function ShareSystemMediaStoragePage() {
                         value={migrationBatchSize}
                         onChange={(event) => setMigrationBatchSize(event.target.value)}
                         disabled={migrating || !migration?.canMigrate}
-                        className="dream-input w-full px-4 py-3 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="w-full rounded-full border border-[var(--outline)]/20 bg-white px-3 py-2 text-xs font-bold text-[var(--foreground)] placeholder:text-[var(--foreground)]/35 disabled:cursor-not-allowed disabled:opacity-60 focus:border-[var(--outline)] focus:outline-none"
                       />
                     </label>
 
-                    <div className="rounded-[22px] bg-white/75 px-4 py-4 text-sm font-bold leading-7 text-[var(--foreground)]/68">
+                    <div className="rounded-[1rem] border border-[var(--outline)]/20 bg-white px-3 py-2 text-xs font-bold leading-5 text-[var(--foreground)]/60">
                       <p>适合先用 10 到 20 条做验证。</p>
                       <p>单批太大时，接口执行时间会更长。</p>
                     </div>
                   </div>
 
-                  <div className="mt-4 space-y-3">
+                  <div className="mt-3 space-y-2">
                     <ToggleField
                       label="迁移成功后删除本地文件"
                       checked={deleteLocalAfterMigration}
@@ -343,7 +343,7 @@ export function ShareSystemMediaStoragePage() {
                     />
                   </div>
 
-                  <div className="mt-5 flex flex-wrap items-center gap-3">
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       onClick={() => void handleRunMigration()}
@@ -353,44 +353,44 @@ export function ShareSystemMediaStoragePage() {
                         settings?.storageMode !== "object_storage" ||
                         (migration?.summary.totalPending ?? 0) <= 0
                       }
-                      className="btn-primary rounded-full px-6 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-full bg-[var(--button-primary)] px-4 py-2 text-xs font-black shadow-sm transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {migrating ? "迁移中..." : "执行一批历史文件迁移"}
                     </button>
                     {migrationMessage ? (
-                      <span className="text-sm font-bold text-[var(--foreground)]/72">{migrationMessage}</span>
+                      <span className="text-xs font-bold text-[var(--foreground)]/65">{migrationMessage}</span>
                     ) : null}
                   </div>
                 </section>
 
-                <section className="rounded-[28px] bg-[rgba(248,252,255,0.92)] px-5 py-5">
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--foreground)]/40">
+                <section className="rounded-[1.2rem] border border-[var(--outline)]/20 bg-[var(--surface-container)] p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--foreground)]/40">
                     Safety Notes
                   </p>
-                  <div className="mt-3 space-y-3 text-sm font-bold leading-7 text-[var(--foreground)]/68">
-                    <p>1. 先确认对象存储模式和命名空间都已经配置完成。</p>
+                  <div className="mt-2 space-y-1.5 text-xs font-bold leading-5 text-[var(--foreground)]/60">
+                    <p>1. 先确认对象存储模式和命名空间已配置完成。</p>
                     <p>2. 初次迁移建议不要勾选删除本地文件。</p>
                     <p>3. 迁移后抽查详情页、下载页、封面预览是否正常。</p>
-                    <p>4. 缺失文件不会自动补回，只会在结果中提示你排查。</p>
+                    <p>4. 缺失文件不会自动补回，只会在结果中提示排查。</p>
                   </div>
                 </section>
               </div>
 
               {migrationResult ? (
-                <section className="mt-6 rounded-[28px] border border-[rgba(220,173,187,0.34)] bg-[rgba(255,251,245,0.94)] px-5 py-5">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
+                <section className="mt-3 rounded-[1.2rem] border border-[var(--outline)]/20 bg-[var(--surface-container)] p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--outline)]/20 pb-2">
                     <div>
-                      <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--foreground)]/40">
+                      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--foreground)]/40">
                         Latest Run
                       </p>
-                      <h3 className="mt-2 text-lg font-black text-[var(--foreground)]">最近一次迁移结果</h3>
+                      <h3 className="text-sm font-black text-[var(--foreground)]">最近一次迁移结果</h3>
                     </div>
-                    <p className="text-sm font-bold text-[var(--foreground)]/68">
+                    <p className="text-xs font-bold text-[var(--foreground)]/60">
                       {migrationResult.hasMore ? "仍有待迁移文件，可继续执行下一批。" : "当前没有更多待迁移历史文件。"}
                     </p>
                   </div>
 
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                     <MetricCard label="已处理" value={`${migrationResult.processed} 个`} />
                     <MetricCard label="成功" value={`${migrationResult.succeeded} 个`} />
                     <MetricCard label="跳过" value={`${migrationResult.skipped} 个`} />
@@ -398,11 +398,11 @@ export function ShareSystemMediaStoragePage() {
                   </div>
 
                   {migrationResult.messages.length > 0 ? (
-                    <div className="mt-4 grid gap-2">
+                    <div className="mt-2 grid gap-1.5">
                       {migrationResult.messages.map((item, index) => (
                         <p
                           key={`${index}-${item}`}
-                          className="rounded-[18px] bg-white/85 px-3 py-2 text-xs font-bold leading-6 text-[var(--foreground)]/70"
+                          className="rounded-[0.8rem] border border-[var(--outline)]/20 bg-white px-2.5 py-1.5 text-[10px] font-bold leading-5 text-[var(--foreground)]/65"
                         >
                           {item}
                         </p>
@@ -415,10 +415,10 @@ export function ShareSystemMediaStoragePage() {
           )}
         </section>
 
-        <section className="space-y-5">
-          <section className="dream-panel px-6 py-6">
-            <h2 className="text-xl font-black text-[var(--foreground)]">当前状态</h2>
-            <div className="mt-5 grid gap-3">
+        <section className="space-y-4">
+          <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
+            <h2 className="text-base font-black text-[var(--foreground)]">当前状态</h2>
+            <div className="mt-2 grid gap-2">
               <MetricCard
                 label="当前写入模式"
                 value={settings?.storageMode === "object_storage" ? "对象存储 / OSS" : "本地存储"}
@@ -448,9 +448,9 @@ export function ShareSystemMediaStoragePage() {
             </div>
           </section>
 
-          <section className="dream-panel px-6 py-6">
-            <h2 className="text-xl font-black text-[var(--foreground)]">操作建议</h2>
-            <div className="mt-4 space-y-3 text-sm font-bold leading-7 text-[var(--foreground)]/68">
+          <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
+            <h2 className="text-base font-black text-[var(--foreground)]">操作建议</h2>
+            <div className="mt-2 space-y-1.5 text-xs font-bold leading-5 text-[var(--foreground)]/60">
               <p>1. 先在“存储配置”和“命名空间”里准备好对象存储。</p>
               <p>2. 在“存储开关配置”中把新文件写入切到 OSS。</p>
               <p>3. 在“历史文件迁移”里按批次迁移旧文件。</p>
@@ -466,7 +466,7 @@ export function ShareSystemMediaStoragePage() {
 function SystemLoadingPage({ currentPath, text }: { currentPath: string; text: string }) {
   return (
     <SystemWorkspace currentPath={currentPath} title="系统管理" description={text}>
-      <div className="dream-panel px-6 py-8 text-sm font-bold text-[var(--foreground)]/70">{text}</div>
+      <div className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white px-5 py-7 text-sm font-bold text-[var(--foreground)]/70 shadow-sm">{text}</div>
     </SystemWorkspace>
   );
 }
@@ -478,7 +478,7 @@ function SystemForbiddenPage({ currentPath }: { currentPath: string }) {
       title="系统管理"
       description="当前账号不是系统初始化超级管理员，无法访问此页面。"
     >
-      <div className="dream-panel px-6 py-8">
+      <div className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white px-5 py-7 shadow-sm">
         <p className="text-sm font-bold leading-7 text-[var(--foreground)]/70">
           当前账号不是系统初始化超级管理员，无法访问此页面。
         </p>
@@ -489,7 +489,7 @@ function SystemForbiddenPage({ currentPath }: { currentPath: string }) {
 
 function ErrorNotice({ message }: { message: string }) {
   return (
-    <p className="dream-panel-soft border-[#f3c8ad] bg-[#fff4ec] px-5 py-4 text-sm font-bold text-[#9a3412]">
+    <p className="rounded-[1.1rem] border border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-xs font-black text-[#9a3412]">
       {message}
     </p>
   );
@@ -498,10 +498,10 @@ function ErrorNotice({ message }: { message: string }) {
 function SectionHeader(props: { eyebrow: string; title: string; description: string }) {
   const { eyebrow, title, description } = props;
   return (
-    <div className="border-b border-[rgba(220,173,187,0.35)] pb-5">
-      <p className="text-xs font-black uppercase tracking-[0.2em] text-[var(--foreground)]/40">{eyebrow}</p>
-      <h2 className="mt-3 text-xl font-black text-[var(--foreground)]">{title}</h2>
-      <p className="mt-3 text-sm font-bold leading-7 text-[var(--foreground)]/68">{description}</p>
+    <div className="border-b border-[var(--outline)]/20 pb-3">
+      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--foreground)]/40">{eyebrow}</p>
+      <h2 className="mt-1 text-base font-black text-[var(--foreground)]">{title}</h2>
+      <p className="mt-0.5 text-xs font-bold leading-5 text-[var(--foreground)]/60">{description}</p>
     </div>
   );
 }
@@ -509,10 +509,10 @@ function SectionHeader(props: { eyebrow: string; title: string; description: str
 function HighlightCard(props: { label: string; value: string; hint: string; compact?: boolean }) {
   const { label, value, hint, compact = false } = props;
   return (
-    <div className="rounded-[24px] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,252,255,0.92))] px-4 py-4 shadow-[0_18px_48px_rgba(188,148,164,0.12)]">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--foreground)]/42">{label}</p>
-      <p className={`mt-3 font-black text-[var(--foreground)] ${compact ? "break-all text-sm" : "text-2xl"}`}>{value}</p>
-      <p className="mt-2 text-xs font-bold leading-6 text-[var(--foreground)]/58">{hint}</p>
+    <div className="rounded-[1rem] border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-2.5">
+      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--foreground)]/40">{label}</p>
+      <p className={`mt-1 font-black text-[var(--foreground)] ${compact ? "break-all text-sm" : "text-base"}`}>{value}</p>
+      <p className="mt-0.5 text-[10px] font-bold leading-4 text-[var(--foreground)]/55">{hint}</p>
     </div>
   );
 }
@@ -529,14 +529,14 @@ function TabButton(props: {
       type="button"
       onClick={onClick}
       className={[
-        "min-w-[220px] cursor-pointer rounded-[24px] border px-5 py-4 text-left transition-colors duration-200",
+        "min-w-[180px] cursor-pointer rounded-[1rem] border px-3 py-2 text-left transition-colors duration-200",
         active
-          ? "border-[rgba(202,122,147,0.36)] bg-[rgba(255,245,248,0.96)] shadow-[0_18px_42px_rgba(197,133,156,0.16)]"
-          : "border-[rgba(220,173,187,0.26)] bg-white/78 hover:bg-[rgba(248,252,255,0.88)]",
+          ? "border-[var(--outline)] bg-[var(--surface-container)] shadow-sm"
+          : "border-[var(--outline)]/20 bg-white hover:bg-[var(--surface-container)]",
       ].join(" ")}
     >
-      <p className="text-sm font-black text-[var(--foreground)]">{label}</p>
-      <p className="mt-2 text-xs font-bold leading-6 text-[var(--foreground)]/62">{description}</p>
+      <p className="text-xs font-black text-[var(--foreground)]">{label}</p>
+      <p className="mt-0.5 text-[10px] font-bold leading-4 text-[var(--foreground)]/55">{description}</p>
     </button>
   );
 }
@@ -544,9 +544,9 @@ function TabButton(props: {
 function MetricCard(props: { label: string; value: string; breakAll?: boolean }) {
   const { label, value, breakAll = false } = props;
   return (
-    <div className="rounded-[22px] bg-[rgba(248,252,255,0.88)] px-4 py-4">
-      <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--foreground)]/42">{label}</p>
-      <p className={`mt-2 text-sm font-black text-[var(--foreground)] ${breakAll ? "break-all" : ""}`}>{value}</p>
+    <div className="rounded-[1rem] border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-2">
+      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--foreground)]/40">{label}</p>
+      <p className={`mt-0.5 text-xs font-black text-[var(--foreground)] ${breakAll ? "break-all" : ""}`}>{value}</p>
     </div>
   );
 }
@@ -561,12 +561,12 @@ function SelectField(props: {
   const { label, value, disabled, options, onChange } = props;
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-black text-[var(--foreground)]/72">{label}</span>
+      <span className="mb-1 block text-xs font-black text-[var(--foreground)]/65">{label}</span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
-        className="dream-input w-full px-4 py-3 disabled:cursor-not-allowed disabled:opacity-60"
+        className="h-8 w-full rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-1 text-xs font-bold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-60 focus:border-[var(--outline)] focus:bg-white focus:outline-none"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -586,14 +586,14 @@ function ToggleField(props: {
 }) {
   const { label, checked, disabled, onChange } = props;
   return (
-    <label className="dream-panel-soft flex cursor-pointer items-center justify-between rounded-[24px] px-4 py-4 text-sm font-black text-[var(--foreground)]">
-      <span>{label}</span>
+    <label className="flex h-8 cursor-pointer items-center gap-2 rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-1 text-xs font-black text-[var(--foreground)]">
+      <span className="leading-none">{label}</span>
       <input
         type="checkbox"
         checked={checked}
         disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}
-        className="h-4 w-4 disabled:cursor-not-allowed"
+        className="h-3 w-3 disabled:cursor-not-allowed"
       />
     </label>
   );

@@ -230,57 +230,57 @@ export function ShareSystemSiteBrandingPage() {
     >
       {loadError ? <ErrorNotice message={loadError} /> : null}
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1.08fr)_380px]">
-        <section className="space-y-5">
-          <section className="dream-panel px-6 py-6 sm:px-8">
-            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[rgba(220,173,187,0.35)] pb-5">
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.08fr)_340px]">
+        <section className="space-y-4">
+          <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--outline)]/20 pb-3">
               <div className="max-w-2xl">
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-[var(--foreground)]/40">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--foreground)]/40">
                   Brand Assets
                 </p>
-                <h2 className="mt-3 text-2xl font-black text-[var(--foreground)]">
+                <h2 className="mt-1 text-lg font-black text-[var(--foreground)]">
                   品牌 Logo 与公开地址
                 </h2>
-                <p className="mt-3 text-sm font-bold leading-7 text-[var(--foreground)]/68">
+                <p className="mt-1 text-xs font-bold leading-5 text-[var(--foreground)]/60">
                   可以直接上传品牌 Logo，也可以继续手动填写外部图片地址。上传成功后，系统会自动切换成站内公开地址。
                 </p>
               </div>
-              <div className="rounded-[24px] bg-[rgba(244,249,255,0.96)] px-4 py-4 text-sm font-bold text-[#285f87] shadow-[0_18px_42px_rgba(53,89,143,0.12)]">
-                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#285f87]/75">
+              <div className="rounded-[1rem] border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-2 text-xs font-bold text-[var(--foreground)]/70">
+                <p className="text-[10px] font-black uppercase tracking-[0.1em] text-[var(--foreground)]/45">
                   Current Logo
                 </p>
-                <p className="mt-2 break-all">
+                <p className="mt-1 max-w-[200px] break-all">
                   {draft?.logoOriginalFileName || "尚未上传站内 Logo"}
                 </p>
-                <p className="mt-1 text-xs text-[#285f87]/72">
+                <p className="mt-0.5 text-[10px] text-[var(--foreground)]/50">
                   {draft?.logoMimeType || "可上传 PNG / JPG / WebP / GIF / SVG"}
                 </p>
               </div>
             </div>
 
-            <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+            <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
               <label className="block">
-                <span className="mb-2 block text-sm font-black text-[var(--foreground)]/72">
+                <span className="mb-1.5 block text-xs font-black text-[var(--foreground)]/65">
                   选择 Logo 文件
                 </span>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(event) => setLogoFile(event.target.files?.[0] || null)}
-                  className="dream-input w-full px-4 py-3"
+                  className="w-full rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-2 text-xs font-bold text-[var(--foreground)] file:mr-2 file:rounded-full file:border-0 file:bg-white file:px-3 file:py-1 file:text-xs file:font-black"
                 />
               </label>
               <button
                 type="button"
                 onClick={() => void handleUploadLogo()}
                 disabled={!logoFile || uploadingLogo}
-                className="btn-primary h-[50px] rounded-full px-6 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-full bg-[var(--button-primary)] px-4 py-2 text-xs font-black shadow-sm transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {uploadingLogo ? "上传中..." : "上传并应用 Logo"}
               </button>
             </div>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
               <MetricPill
                 label="预览来源"
                 value={
@@ -306,18 +306,18 @@ export function ShareSystemSiteBrandingPage() {
               <InlineNotice
                 tone={logoMessageTone}
                 message={logoMessage}
-                className="mt-4"
+                className="mt-3"
               />
             ) : null}
 
-            <div className="mt-5 rounded-[28px] border-[3px] border-[rgba(70,124,169,0.18)] bg-[linear-gradient(180deg,rgba(243,249,255,0.98),rgba(252,254,255,0.92))] px-5 py-5">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2f628f]">
+            <div className="mt-3 rounded-[1.2rem] border border-[var(--outline)]/20 bg-[var(--surface-container)] p-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--foreground)]/45">
                 图片地址
               </p>
-              <p className="mt-2 text-sm font-bold leading-7 text-[var(--foreground)]/68">
+              <p className="mt-1 text-xs font-bold leading-5 text-[var(--foreground)]/60">
                 如果你需要接入 CDN 或外部图床，也可以直接填写 URL。留空时会退回文字 Logo。
               </p>
-              <div className="mt-4">
+              <div className="mt-2">
                 <TextField
                   label="Logo 图片地址"
                   value={draft?.logoImageSrc || ""}
@@ -327,100 +327,128 @@ export function ShareSystemSiteBrandingPage() {
             </div>
           </section>
 
-          <section className="dream-panel px-6 py-6 sm:px-8">
-            <div className="grid gap-4 md:grid-cols-2">
-              <TextField
-                label="站点全称"
-                value={draft?.siteName || ""}
-                onChange={(value) => updateDraft("siteName", value)}
-              />
-              <TextField
-                label="站点简称"
-                value={draft?.siteShortName || ""}
-                onChange={(value) => updateDraft("siteShortName", value)}
-              />
-              <ToggleTextField
-                label="站点副标题"
-                toggleLabel="显示"
-                checked={draft?.showSiteSubtitle ?? true}
-                value={draft?.siteSubtitle || ""}
-                onToggleChange={(checked) => updateDraft("showSiteSubtitle", checked)}
-                onChange={(value) => updateDraft("siteSubtitle", value)}
-              />
-              <ToggleTextField
-                label="登录页副标题"
-                toggleLabel="显示"
-                checked={draft?.showAuthSubtitle ?? true}
-                value={draft?.authSubtitle || ""}
-                onToggleChange={(checked) => updateDraft("showAuthSubtitle", checked)}
-                onChange={(value) => updateDraft("authSubtitle", value)}
-              />
-              <TextField
-                label="Logo 文字"
-                value={draft?.logoText || ""}
-                onChange={(value) => updateDraft("logoText", value)}
-              />
-              <TextField
-                label="Logo 徽标"
-                value={draft?.logoBadgeText || ""}
-                onChange={(value) => updateDraft("logoBadgeText", value)}
-              />
-              <TextField
-                label="页脚文案"
-                value={draft?.footerText || ""}
-                onChange={(value) => updateDraft("footerText", value)}
-              />
-              <TextField
-                label="默认显示名"
-                value={draft?.defaultDisplayName || ""}
-                onChange={(value) => updateDraft("defaultDisplayName", value)}
-              />
-              <TextField
-                label="默认 Creator 名称"
-                value={draft?.defaultCreatorName || ""}
-                onChange={(value) => updateDraft("defaultCreatorName", value)}
-              />
-              <TextField
-                label="默认 Creator Handle"
-                value={draft?.defaultCreatorHandle || ""}
-                onChange={(value) => updateDraft("defaultCreatorHandle", value)}
-              />
-              <TextField
-                label="默认首字母"
-                value={draft?.defaultInitials || ""}
-                onChange={(value) => updateDraft("defaultInitials", value.toUpperCase())}
-              />
+          <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
+            <div className="border-b border-[var(--outline)]/20 pb-3">
+              <h2 className="text-base font-black text-[var(--foreground)]">站点文案与默认值</h2>
+              <p className="mt-0.5 text-xs font-bold text-[var(--foreground)]/60">按用途分组管理站点名称、页面文案、Logo 文案和默认创作者信息。</p>
             </div>
 
-            <div className="mt-4">
-              <TextAreaField
-                label="站点描述"
-                rows={4}
-                value={draft?.siteDescription || ""}
-                onChange={(value) => updateDraft("siteDescription", value)}
-              />
+            <div className="mt-3 space-y-3">
+              <section>
+                <h3 className="text-xs font-black text-[var(--foreground)]/75">站点信息</h3>
+                <div className="mt-2 grid gap-3 md:grid-cols-2">
+                  <TextField
+                    label="站点全称"
+                    value={draft?.siteName || ""}
+                    onChange={(value) => updateDraft("siteName", value)}
+                  />
+                  <TextField
+                    label="站点简称"
+                    value={draft?.siteShortName || ""}
+                    onChange={(value) => updateDraft("siteShortName", value)}
+                  />
+                  <div className="md:col-span-2">
+                    <TextAreaField
+                      label="站点描述"
+                      rows={2}
+                      value={draft?.siteDescription || ""}
+                      onChange={(value) => updateDraft("siteDescription", value)}
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <section>
+                <h3 className="text-xs font-black text-[var(--foreground)]/75">页面文案</h3>
+                <div className="mt-2 grid gap-3 md:grid-cols-2">
+                  <ToggleTextField
+                    label="站点副标题"
+                    toggleLabel="显示"
+                    checked={draft?.showSiteSubtitle ?? true}
+                    value={draft?.siteSubtitle || ""}
+                    onToggleChange={(checked) => updateDraft("showSiteSubtitle", checked)}
+                    onChange={(value) => updateDraft("siteSubtitle", value)}
+                  />
+                  <ToggleTextField
+                    label="登录页副标题"
+                    toggleLabel="显示"
+                    checked={draft?.showAuthSubtitle ?? true}
+                    value={draft?.authSubtitle || ""}
+                    onToggleChange={(checked) => updateDraft("showAuthSubtitle", checked)}
+                    onChange={(value) => updateDraft("authSubtitle", value)}
+                  />
+                  <div className="md:col-span-2">
+                    <TextField
+                      label="页脚文案"
+                      value={draft?.footerText || ""}
+                      onChange={(value) => updateDraft("footerText", value)}
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <section>
+                <h3 className="text-xs font-black text-[var(--foreground)]/75">Logo 文案</h3>
+                <div className="mt-2 grid gap-3 md:grid-cols-2">
+                  <TextField
+                    label="Logo 文字"
+                    value={draft?.logoText || ""}
+                    onChange={(value) => updateDraft("logoText", value)}
+                  />
+                  <TextField
+                    label="Logo 徽标"
+                    value={draft?.logoBadgeText || ""}
+                    onChange={(value) => updateDraft("logoBadgeText", value)}
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h3 className="text-xs font-black text-[var(--foreground)]/75">默认创作者信息</h3>
+                <div className="mt-2 grid gap-3 md:grid-cols-2">
+                  <TextField
+                    label="默认显示名"
+                    value={draft?.defaultDisplayName || ""}
+                    onChange={(value) => updateDraft("defaultDisplayName", value)}
+                  />
+                  <TextField
+                    label="默认 Creator 名称"
+                    value={draft?.defaultCreatorName || ""}
+                    onChange={(value) => updateDraft("defaultCreatorName", value)}
+                  />
+                  <TextField
+                    label="默认 Creator Handle"
+                    value={draft?.defaultCreatorHandle || ""}
+                    onChange={(value) => updateDraft("defaultCreatorHandle", value)}
+                  />
+                  <TextField
+                    label="默认首字母"
+                    value={draft?.defaultInitials || ""}
+                    onChange={(value) => updateDraft("defaultInitials", value.toUpperCase())}
+                  />
+                  <div className="md:col-span-2">
+                    <TextAreaField
+                      label="Creator 默认标语"
+                      rows={2}
+                      value={draft?.creatorTagline || ""}
+                      onChange={(value) => updateDraft("creatorTagline", value)}
+                    />
+                  </div>
+                </div>
+              </section>
             </div>
 
-            <div className="mt-4">
-              <TextAreaField
-                label="Creator 默认标语"
-                rows={4}
-                value={draft?.creatorTagline || ""}
-                onChange={(value) => updateDraft("creatorTagline", value)}
-              />
-            </div>
-
-            <div className="mt-6 flex flex-wrap items-center gap-3">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => void handleSave()}
                 disabled={!draft?.canUpdate || saving}
-                className="btn-primary rounded-full px-6 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-full bg-[var(--button-primary)] px-4 py-2 text-xs font-black shadow-sm transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {saving ? "保存中..." : "保存站点品牌"}
               </button>
               {saveMessage ? (
-                <span className="text-sm font-bold text-[var(--foreground)]/72">
+                <span className="text-xs font-bold text-[var(--foreground)]/65">
                   {saveMessage}
                 </span>
               ) : null}
@@ -428,32 +456,32 @@ export function ShareSystemSiteBrandingPage() {
           </section>
         </section>
 
-        <aside className="space-y-5">
+        <aside className="space-y-4">
           <ShareSiteBrandProvider brand={previewBrand}>
-            <section className="dream-panel px-6 py-6">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--foreground)]/42">
+            <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
+              <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--foreground)]/40">
                 Preview
               </p>
-              <div className="mt-5 rounded-[28px] border-[3px] border-[var(--outline)] bg-[rgba(248,252,255,0.92)] p-5">
+              <div className="mt-2 rounded-[1.2rem] border border-[var(--outline)]/20 bg-[var(--surface-container)] p-3">
                 <div className="flex items-center gap-3">
                   <ShareSiteBrandMark
                     titleLevel="div"
-                    iconClassName="relative flex h-14 w-14 -rotate-6 items-center justify-center rounded-2xl border-[3px] border-[var(--outline)] bg-white text-base font-black text-[var(--foreground)]"
-                    textClassName="text-2xl font-black leading-none tracking-tight text-[var(--foreground)]"
-                    subtitleClassName="text-sm font-extrabold text-[var(--foreground)]/78"
+                    iconClassName="relative flex h-12 w-12 -rotate-6 items-center justify-center rounded-xl border-2 border-[var(--outline)] bg-white text-sm font-black text-[var(--foreground)]"
+                    textClassName="text-xl font-black leading-none tracking-tight text-[var(--foreground)]"
+                    subtitleClassName="text-xs font-extrabold text-[var(--foreground)]/78"
                   />
                 </div>
-                <p className="mt-5 text-sm font-bold text-[var(--foreground)]/68">
+                <p className="mt-3 text-xs font-bold text-[var(--foreground)]/65">
                   {previewBrand.siteDescription}
                 </p>
-                <div className="mt-5 rounded-[22px] bg-white px-4 py-4">
-                  <p className="text-sm font-black text-[var(--foreground)]">
+                <div className="mt-3 rounded-[1rem] border border-[var(--outline)]/20 bg-white px-3 py-2.5">
+                  <p className="text-xs font-black text-[var(--foreground)]">
                     {previewBrand.defaultCreatorName}
                   </p>
-                  <p className="mt-1 text-xs font-bold text-[var(--foreground)]/60">
+                  <p className="mt-0.5 text-[10px] font-bold text-[var(--foreground)]/55">
                     {previewBrand.defaultCreatorHandle}
                   </p>
-                  <p className="mt-3 text-sm font-bold text-[var(--foreground)]/72">
+                  <p className="mt-1.5 text-xs font-bold text-[var(--foreground)]/65">
                     {previewBrand.creatorTagline}
                   </p>
                 </div>
@@ -461,9 +489,9 @@ export function ShareSystemSiteBrandingPage() {
             </section>
           </ShareSiteBrandProvider>
 
-          <section className="dream-panel px-6 py-6">
-            <h2 className="text-xl font-black text-[var(--foreground)]">说明</h2>
-            <div className="mt-4 space-y-3 text-sm font-bold leading-7 text-[var(--foreground)]/68">
+          <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
+            <h2 className="text-base font-black text-[var(--foreground)]">说明</h2>
+            <div className="mt-2 space-y-1.5 text-xs font-bold leading-5 text-[var(--foreground)]/60">
               <p>
                 上传 Logo 后，会自动生成一个公开的站内地址，首页、登录页、卡片详情和系统页都会即时使用它。
               </p>
@@ -488,7 +516,7 @@ function SystemStateView(props: { currentPath: string; text: string }) {
       title="站点品牌"
       description={props.text}
     >
-      <div className="dream-panel px-6 py-8 text-sm font-bold text-[var(--foreground)]/70">
+      <div className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white px-5 py-7 text-sm font-bold text-[var(--foreground)]/70 shadow-sm">
         {props.text}
       </div>
     </SystemWorkspace>
@@ -497,7 +525,7 @@ function SystemStateView(props: { currentPath: string; text: string }) {
 
 function ErrorNotice({ message }: { message: string }) {
   return (
-    <p className="dream-panel-soft border-[#f3c8ad] bg-[#fff4ec] px-5 py-4 text-sm font-bold text-[#9a3412]">
+    <p className="rounded-[1.1rem] border border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-xs font-black text-[#9a3412]">
       {message}
     </p>
   );
@@ -514,7 +542,7 @@ function InlineNotice(props: {
       : "border-[#c9ddf4] bg-[#eef6ff] text-[#285f87]";
   return (
     <p
-      className={`${props.className || ""} rounded-[22px] border px-4 py-3 text-sm font-bold ${toneClassName}`}
+      className={`${props.className || ""} rounded-[1.1rem] border px-3 py-2 text-xs font-bold ${toneClassName}`}
     >
       {props.message}
     </p>
@@ -528,14 +556,14 @@ function TextField(props: {
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-black text-[var(--foreground)]/72">
+      <span className="mb-1.5 block text-xs font-black text-[var(--foreground)]/65">
         {props.label}
       </span>
       <input
         type="text"
         value={props.value}
         onChange={(event) => props.onChange(event.target.value)}
-        className="dream-input w-full px-4 py-3"
+        className="w-full rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-2 text-xs font-bold text-[var(--foreground)] placeholder:text-[var(--foreground)]/35 focus:border-[var(--outline)] focus:bg-white focus:outline-none"
       />
     </label>
   );
@@ -551,7 +579,7 @@ function ToggleTextField(props: {
 }) {
   return (
     <label className="block">
-      <span className="mb-2 flex items-center justify-between gap-3 text-sm font-black text-[var(--foreground)]/72">
+      <span className="mb-1.5 flex items-center justify-between gap-2 text-xs font-black text-[var(--foreground)]/65">
         <span>{props.label}</span>
         <InlineSwitch
           label={props.toggleLabel}
@@ -563,7 +591,7 @@ function ToggleTextField(props: {
         type="text"
         value={props.value}
         onChange={(event) => props.onChange(event.target.value)}
-        className="dream-input w-full px-4 py-3"
+        className="w-full rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-2 text-xs font-bold text-[var(--foreground)] placeholder:text-[var(--foreground)]/35 focus:border-[var(--outline)] focus:bg-white focus:outline-none"
       />
     </label>
   );
@@ -580,19 +608,19 @@ function InlineSwitch(props: {
       role="switch"
       aria-checked={props.checked}
       onClick={() => props.onChange(!props.checked)}
-      className="inline-flex items-center gap-2 rounded-full bg-[rgba(248,252,255,0.9)] px-2.5 py-1.5 text-xs font-black text-[var(--foreground)]/72"
+      className="inline-flex items-center gap-1.5 rounded-full border border-[var(--outline)]/20 bg-white px-2 py-1 text-[10px] font-black text-[var(--foreground)]/72"
     >
       <span>{props.label}</span>
       <span
         className={[
-          "relative inline-flex h-6 w-11 items-center rounded-full border-[2px] border-[var(--outline)] transition",
+          "relative inline-flex h-4 w-7 items-center rounded-full border border-[var(--outline)] transition",
           props.checked ? "bg-[var(--button-primary)]" : "bg-white",
         ].join(" ")}
       >
         <span
           className={[
-            "h-4 w-4 rounded-full border-2 border-[var(--outline)] bg-white transition",
-            props.checked ? "translate-x-5" : "translate-x-0.5",
+            "h-2.5 w-2.5 rounded-full border border-[var(--outline)] bg-white transition",
+            props.checked ? "translate-x-3" : "translate-x-0.5",
           ].join(" ")}
         />
       </span>
@@ -608,14 +636,14 @@ function TextAreaField(props: {
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-black text-[var(--foreground)]/72">
+      <span className="mb-1.5 block text-xs font-black text-[var(--foreground)]/65">
         {props.label}
       </span>
       <textarea
         rows={props.rows ?? 3}
         value={props.value}
         onChange={(event) => props.onChange(event.target.value)}
-        className="dream-input w-full resize-y px-4 py-3"
+        className="w-full resize-y rounded-[1rem] border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-2 text-xs font-bold text-[var(--foreground)] placeholder:text-[var(--foreground)]/35 focus:border-[var(--outline)] focus:bg-white focus:outline-none"
       />
     </label>
   );
@@ -627,12 +655,12 @@ function MetricPill(props: {
   breakAll?: boolean;
 }) {
   return (
-    <div className="rounded-[22px] bg-[rgba(248,252,255,0.88)] px-4 py-3">
-      <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[var(--foreground)]/42">
+    <div className="rounded-[1rem] border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-2">
+      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--foreground)]/40">
         {props.label}
       </p>
       <p
-        className={`mt-1 text-sm font-black text-[var(--foreground)] ${props.breakAll ? "break-all" : ""}`}
+        className={`mt-0.5 text-xs font-black text-[var(--foreground)] ${props.breakAll ? "break-all" : ""}`}
       >
         {props.value}
       </p>

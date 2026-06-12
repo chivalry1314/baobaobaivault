@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { AccessModeBadge } from "@/components/share/access-mode-badge";
@@ -6,7 +6,6 @@ import {
   formatDate,
   formatDateTime,
   getInactiveReason,
-  getRarityLabel,
   isActiveItem,
 } from "@/components/share/access-code-dashboard/helpers";
 import type { AccessCodeDashboardItem, PlatformCard } from "@/lib/shared";
@@ -20,22 +19,22 @@ export function EmptyState(props: {
   const hasAvailableCard = cardsWithoutCode.length > 0;
 
   return (
-    <div className="relative min-h-[480px] overflow-hidden rounded-[30px] border-[3px] border-[var(--line-strong)] bg-[#fcfeff] px-6 py-12 text-center">
-      <div className="absolute left-[18%] top-[22%] h-36 w-36 rounded-full bg-[#cff3fa] opacity-60 blur-3xl" />
-      <div className="absolute bottom-[18%] right-[18%] h-36 w-36 rounded-full bg-[#f9cdcd] opacity-50 blur-3xl" />
+    <div className="relative min-h-[360px] overflow-hidden rounded-[1.4rem] border border-[var(--outline)]/15 bg-[var(--surface-container)] px-5 py-10 text-center">
+      <div className="absolute left-[18%] top-[22%] h-28 w-28 rounded-full bg-[#cff3fa] opacity-50 blur-3xl" />
+      <div className="absolute bottom-[18%] right-[18%] h-28 w-28 rounded-full bg-[#f9cdcd] opacity-40 blur-3xl" />
 
       <div className="relative z-10 flex h-full flex-col items-center justify-center">
-        <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-full border-[4px] border-[var(--line-strong)] bg-[#cff3fa] shadow-[3px_3px_0px_var(--line-strong)]">
-          <KeyIcon className="h-8 w-8 text-[var(--primary)]" />
+        <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full border-2 border-[var(--outline)] bg-[var(--secondary)] shadow-sm">
+          <KeyIcon className="h-6 w-6 text-[var(--foreground)]" />
         </div>
 
-        <h2 className="text-3xl font-black text-[var(--foreground)]">还没有提取码</h2>
-        <p className="mt-4 max-w-xl text-lg font-bold text-[var(--foreground)]/70">
+        <h2 className="text-xl font-black text-[var(--foreground)]">还没有提取码</h2>
+        <p className="mt-2 max-w-xl text-xs font-bold text-[var(--foreground)]/70">
           {hasAvailableCard ? "你已有可用卡片，直接点击下面按钮即可进入对应卡片的提取码配置页。" : "你还没有可配置提取码的卡片，先去创建并发布一张卡片吧。"}
         </p>
 
         {hasAvailableCard ? (
-          <div className="mt-8 flex w-full max-w-2xl flex-col gap-3">
+          <div className="mt-6 flex w-full max-w-2xl flex-col gap-2.5">
             {cardsWithoutCode.map((card) => (
               <CardWithoutCodeRow key={card.id} card={card} onConfigureAccessCode={onConfigureAccessCode} />
             ))}
@@ -44,7 +43,7 @@ export function EmptyState(props: {
           <button
             type="button"
             onClick={onCreateCard}
-            className="mt-10 rounded-full border-[3px] border-[var(--line-strong)] bg-white px-8 py-3.5 text-lg font-black text-[var(--foreground)] shadow-[3px_3px_0px_var(--line-strong)] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0px_var(--line-strong)]"
+            className="mt-6 rounded-full border-2 border-[var(--outline)] bg-[var(--button-primary)] px-6 py-2 text-sm font-black text-[var(--foreground)] shadow-sm transition hover:bg-[var(--button-primary-hover)]"
           >
             去创建卡片
           </button>
@@ -61,16 +60,16 @@ export function CardWithoutCodeRow(props: {
   const { card, onConfigureAccessCode } = props;
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border-[2px] border-[var(--line-strong)] bg-white px-4 py-3 text-left">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1rem] border border-[var(--outline)]/15 bg-white px-3.5 py-2.5 text-left shadow-sm">
       <div className="min-w-0">
-        <p className="truncate text-base font-black text-[var(--foreground)]">{card.title}</p>
-        <p className="mt-1 text-xs text-[var(--foreground)]/56">{card.originalFileName || "未命名文件"}</p>
-        <div className="mt-2">
+        <p className="truncate text-sm font-black text-[var(--foreground)]">{card.title}</p>
+        <p className="mt-0.5 text-[11px] font-bold text-[var(--foreground)]/56">{card.originalFileName || "未命名文件"}</p>
+        <div className="mt-1.5">
           <AccessModeBadge mode={card.accessMode} compact />
         </div>
       </div>
       <ActionButton onClick={() => onConfigureAccessCode(card.id)}>
-        <EditIcon className="h-4 w-4" />
+        <EditIcon className="h-3.5 w-3.5" />
         配置提取码
       </ActionButton>
     </div>
@@ -88,113 +87,103 @@ export function AccessCodeCard(props: {
 }) {
   const { item, pendingAction, onEdit, onCopy, onHide, onReactivate, onDelete } = props;
   const active = isActiveItem(item);
-  const codeLabel = active ? "当前提取码" : "已停用提取码";
   const statusTip = active ? "提取码可正常使用，访问链接可直接分发给用户。" : getInactiveReason(item);
+  const codeTone = active
+    ? "border-[var(--outline)]/15 bg-[var(--tertiary)]/40 text-[var(--foreground)]"
+    : "border-[var(--outline)]/12 bg-[var(--surface-container)] text-[var(--foreground)]/42";
 
   return (
-    <article className="h-full w-full rounded-[24px] border-[3px] border-[var(--line-strong)] bg-white p-3 shadow-[3px_3px_0px_var(--line-strong)] sm:p-4">
-      <div className="flex h-full flex-col gap-3 lg:flex-row">
-        <div className="flex flex-col gap-3">
-          <Link
-            href={`/cards/${encodeURIComponent(item.card.id)}`}
-            className="relative block h-[118px] w-full overflow-hidden rounded-[18px] border-[3px] border-[var(--line-strong)] bg-[#4f4a75] sm:h-[132px] sm:w-[154px] sm:shrink-0"
-          >
-            {item.card.mimeType.startsWith("image/") ? (
-              <img src={item.card.previewUrl} alt={item.card.title} className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full items-center justify-center px-4 text-center text-base font-medium text-white/92">{item.card.title}</div>
-            )}
+    <article className="flex h-full flex-col overflow-hidden rounded-[1.1rem] border-2 border-[var(--outline)] bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-3.5">
+      {/* top: image + main info */}
+      <div className="flex gap-3">
+        <Link
+          href={`/cards/${encodeURIComponent(item.card.id)}`}
+          className="relative block h-[92px] w-[92px] shrink-0 overflow-hidden rounded-[0.8rem] border border-[var(--outline)]/15 bg-[#4f4a75] sm:h-[104px] sm:w-[104px]"
+        >
+          {item.card.mimeType.startsWith("image/") ? (
+            <img src={item.card.previewUrl} alt={item.card.title} className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full items-center justify-center px-2 text-center text-[10px] font-medium text-white/92">{item.card.title}</div>
+          )}
 
-            <span className="absolute bottom-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-[rgba(22,12,18,0.74)] px-2.5 py-0.5 text-xs font-semibold text-white">
-              <StarMiniIcon className="h-4 w-4 text-[#ffd166]" />
-              {getRarityLabel(item.stats.downloadCount)}
-            </span>
-          </Link>
+        </Link>
 
-          <div>
-            <div className="text-[10px] font-black uppercase tracking-[0.08em] text-[var(--foreground)]/46">使用次数</div>
-            <div className="mt-0.5 inline-flex items-center gap-1.5 text-sm font-black text-[var(--foreground)]/78">
-              <DownloadMiniIcon className="h-3.5 w-3.5 text-[var(--brand)]/62" />
-              <span>
-                {item.config.usageCount}
-                {item.config.unlimited ? " / 不限" : ` / ${Math.max(item.config.usageLimit, 0)}`}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex h-full flex-col gap-2">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <h2 className="truncate text-[1.35rem] font-black leading-none text-[var(--foreground)]">{item.card.title}</h2>
-              <p className="mt-1 text-[11px] font-bold text-[var(--foreground)]/52">创建于 {formatDate(item.card.createdAt)}</p>
-              <div className="mt-2">
-                <AccessModeBadge mode={item.card.accessMode} compact />
-              </div>
-              <div className="my-2 border-t border-dashed border-[var(--line-strong)]/24" />
-
-              <div>
-                <div className="text-[11px] font-black uppercase tracking-[0.08em] text-[var(--foreground)]/46">{codeLabel}</div>
-                <div
-                  className={`mt-1 inline-flex max-w-full items-center gap-1.5 rounded-full border-[2px] border-[var(--line-strong)] px-3 py-1 text-xs font-black tracking-[0.08em] ${
-                    active ? "bg-[#fdeef4] text-[#7d4a5a]" : "bg-[#f6eef1] text-[var(--foreground)]/42"
-                  }`}
-                >
-                  {active ? <KeyIcon className="h-3.5 w-3.5 shrink-0" /> : <LockIcon className="h-3.5 w-3.5 shrink-0" />}
-                  <span className={`truncate ${active ? "" : "line-through"}`}>{item.config.code}</span>
-                </div>
-
-                <div className="mt-1.5 inline-flex items-center gap-1.5 text-[10px] font-bold text-[var(--foreground)]/54">
-                  <CalendarIcon className="h-3.5 w-3.5" />
-                  到期时间：{formatDateTime(item.config.expiresAt)}
-                </div>
-
-                <div className="mt-2">
-                  <ActionButton onClick={onEdit}>
-                    <EditIcon className="h-4 w-4" />
-                    配置提取码
-                  </ActionButton>
-                </div>
-              </div>
+              <h2 className="truncate text-sm font-black leading-tight text-[var(--foreground)]">
+                <Link href={`/cards/${encodeURIComponent(item.card.id)}`}>{item.card.title}</Link>
+              </h2>
+              <p className="mt-0.5 text-[10px] font-bold text-[var(--foreground)]/48">创建于 {formatDate(item.card.createdAt)}</p>
             </div>
+            <button
+              type="button"
+              onClick={onEdit}
+              className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--outline)]/20 bg-white px-2 py-1 text-[10px] font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)] hover:text-[var(--foreground)]"
+            >
+              <EditIcon className="h-3 w-3" />
+              配置提取码
+            </button>
+          </div>
 
-            <div className="flex flex-wrap items-start justify-between gap-2 border-t border-dashed border-[var(--line-strong)]/24 pt-2">
-              <span
-                className={`rounded-full border-[3px] px-3 py-0.5 text-xs font-black ${
-                  active ? "border-[var(--line-strong)] bg-[#eefcf1] text-[#248a42]" : "border-[var(--line-strong)] bg-[#f8eef1] text-[#b18a92]"
-                }`}
-              >
-                {active ? "启用中" : "已停用"}
-              </span>
+          <div className="mt-1.5">
+            <AccessModeBadge mode={item.card.accessMode} compact />
+          </div>
 
-              <p className="w-full text-[11px] font-bold leading-4 text-[var(--foreground)]/58">{statusTip}</p>
-            </div>
-            <div className="mt-auto flex w-full flex-wrap items-center gap-1.5">
-              {active ? (
-                <>
-                  <ActionButton disabled={pendingAction === `copy:${item.card.id}`} onClick={onCopy}>
-                    <LinkIcon className="h-4 w-4" />
-                    {pendingAction === `copy:${item.card.id}` ? "复制中..." : "复制链接"}
-                  </ActionButton>
-                  <ActionButton danger disabled={pendingAction === `hide:${item.card.id}`} onClick={onHide}>
-                    <HideIcon className="h-4 w-4" />
-                    {pendingAction === `hide:${item.card.id}` ? "停用中..." : "停用"}
-                  </ActionButton>
-                </>
-              ) : (
-                <>
-                  <ActionButton disabled={pendingAction === `reactivate:${item.card.id}`} onClick={onReactivate}>
-                    <RefreshIcon className="h-4 w-4" />
-                    {pendingAction === `reactivate:${item.card.id}` ? "启用中..." : "重新启用"}
-                  </ActionButton>
-                  <IconActionButton danger disabled={pendingAction === `delete:${item.card.id}`} onClick={onDelete}>
-                    <TrashIcon className="h-4 w-4" />
-                  </IconActionButton>
-                </>
-              )}
-            </div>
+          <div className={`mt-auto inline-flex w-fit max-w-full items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-black tracking-[0.04em] ${codeTone}`}>
+            {active ? <KeyIcon className="h-3 w-3 shrink-0" /> : <LockIcon className="h-3 w-3 shrink-0" />}
+            <span className={`truncate ${active ? "" : "line-through"}`}>{item.config.code}</span>
           </div>
         </div>
+      </div>
+
+      {/* meta row */}
+      <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold text-[var(--foreground)]/60">
+        <span className="inline-flex items-center gap-1">
+          <CalendarIcon className="h-3 w-3" />
+          到期 {formatDateTime(item.config.expiresAt)}
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <DownloadMiniIcon className="h-3 w-3 text-[var(--brand)]/70" />
+          已用 {item.config.usageCount}
+          {item.config.unlimited ? " / 不限" : ` / ${Math.max(item.config.usageLimit, 0)}`}
+        </span>
+        <span
+          className={`rounded-full px-1.5 py-0.5 text-[9px] font-black ${
+            active ? "bg-[var(--secondary)]/70 text-[var(--foreground)]" : "bg-[var(--surface-container-high)] text-[var(--foreground)]/60"
+          }`}
+        >
+          {active ? "启用中" : "已停用"}
+        </span>
+      </div>
+
+      {/* status tip */}
+      <p className="mt-1.5 text-[10px] font-bold leading-4 text-[var(--foreground)]/52">{statusTip}</p>
+
+      {/* actions */}
+      <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-2.5">
+        {active ? (
+          <>
+            <ActionButton disabled={pendingAction === `copy:${item.card.id}`} onClick={onCopy}>
+              <LinkIcon className="h-3.5 w-3.5" />
+              {pendingAction === `copy:${item.card.id}` ? "复制中..." : "复制链接"}
+            </ActionButton>
+            <ActionButton danger disabled={pendingAction === `hide:${item.card.id}`} onClick={onHide}>
+              <HideIcon className="h-3.5 w-3.5" />
+              {pendingAction === `hide:${item.card.id}` ? "停用中..." : "停用"}
+            </ActionButton>
+          </>
+        ) : (
+          <>
+            <ActionButton disabled={pendingAction === `reactivate:${item.card.id}`} onClick={onReactivate}>
+              <RefreshIcon className="h-3.5 w-3.5" />
+              {pendingAction === `reactivate:${item.card.id}` ? "启用中..." : "重新启用"}
+            </ActionButton>
+            <IconActionButton danger disabled={pendingAction === `delete:${item.card.id}`} onClick={onDelete}>
+              <TrashIcon className="h-3.5 w-3.5" />
+            </IconActionButton>
+          </>
+        )}
       </div>
     </article>
   );
@@ -212,10 +201,10 @@ export function ActionButton(props: {
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`inline-flex items-center gap-1.5 rounded-full border-[3px] px-3 py-1 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${
+      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${
         danger
           ? "border-[#f1c5cc] bg-white text-[#cf425d] hover:border-[#cf425d] hover:bg-[#fff7f8]"
-          : "border-[var(--line-strong)] bg-white text-[var(--foreground)]/78 hover:bg-gray-50"
+          : "border-[var(--outline)]/20 bg-white text-[var(--foreground)]/78 hover:bg-[var(--surface-container)]"
       }`}
     >
       {children}
@@ -235,8 +224,8 @@ export function IconActionButton(props: {
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`inline-flex h-8 w-8 items-center justify-center rounded-full border-[3px] transition disabled:cursor-not-allowed disabled:opacity-60 ${
-        danger ? "border-[#ead2d8] bg-white text-[#b18a92] hover:border-[#cf425d] hover:text-[#cf425d]" : "border-[var(--line-strong)] bg-white text-[var(--foreground)]/78 hover:bg-gray-50"
+      className={`inline-flex h-7 w-7 items-center justify-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-60 ${
+        danger ? "border-[#ead2d8] bg-white text-[#b18a92] hover:border-[#cf425d] hover:text-[#cf425d]" : "border-[var(--outline)]/20 bg-white text-[var(--foreground)]/78 hover:bg-[var(--surface-container)]"
       }`}
     >
       {children}
@@ -354,14 +343,6 @@ function DownloadMiniIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
       <path d="M11.25 4.5h1.5v8.19l2.97-2.97 1.06 1.06L12 15.56l-4.78-4.78 1.06-1.06 2.97 2.97V4.5ZM5.25 17.25h13.5v1.5H5.25v-1.5Z" fill="currentColor" />
-    </svg>
-  );
-}
-
-function StarMiniIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
-      <path d="m12 3 2.08 4.22 4.66.68-3.37 3.28.8 4.64L12 13.4l-4.17 2.42.8-4.64L5.26 7.9l4.66-.68L12 3Z" fill="currentColor" />
     </svg>
   );
 }

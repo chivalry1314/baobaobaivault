@@ -8,6 +8,9 @@ import type { CardContentSlot, DiscoverCardItem } from "@/lib/shared";
 
 export function resolveColumnCount(viewportWidth: number) {
   if (viewportWidth >= 1280) {
+    return 4;
+  }
+  if (viewportWidth >= 1024) {
     return 3;
   }
   if (viewportWidth >= 640) {

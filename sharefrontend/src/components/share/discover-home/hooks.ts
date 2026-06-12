@@ -214,8 +214,8 @@ export function useDiscoverHome({
 
   const rowVirtualizer = useWindowVirtualizer({
     count: cardRows.length,
-    estimateSize: () => 420,
-    overscan: 4,
+    estimateSize: () => 360,
+    overscan: 6,
     scrollMargin,
   });
 

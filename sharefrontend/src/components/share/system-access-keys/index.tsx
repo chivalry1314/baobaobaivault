@@ -107,50 +107,52 @@ export function ShareSystemAccessKeysPage() {
       {actionError ? <ErrorNotice message={actionError} /> : null}
       {successMessage ? <SuccessNotice message={successMessage} /> : null}
 
-      <section className="dream-panel px-6 py-6 sm:px-8">
-        <div className="flex flex-col gap-4 border-b border-[rgba(220,173,187,0.35)] pb-4 sm:flex-row sm:items-center sm:justify-between">
+      <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
+        <div className="flex flex-col gap-3 border-b border-[var(--outline)]/20 pb-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-xl font-black text-[var(--foreground)]">已有密钥</h2>
-            <p className="mt-2 text-sm font-bold text-[var(--foreground)]/65">
+            <h2 className="text-base font-black text-[var(--foreground)]">已有密钥</h2>
+            <p className="mt-0.5 text-[10px] font-bold text-[var(--foreground)]/55">
               第 {safePage} / {totalPages} 页，共 {items.length} 个密钥
             </p>
           </div>
-          <Link href="/system/access-keys/new" className="btn-primary inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-black">
+          <Link href="/system/access-keys/new" className="inline-flex items-center justify-center rounded-full bg-[var(--button-primary)] px-4 py-2 text-xs font-black shadow-sm transition hover:bg-[var(--button-primary-hover)]">
             创建密钥
           </Link>
         </div>
 
-        <div className="mt-5 space-y-3">
+        <div className="mt-3 space-y-2">
           {loading ? (
-            <p className="text-sm font-bold text-[var(--foreground)]/65">正在加载访问密钥...</p>
+            <p className="text-xs font-bold text-[var(--foreground)]/55">正在加载访问密钥...</p>
           ) : items.length === 0 ? (
-            <div className="rounded-[24px] border border-dashed border-[rgba(120,85,94,0.22)] px-4 py-5 text-sm font-bold text-[var(--foreground)]/65">
-              <p>暂时还没有访问密钥。</p>
-              <Link href="/system/access-keys/new" className="btn-primary mt-4 inline-flex rounded-full px-4 py-2 text-sm font-black">
+            <div className="rounded-[1.2rem] border-2 border-dashed border-[var(--outline)]/25 bg-[var(--surface-container)] px-4 py-5 text-center">
+              <p className="text-xs font-black text-[var(--foreground)]/60">暂时还没有访问密钥。</p>
+              <Link href="/system/access-keys/new" className="mt-3 inline-flex rounded-full bg-[var(--button-primary)] px-4 py-2 text-xs font-black shadow-sm transition hover:bg-[var(--button-primary-hover)]">
                 去创建第一组密钥
               </Link>
             </div>
           ) : (
             pagedItems.map((item) => (
-              <article key={item.id} className="dream-panel-soft rounded-[22px] px-4 py-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <article key={item.id} className="rounded-[1.1rem] border-2 border-[var(--outline)] bg-white p-3 shadow-sm transition hover:shadow-md">
+                <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="break-all text-base font-black text-[var(--foreground)]">{item.access_key}</h3>
-                      <span className={`rounded-full px-3 py-1 text-xs font-black ${item.status === "active" ? "bg-[rgba(199,244,214,0.9)] text-[#2f6d37]" : "bg-[rgba(255,230,224,0.9)] text-[#b64031]"}`}>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <h3 className="break-all text-sm font-black text-[var(--foreground)]">{item.access_key}</h3>
+                      <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-black ${item.status === "active" ? "border-[#c0ebd0] bg-[#f0fff5] text-[#2d8d62]" : "border-[#f7cfc7] bg-[#fff6f4] text-[#b64031]"}`}>
                         {item.status || "unknown"}
                       </span>
                     </div>
-                    <p className="mt-2 text-sm font-bold text-[var(--foreground)]/68">描述：{item.description || "未填写"}</p>
-                    <p className="mt-1 text-sm font-bold text-[var(--foreground)]/68">过期时间：{formatDateTime(item.expires_at)}</p>
-                    <p className="mt-1 text-sm font-bold text-[var(--foreground)]/68">创建时间：{formatDateTime(item.created_at)}</p>
+                    <div className="mt-1.5 grid grid-cols-1 gap-x-4 gap-y-0.5 text-[10px] font-bold text-[var(--foreground)]/55 sm:grid-cols-3">
+                      <p><span className="text-[var(--foreground)]/40">描述</span> {item.description || "-"}</p>
+                      <p><span className="text-[var(--foreground)]/40">过期</span> {formatDateTime(item.expires_at)}</p>
+                      <p><span className="text-[var(--foreground)]/40">创建</span> {formatDateTime(item.created_at)}</p>
+                    </div>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => void handleRevoke(item)}
                     disabled={revokingId === item.id || item.status === "revoked"}
-                    className="rounded-full bg-[#c94c3b] px-5 py-3 text-sm font-black text-white transition hover:bg-[#b64031] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="shrink-0 rounded-full bg-[#c94c3b] px-3 py-1.5 text-[10px] font-black text-white shadow-sm transition hover:bg-[#b64031] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {revokingId === item.id ? "吊销中..." : item.status === "revoked" ? "已吊销" : "吊销"}
                   </button>
@@ -166,7 +168,7 @@ export function ShareSystemAccessKeysPage() {
           onPageChange={(nextPage) => {
             setPage(Math.min(Math.max(nextPage, 1), totalPages));
           }}
-          className="mt-6"
+          className="mt-4"
         />
       </section>
     </SystemWorkspace>
@@ -250,22 +252,24 @@ export function ShareSystemAccessKeysCreatePage() {
       <SystemBackLink href="/system/access-keys" label="返回列表" />
 
       {lastCreated ? (
-        <section className="dream-panel max-w-3xl px-6 py-6 sm:px-8">
-          <h2 className="text-xl font-black text-[var(--foreground)]">新创建的密钥</h2>
-          <div className="mt-4 rounded-[24px] bg-[rgba(255,248,230,0.92)] px-5 py-5 text-sm font-bold leading-7 text-[#8a5a00]">
-            <p>Access Key：{lastCreated.access_key}</p>
-            <p className="mt-2 break-all">Secret Key：{lastCreated.secret_key}</p>
-            <p className="mt-2 text-xs">注意：Secret Key 只会返回这一轮。</p>
+        <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
+          <div className="border-b border-[var(--outline)]/20 pb-3">
+            <h2 className="text-base font-black text-[var(--foreground)]">新创建的密钥</h2>
+          </div>
+          <div className="mt-3 rounded-[1rem] border border-[#f3d89a] bg-[#fff9e8] px-3 py-2.5 text-xs font-bold leading-6 text-[#8a5a00]">
+            <p className="break-all">Access Key：{lastCreated.access_key}</p>
+            <p className="mt-1 break-all">Secret Key：{lastCreated.secret_key}</p>
+            <p className="mt-1 text-[10px] opacity-80">注意：Secret Key 只会返回这一轮。</p>
           </div>
         </section>
       ) : null}
 
-      <section className="dream-panel max-w-3xl px-6 py-6 sm:px-8">
-        <div className="border-b border-[rgba(220,173,187,0.35)] pb-4">
-          <h2 className="text-xl font-black text-[var(--foreground)]">创建表单</h2>
+      <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
+        <div className="border-b border-[var(--outline)]/20 pb-3">
+          <h2 className="text-base font-black text-[var(--foreground)]">创建表单</h2>
         </div>
 
-        <form className="mt-6 space-y-4" onSubmit={handleCreate}>
+        <form className="mt-3 grid gap-3 sm:grid-cols-2" onSubmit={handleCreate}>
           <TextField
             label="用途描述"
             value={form.description}
@@ -278,11 +282,11 @@ export function ShareSystemAccessKeysCreatePage() {
             onChange={(value) => setForm((current) => ({ ...current, expiresInDays: value }))}
             placeholder="0 表示不过期"
           />
-          <div className="flex flex-wrap gap-3 pt-2">
+          <div className="flex flex-wrap gap-2 sm:col-span-2">
             <button
               type="submit"
               disabled={saving}
-              className="btn-primary rounded-full px-6 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-full bg-[var(--button-primary)] px-4 py-2 text-xs font-black shadow-sm transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {saving ? "创建中..." : "创建访问密钥"}
             </button>
@@ -307,7 +311,7 @@ function formatDateTime(value?: string | null) {
 function SystemLoadingPage({ currentPath, text }: { currentPath: string; text: string }) {
   return (
     <SystemWorkspace currentPath={currentPath} title="系统管理" description={text}>
-      <div className="dream-panel px-6 py-8 text-sm font-bold text-[var(--foreground)]/70">{text}</div>
+      <div className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white px-5 py-7 text-sm font-bold text-[var(--foreground)]/70 shadow-sm">{text}</div>
     </SystemWorkspace>
   );
 }
@@ -315,7 +319,7 @@ function SystemLoadingPage({ currentPath, text }: { currentPath: string; text: s
 function SystemForbiddenPage({ currentPath }: { currentPath: string }) {
   return (
     <SystemWorkspace currentPath={currentPath} title="系统管理" description="当前账号不是系统初始化超级管理员，无法访问此页面。">
-      <div className="dream-panel px-6 py-8">
+      <div className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white px-5 py-7 shadow-sm">
         <p className="text-sm font-bold leading-7 text-[var(--foreground)]/70">
           当前账号不是系统初始化超级管理员，无法访问此页面。
         </p>
@@ -325,19 +329,19 @@ function SystemForbiddenPage({ currentPath }: { currentPath: string }) {
 }
 
 function ErrorNotice({ message }: { message: string }) {
-  return <p className="dream-panel-soft border-[#f3c8ad] bg-[#fff4ec] px-5 py-4 text-sm font-bold text-[#9a3412]">{message}</p>;
+  return <p className="rounded-[1.1rem] border border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-xs font-black text-[#9a3412]">{message}</p>;
 }
 
 function SuccessNotice({ message }: { message: string }) {
-  return <p className="dream-panel-soft border-[#d9eed6] bg-[#f3fbf1] px-5 py-4 text-sm font-bold text-[#2f6d37]">{message}</p>;
+  return <p className="rounded-[1.1rem] border border-[#d9eed6] bg-[#f3fbf1] px-4 py-3 text-xs font-black text-[#2f6d37]">{message}</p>;
 }
 
 function TextField(props: { label: string; value: string; onChange: (value: string) => void; placeholder: string }) {
   const { label, value, onChange, placeholder } = props;
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-black text-[var(--foreground)]/72">{label}</span>
-      <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="dream-input w-full px-4 py-3" />
+      <span className="mb-1.5 block text-xs font-black text-[var(--foreground)]/65">{label}</span>
+      <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="w-full rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-2 text-xs font-bold text-[var(--foreground)] placeholder:text-[var(--foreground)]/35 focus:border-[var(--outline)] focus:bg-white focus:outline-none" />
     </label>
   );
 }

@@ -29,18 +29,18 @@ export function SystemWorkspace(props: {
 
   return (
     <AppShell currentPath={currentPath}>
-      <section className="mx-auto flex w-full max-w-[1680px] flex-col gap-4 px-4 pb-8 pt-5 sm:px-6 sm:pt-6 lg:px-8 2xl:px-10">
-        <div className="grid gap-5 lg:grid-cols-[228px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)]">
+      <section className="relative mx-auto flex w-full max-w-[var(--layout-max)] flex-col gap-4 px-4 pb-12 pt-5 sm:px-6 sm:pt-6">
+        <div className="grid gap-4 lg:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)]">
           <aside className="lg:sticky lg:top-24 lg:self-start">
-            <div className="dream-panel px-4 py-4">
-              <div className="border-b border-[rgba(220,173,187,0.35)] px-2 pb-4">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--foreground)]/45">
+            <div className="rounded-[1.2rem] border-2 border-[var(--outline)] bg-white p-3 shadow-sm">
+              <div className="border-b border-[var(--outline)]/20 px-2 pb-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--foreground)]/40">
                   System
                 </p>
-                <h1 className="mt-2 text-xl font-black text-[var(--foreground)]">系统管理</h1>
+                <h1 className="mt-1 text-base font-black text-[var(--foreground)]">系统管理</h1>
               </div>
 
-              <nav className="mt-4 hidden flex-col gap-2 lg:flex">
+              <nav className="mt-3 hidden flex-col gap-1.5 lg:flex">
                 {SYSTEM_NAV_ITEMS.map((item) => {
                   const active =
                     item.href === "/system"
@@ -50,10 +50,10 @@ export function SystemWorkspace(props: {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={`inline-flex min-h-11 items-center rounded-full px-4 py-3 text-sm font-black transition ${
+                      className={`inline-flex min-h-[34px] items-center rounded-full px-3 py-1.5 text-xs font-black transition ${
                         active
-                          ? "btn-primary pointer-events-none justify-center"
-                          : "btn-subtle text-[var(--foreground)]/78"
+                          ? "bg-[var(--button-primary)] text-[var(--foreground)]"
+                          : "text-[var(--foreground)]/72 hover:bg-[var(--surface-container)]"
                       }`}
                       aria-current={active ? "page" : undefined}
                     >
@@ -63,8 +63,8 @@ export function SystemWorkspace(props: {
                 })}
               </nav>
 
-              <div className="mt-4 lg:hidden">
-                <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+              <div className="mt-3 lg:hidden">
+                <div className="no-scrollbar flex gap-1.5 overflow-x-auto pb-1">
                   {SYSTEM_NAV_ITEMS.map((item) => {
                     const active =
                       item.href === "/system"
@@ -74,10 +74,10 @@ export function SystemWorkspace(props: {
                       <Link
                         key={item.href}
                         href={item.href}
-                        className={`shrink-0 rounded-full px-4 py-2 text-sm font-black transition ${
+                        className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-black transition ${
                           active
-                            ? "btn-primary pointer-events-none"
-                            : "btn-subtle text-[var(--foreground)]/78"
+                            ? "bg-[var(--button-primary)] text-[var(--foreground)]"
+                            : "border border-[var(--outline)]/20 bg-white text-[var(--foreground)]/72 hover:bg-[var(--surface-container)]"
                         }`}
                         aria-current={active ? "page" : undefined}
                       >
@@ -90,7 +90,7 @@ export function SystemWorkspace(props: {
             </div>
           </aside>
 
-          <div className="flex min-w-0 flex-col gap-5">{children}</div>
+          <div className="flex min-w-0 flex-col gap-4">{children}</div>
         </div>
       </section>
     </AppShell>

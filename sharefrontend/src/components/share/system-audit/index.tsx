@@ -168,9 +168,12 @@ export function ShareSystemAuditPage() {
       {loadError ? <ErrorNotice message={loadError} /> : null}
       {successMessage ? <SuccessNotice message={successMessage} /> : null}
 
-      <section className="dream-panel px-6 py-6 sm:px-8">
+      <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
+        <div className="border-b border-[var(--outline)]/20 pb-3">
+          <h2 className="text-base font-black text-[var(--foreground)]">筛选条件</h2>
+        </div>
         <form
-          className="grid gap-4 md:grid-cols-2 xl:grid-cols-4"
+          className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4"
           onSubmit={handleSubmit}
         >
           <TextField
@@ -229,11 +232,11 @@ export function ShareSystemAuditPage() {
             }
             placeholder="YYYY-MM-DD"
           />
-          <div className="flex items-end gap-3">
+          <div className="flex items-end gap-2">
             <button
               type="submit"
               disabled={submitting}
-              className="btn-primary flex-1 rounded-full px-5 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex-1 rounded-full bg-[var(--button-primary)] px-4 py-2 text-xs font-black shadow-sm transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? "查询中..." : "应用筛选"}
             </button>
@@ -241,7 +244,7 @@ export function ShareSystemAuditPage() {
               type="button"
               onClick={() => void handleReset()}
               disabled={submitting}
-              className="btn-subtle rounded-full px-5 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-full border border-[var(--outline)]/20 bg-white px-4 py-2 text-xs font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)] disabled:cursor-not-allowed disabled:opacity-60"
             >
               重置
             </button>
@@ -249,25 +252,21 @@ export function ShareSystemAuditPage() {
         </form>
       </section>
 
-      <section className="dream-panel px-6 py-6 sm:px-8">
-        <div className="flex items-center justify-between gap-4 border-b border-[rgba(220,173,187,0.35)] pb-4">
+      <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--outline)]/20 pb-3">
           <div>
-            <h2 className="text-xl font-black text-[var(--foreground)]">
-              最近日志
-            </h2>
-            <p className="mt-2 text-sm font-bold text-[var(--foreground)]/65">
+            <h2 className="text-base font-black text-[var(--foreground)]">最近日志</h2>
+            <p className="mt-0.5 text-[10px] font-bold text-[var(--foreground)]/55">
               第 {page} / {totalPages} 页，共 {total} 条记录
             </p>
           </div>
         </div>
 
-        <div className="mt-5 space-y-2.5">
+        <div className="mt-3 space-y-2">
           {loading ? (
-            <p className="text-sm font-bold text-[var(--foreground)]/65">
-              正在加载操作审计日志...
-            </p>
+            <p className="text-xs font-bold text-[var(--foreground)]/55">正在加载操作审计日志...</p>
           ) : parsedRows.length === 0 ? (
-            <p className="rounded-[24px] border border-dashed border-[rgba(120,85,94,0.22)] px-4 py-5 text-sm font-bold text-[var(--foreground)]/65">
+            <p className="rounded-[1.2rem] border-2 border-dashed border-[var(--outline)]/25 bg-[var(--surface-container)] px-4 py-5 text-center text-xs font-black text-[var(--foreground)]/60">
               当前筛选条件下暂无操作审计日志。
             </p>
           ) : (
@@ -285,7 +284,7 @@ export function ShareSystemAuditPage() {
           page={page}
           totalPages={totalPages}
           onPageChange={(nextPage) => void handlePageChange(nextPage)}
-          className="mt-6"
+          className="mt-4"
         />
       </section>
 
@@ -313,56 +312,53 @@ function AuditRow({
   const httpRow = contextRows.find((item) => item.label === "HTTP");
 
   return (
-    <article className="dream-panel-soft rounded-[18px] px-3.5 py-3">
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.7fr)_minmax(280px,1fr)] lg:items-start">
-        <div className="min-w-0 space-y-2">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-black text-[var(--foreground)]/72">
+    <article className="rounded-[1.1rem] border-2 border-[var(--outline)] bg-white p-2.5 shadow-sm transition hover:shadow-md">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-1">
+            <span className="rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-1.5 py-0.5 text-[10px] font-black text-[var(--foreground)]/72">
               {(log.action || "-").toUpperCase()}
             </span>
             <span
-              className={`rounded-full px-2.5 py-0.5 text-[11px] font-black ${
+              className={`rounded-full border px-1.5 py-0.5 text-[10px] font-black ${
                 log.status === "success"
-                  ? "bg-[rgba(199,244,214,0.9)] text-[#2f6d37]"
-                  : "bg-[rgba(255,230,224,0.9)] text-[#b64031]"
+                  ? "border-[#c0ebd0] bg-[#f0fff5] text-[#2d8d62]"
+                  : "border-[#f7cfc7] bg-[#fff6f4] text-[#b64031]"
               }`}
             >
               {log.status || "unknown"}
             </span>
-          </div>
-
-          <div className="min-w-0">
-            <h3 className="break-all text-[15px] font-black leading-5 text-[var(--foreground)]">
-              {log.resource || "未命名资源"}
-            </h3>
-            {detailPath ? (
-              <p className="mt-0.5 break-all text-[12px] font-bold text-[var(--foreground)]/68">
-                路径：{detailPath}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="flex flex-wrap gap-1.5 text-[11px] font-bold text-[var(--foreground)]/66">
             {httpRow ? (
-              <span className="rounded-full bg-white/76 px-2.5 py-1">
+              <span className="max-w-[180px] truncate rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--foreground)]/55">
                 {httpRow.value}
               </span>
             ) : null}
+            {log.user_id ? (
+              <span className="max-w-[180px] truncate rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--foreground)]/55">
+                用户 ID：{log.user_id}
+              </span>
+            ) : null}
             {log.resource_id ? (
-              <span className="rounded-full bg-white/76 px-2.5 py-1">
+              <span className="max-w-[180px] truncate rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--foreground)]/55">
                 资源 ID：{log.resource_id}
               </span>
             ) : null}
-            {log.user_id ? (
-              <span className="rounded-full bg-white/76 px-2.5 py-1">
-                用户 ID：{log.user_id}
-              </span>
+          </div>
+
+          <div className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0">
+            <h3 className="break-all text-sm font-black leading-5 text-[var(--foreground)]">
+              {log.resource || "未命名资源"}
+            </h3>
+            {detailPath ? (
+              <p className="break-all text-[10px] font-bold text-[var(--foreground)]/45">
+                {detailPath}
+              </p>
             ) : null}
           </div>
         </div>
 
-        <div className="space-y-2.5 lg:flex lg:flex-col lg:items-end lg:text-right">
-          <p className="text-[11px] font-bold text-[var(--foreground)]/62">
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <p className="text-[10px] font-bold text-[var(--foreground)]/50">
             {formatDateTime(log.created_at)}
           </p>
 
@@ -370,24 +366,24 @@ function AuditRow({
             <button
               type="button"
               onClick={onOpenContext}
-              className="btn-subtle rounded-full px-3 py-1.5 text-[11px] font-black text-[var(--foreground)]/74"
+              className="rounded-full border border-[var(--outline)]/20 bg-white px-2 py-1 text-[10px] font-black text-[var(--foreground)]/72 shadow-sm transition hover:bg-[var(--surface-container)]"
             >
-              查看请求上下文
+              上下文
             </button>
           ) : null}
         </div>
       </div>
 
       {changes.length > 0 ? (
-        <details className="mt-3 rounded-[16px] bg-white/70 px-3 py-2.5">
-          <summary className="cursor-pointer text-[12px] font-black text-[var(--foreground)]">
+        <details className="mt-2 rounded-[1rem] border border-[var(--outline)]/20 bg-[var(--surface-container)] px-2.5 py-2">
+          <summary className="cursor-pointer text-[11px] font-black text-[var(--foreground)]/75">
             查看字段变更 ({changes.length})
           </summary>
           <div className="mt-2 grid gap-1.5 lg:grid-cols-2">
             {changes.map((item, index) => (
               <div
                 key={`${log.id}-change-${index}`}
-                className="rounded-[14px] bg-[rgba(248,242,245,0.9)] px-2.5 py-2 text-[11px] font-bold leading-5 text-[var(--foreground)]/72"
+                className="rounded-[0.8rem] border border-[var(--outline)]/20 bg-white px-2.5 py-2 text-[10px] font-bold leading-5 text-[var(--foreground)]/70"
               >
                 <p>字段：{String(item.field || `field_${index}`)}</p>
                 <p>变更前：{formatAuditValue(item.before)}</p>
@@ -399,11 +395,11 @@ function AuditRow({
       ) : null}
 
       {changes.length === 0 && hasSnapshots ? (
-        <details className="mt-3 rounded-[16px] bg-white/70 px-3 py-2.5">
-          <summary className="cursor-pointer text-[12px] font-black text-[var(--foreground)]">
+        <details className="mt-2 rounded-[1rem] border border-[var(--outline)]/20 bg-[var(--surface-container)] px-2.5 py-2">
+          <summary className="cursor-pointer text-[11px] font-black text-[var(--foreground)]/75">
             查看快照
           </summary>
-          <pre className="mt-2 overflow-x-auto rounded-[14px] bg-[rgba(248,242,245,0.9)] px-2.5 py-2 text-[11px] font-bold leading-5 text-[var(--foreground)]/72">
+          <pre className="mt-2 overflow-x-auto rounded-[0.8rem] border border-[var(--outline)]/20 bg-white px-2.5 py-2 text-[10px] font-bold leading-5 text-[var(--foreground)]/70">
             {JSON.stringify(
               { before: detail.before, after: detail.after },
               null,
@@ -446,41 +442,39 @@ function AuditContextModal({
         aria-label="关闭请求上下文弹窗"
         onClick={onClose}
       />
-      <div className="dream-panel relative z-10 w-full max-w-[720px] p-5 sm:p-6">
-        <div className="flex items-start justify-between gap-4">
+      <div className="relative z-10 w-full max-w-[720px] rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-xl sm:p-5">
+        <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-xl font-black text-[var(--foreground)]">
-              请求上下文
-            </h3>
-            <p className="mt-1 break-all text-sm leading-6 text-[var(--foreground)]/62">
+            <h3 className="text-base font-black text-[var(--foreground)]">请求上下文</h3>
+            <p className="mt-0.5 break-all text-xs leading-5 text-[var(--foreground)]/60">
               {resource || "-"}
             </p>
-            <p className="mt-1 text-[12px] font-bold text-[var(--foreground)]/52">
+            <p className="mt-0.5 text-[10px] font-bold text-[var(--foreground)]/50">
               {formatDateTime(createdAt)}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="btn-subtle flex h-10 w-10 items-center justify-center rounded-full text-[var(--foreground)]/62"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--outline)]/20 bg-white text-[var(--foreground)]/60 shadow-sm transition hover:bg-[var(--surface-container)]"
             aria-label="关闭"
           >
-            <CloseIcon />
+            <CloseIcon className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="mt-5 grid gap-2.5">
+        <div className="mt-3 grid gap-2">
           {rows.map((item) => (
             <div
               key={`${item.label}-${item.value}`}
-              className="rounded-[16px] bg-[rgba(248,242,245,0.9)] px-3.5 py-3"
+              className="rounded-[1rem] border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-2"
             >
-              <p className="text-[11px] font-black uppercase tracking-[0.08em] text-[var(--foreground)]/42">
+              <p className="text-[10px] font-black uppercase tracking-[0.08em] text-[var(--foreground)]/40">
                 {item.label}
               </p>
               <p
-                className={`mt-1.5 break-all text-[13px] font-bold leading-6 ${
-                  item.isError ? "text-[#b64031]" : "text-[var(--foreground)]/74"
+                className={`mt-1 break-all text-xs font-bold leading-5 ${
+                  item.isError ? "text-[#b64031]" : "text-[var(--foreground)]/72"
                 }`}
               >
                 {item.value}
@@ -585,7 +579,7 @@ function SystemLoadingPage({
 }) {
   return (
     <SystemWorkspace currentPath={currentPath} title="系统管理" description={text}>
-      <div className="dream-panel px-6 py-8 text-sm font-bold text-[var(--foreground)]/70">
+      <div className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white px-5 py-7 text-sm font-bold text-[var(--foreground)]/70 shadow-sm">
         {text}
       </div>
     </SystemWorkspace>
@@ -599,7 +593,7 @@ function SystemForbiddenPage({ currentPath }: { currentPath: string }) {
       title="系统管理"
       description="当前账号不是系统初始化超级管理员，无法访问此页面。"
     >
-      <div className="dream-panel px-6 py-8">
+      <div className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white px-5 py-7 shadow-sm">
         <p className="text-sm font-bold leading-7 text-[var(--foreground)]/70">
           当前账号不是系统初始化超级管理员，无法访问此页面。
         </p>
@@ -610,7 +604,7 @@ function SystemForbiddenPage({ currentPath }: { currentPath: string }) {
 
 function ErrorNotice({ message }: { message: string }) {
   return (
-    <p className="dream-panel-soft border-[#f3c8ad] bg-[#fff4ec] px-5 py-4 text-sm font-bold text-[#9a3412]">
+    <p className="rounded-[1.1rem] border border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-xs font-black text-[#9a3412]">
       {message}
     </p>
   );
@@ -618,7 +612,7 @@ function ErrorNotice({ message }: { message: string }) {
 
 function SuccessNotice({ message }: { message: string }) {
   return (
-    <p className="dream-panel-soft border-[#d9eed6] bg-[#f3fbf1] px-5 py-4 text-sm font-bold text-[#2f6d37]">
+    <p className="rounded-[1.1rem] border border-[#d9eed6] bg-[#f3fbf1] px-4 py-3 text-xs font-black text-[#2f6d37]">
       {message}
     </p>
   );
@@ -637,14 +631,14 @@ function TextField({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-black text-[var(--foreground)]/72">
+      <span className="mb-1.5 block text-xs font-black text-[var(--foreground)]/65">
         {label}
       </span>
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="dream-input w-full px-4 py-3"
+        className="w-full rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-2 text-xs font-bold text-[var(--foreground)] placeholder:text-[var(--foreground)]/35 focus:border-[var(--outline)] focus:bg-white focus:outline-none"
       />
     </label>
   );
