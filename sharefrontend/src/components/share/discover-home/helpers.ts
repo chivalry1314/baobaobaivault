@@ -62,6 +62,8 @@ export function toHomeFeedCards(cards: DiscoverCardItem[]): HomeFeedCard[] {
       description: descriptionText,
       creatorName,
       metric: formatMetric(item.stats.downloadCount),
+      favoriteCount: item.stats.favoriteCount ?? 0,
+      isFavorited: item.isFavorited ?? false,
       accessMode: item.card.accessMode,
       href: `/cards/${encodeURIComponent(item.card.id)}`,
       imageUrl: item.card.previewUrl,

@@ -181,7 +181,11 @@ func (s *ShareService) mapDiscoverSystemThemes(
 		creatorMap[creator.ID] = creator
 	}
 
-	statsByCard, _ := aggregateStatsFromCards(cards)
+	favoriteCounts, err := s.CountFavorites(ctx, collectShareCardIDs(cards))
+	if err != nil {
+		return nil, err
+	}
+	statsByCard, _ := aggregateStatsFromCards(cards, favoriteCounts)
 	items := make([]ShareDiscoverSystemThemeItem, 0, len(cards))
 	for _, card := range cards {
 		assets := assetsByCardID[card.ID]

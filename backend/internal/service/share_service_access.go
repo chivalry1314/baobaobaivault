@@ -60,7 +60,15 @@ func (s *ShareService) GetCardDetail(ctx context.Context, cardID, viewerUserID s
 		return nil, err
 	}
 
-	statsByCard, _ := aggregateStatsFromCards([]model.SharePlatformCard{card})
+	favoriteCount, err := s.CountFavorites(ctx, []string{card.ID})
+	if err != nil {
+		return nil, err
+	}
+	isFavorited, err := s.IsFavorited(ctx, viewerUserID, card.ID)
+	if err != nil {
+		return nil, err
+	}
+	statsByCard, _ := aggregateStatsFromCards([]model.SharePlatformCard{card}, favoriteCount)
 
 	return &ShareCardDetail{
 		Card:             toShareCardView(&card, assets),
@@ -71,6 +79,7 @@ func (s *ShareService) GetCardDetail(ctx context.Context, cardID, viewerUserID s
 		CanEdit:          canEdit,
 		CanDownload:      canDownload,
 		AccessCodeStatus: accessCodeStatus,
+		IsFavorited:      isFavorited,
 	}, nil
 }
 

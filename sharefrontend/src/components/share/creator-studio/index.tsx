@@ -12,6 +12,7 @@ import {
   CreatorCard,
   CreatorStudioIcons,
   EmptyState,
+  FavoriteCard,
   HistoryItem,
   SidebarButton,
   TabButton,
@@ -55,6 +56,13 @@ export function CreatorStudio() {
     historyTotalPages,
     pagedCards,
     pagedHistoryItems,
+    favorites,
+    favoritesPage,
+    favoritesTotalPages,
+    favoritesLoading,
+    favoritesError,
+    loadFavoritesPage,
+    removeFavoriteFromList,
     heroSurfaceStyle,
     handleProfileSaved,
     openCreatePanel,
@@ -309,12 +317,46 @@ export function CreatorStudio() {
                   ) : null}
 
                   {activeTab === "collections" ? (
-                    <EmptyState
-                      title="收藏功能即将上线"
-                      description="很快你就可以在这里管理收藏的卡片内容，先去首页浏览更多作品吧。"
-                      actionLabel="前往首页"
-                      actionHref="/"
-                    />
+                    favoritesLoading && favorites.length === 0 ? (
+                      <div className="py-10 text-center text-[var(--foreground)]/62">
+                        正在加载收藏...
+                      </div>
+                    ) : favoritesError ? (
+                      <div className="dream-panel-soft flex flex-col gap-3 border-[#f3c8ad] bg-[#fff6ef] px-5 py-4 text-sm text-[#9a3412] sm:flex-row sm:items-center sm:justify-between">
+                        <span>{favoritesError}</span>
+                        <button
+                          type="button"
+                          onClick={() => void loadFavoritesPage(favoritesPage)}
+                          className="btn-subtle w-fit rounded-full border-[#f1b18a] px-4 py-2 text-sm"
+                        >
+                          重新加载
+                        </button>
+                      </div>
+                    ) : favorites.length > 0 ? (
+                      <div className="space-y-5">
+                        <div className="grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                          {favorites.map((item) => (
+                            <FavoriteCard
+                              key={item.card.id}
+                              item={item}
+                              onUnfavorited={() => removeFavoriteFromList(item.card.id)}
+                            />
+                          ))}
+                        </div>
+                        <PaginationControls
+                          page={favoritesPage}
+                          totalPages={favoritesTotalPages}
+                          onPageChange={(nextPage) => void loadFavoritesPage(nextPage)}
+                        />
+                      </div>
+                    ) : (
+                      <EmptyState
+                        title="还没有收藏内容"
+                        description="在发现页看到喜欢的卡片，点击收藏按钮即可在这里找到。"
+                        actionLabel="前往首页"
+                        actionHref="/"
+                      />
+                    )
                   ) : null}
 
                   {activeTab === "history" ? (

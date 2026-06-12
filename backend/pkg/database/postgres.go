@@ -78,6 +78,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&model.ShareSiteBrandingSettings{},
 		&model.SharePlatformCard{},
 		&model.SharePlatformCardAsset{},
+		&model.SharePlatformCardFavorite{},
 		&model.SharePlatformDownloadLog{},
 	); err != nil {
 		return err

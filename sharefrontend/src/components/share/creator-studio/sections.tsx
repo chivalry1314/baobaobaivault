@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { AccessModeBadge } from "@/components/share/access-mode-badge";
+import { FavoriteButton } from "@/components/share/favorite-button";
 import {
   defaultCardDescription,
   formatCardCode,
@@ -17,6 +18,7 @@ import {
 import type {
   DashboardCard,
   ExternalSessionUser,
+  FavoriteItem,
 } from "@/lib/shared";
 
 export function Avatar({
@@ -240,6 +242,83 @@ export function CreatorCard({ item }: { item: DashboardCard }) {
           >
             管理提取码
           </Link>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+export function FavoriteCard({
+  item,
+  onUnfavorited,
+}: {
+  item: FavoriteItem;
+  onUnfavorited?: () => void;
+}) {
+  const cardHref = `/cards/${encodeURIComponent(item.card.id)}`;
+
+  return (
+    <article className="dream-panel-soft flex h-full flex-col overflow-hidden rounded-[18px] p-1.5 shadow-[0_14px_30px_-26px_rgba(71,102,129,0.24)]">
+      <div className="relative overflow-hidden rounded-[14px] bg-[rgba(244,249,252,0.94)] p-2">
+        <div className="absolute inset-x-2.5 top-2 flex items-center justify-between">
+          <AccessModeBadge mode={item.card.accessMode} compact />
+          <div className="flex gap-2">
+            <span className="inline-flex rounded-full bg-white/88 px-2 py-0.5 text-[9px] font-black text-[var(--foreground)]/62">
+              #{formatCardCode(item.card.id)}
+            </span>
+          </div>
+        </div>
+
+        <div className="pt-5">
+          {isImageCard(item.card) ? (
+            <div className="overflow-hidden rounded-[12px] border border-white/80 bg-white shadow-[0_14px_30px_-28px_rgba(83,110,122,0.4)]">
+              <img
+                src={item.card.previewUrl}
+                alt={item.card.title}
+                className="h-20 w-full object-cover"
+              />
+            </div>
+          ) : (
+            <div className="flex h-20 items-end rounded-[12px] border border-dashed border-[var(--outline-variant)] bg-[linear-gradient(135deg,rgba(209,234,247,0.36),rgba(246,223,233,0.34))] p-2">
+              <p className="max-w-[12rem] text-[9px] leading-3.5 text-[var(--foreground)]/66">
+                {defaultCardDescription(item.card)}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-1 flex-col px-1 pb-1 pt-1.5">
+        <div className="min-w-0">
+          <h2 className="line-clamp-1 text-[13px] font-black leading-[1.15] text-[var(--foreground)]">
+            {item.card.title}
+          </h2>
+          <p className="sr-only">{defaultCardDescription(item.card)}</p>
+        </div>
+
+        <div className="mt-2 grid grid-cols-2 gap-1">
+          <StatCard label="下载" value={String(item.stats.downloadCount)} />
+          <StatCard label="收藏" value={String(item.stats.favoriteCount)} />
+        </div>
+
+        <div className="mt-auto flex flex-wrap gap-1 pt-2">
+          <Link
+            href={cardHref}
+            className="btn-primary inline-flex min-h-[32px] flex-1 items-center justify-center rounded-full px-2 py-1 text-[10px] font-black"
+          >
+            查看卡片
+          </Link>
+          <FavoriteButton
+            cardId={item.card.id}
+            initialFavorited
+            initialCount={item.stats.favoriteCount}
+            size="compact"
+            onToggle={(nextFavorited) => {
+              if (!nextFavorited) {
+                onUnfavorited?.();
+              }
+            }}
+          />
         </div>
       </div>
     </article>

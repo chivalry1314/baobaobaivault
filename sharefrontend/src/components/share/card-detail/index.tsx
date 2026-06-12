@@ -17,6 +17,7 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
     setDownloadError,
     viewModel,
     handleAssetDownload,
+    toggleFavorite,
   } = useCardDetail({ cardId });
 
   return (
@@ -44,6 +45,7 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
               onAssetDownload={(asset) => {
                 void handleAssetDownload(asset);
               }}
+              onToggleFavorite={toggleFavorite}
             />
           ) : null}
         </section>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AccessModeBadge } from "@/components/share/access-mode-badge";
+import { FavoriteButton } from "@/components/share/favorite-button";
 import { SLOT_LABEL_MAP } from "@/components/share/card-detail/constants";
 import { formatBytes, getInitials } from "@/components/share/card-detail/helpers";
 import { useShareSiteBrand } from "@/components/share/site-brand/provider";
@@ -37,6 +38,7 @@ export function CardDetailContent(props: {
   downloadError: string;
   setDownloadError: (value: string) => void;
   onAssetDownload: (asset: CardAsset) => void;
+  onToggleFavorite?: (nextFavorited: boolean, nextCount: number) => void;
 }) {
   const {
     detail,
@@ -47,6 +49,7 @@ export function CardDetailContent(props: {
     downloadError,
     setDownloadError,
     onAssetDownload,
+    onToggleFavorite,
   } = props;
 
   const brand = useShareSiteBrand();
@@ -66,9 +69,13 @@ export function CardDetailContent(props: {
             返回
           </Link>
 
-          <div className="absolute right-6 top-6 z-20 flex items-center gap-2 rounded-full border-[3px] border-[var(--outline)] bg-white px-4 py-2">
-            <HeartIcon className="h-5 w-5 text-[var(--brand)]" />
-            <span className="text-base font-black text-[var(--foreground)]">{viewModel.metric}</span>
+          <div className="absolute right-6 top-6 z-20 flex items-center gap-2">
+            <FavoriteButton
+              cardId={detail.card.id}
+              initialFavorited={detail.isFavorited}
+              initialCount={detail.stats.favoriteCount}
+              onToggle={onToggleFavorite}
+            />
           </div>
 
           <div className="relative h-full w-full overflow-hidden rounded-[1.3rem] border-[3px] border-[var(--outline)] bg-[var(--outline)]">
@@ -280,13 +287,5 @@ export function CardDetailContent(props: {
         </section>
       </aside>
     </div>
-  );
-}
-
-function HeartIcon({ className = "h-4 w-4" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
-      <path d="M12 20.3 4.94 13.6a4.67 4.67 0 0 1 6.6-6.6L12 7.45l.46-.45a4.67 4.67 0 0 1 6.6 6.6L12 20.3Z" fill="currentColor" />
-    </svg>
   );
 }

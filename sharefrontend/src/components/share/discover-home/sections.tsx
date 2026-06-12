@@ -6,6 +6,7 @@ import {
   type ShareAccessModeFilter,
 } from "@/components/share/access-mode-filter";
 import { AccessModeBadge } from "@/components/share/access-mode-badge";
+import { FavoriteButton } from "@/components/share/favorite-button";
 import {
   CHIP_LABELS,
   CHIP_VISUALS,
@@ -293,8 +294,14 @@ function CardItem({ card, index }: { card: HomeFeedCard; index: number }) {
         <span>{card.creatorName}</span>
         <span>{card.metric}</span>
       </div>
-      <div className="mt-2 px-1">
+      <div className="mt-2 flex items-center justify-between px-1">
         <AccessModeBadge mode={card.accessMode} compact />
+        <FavoriteButton
+          cardId={card.id}
+          initialFavorited={card.isFavorited}
+          initialCount={card.favoriteCount}
+          size="compact"
+        />
       </div>
     </Link>
   );

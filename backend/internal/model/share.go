@@ -123,6 +123,21 @@ func (SharePlatformCard) TableName() string {
 	return "share_platform_cards"
 }
 
+// SharePlatformCardFavorite records a user's favorite/collection of a platform card.
+type SharePlatformCardFavorite struct {
+	ID             string    `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	ExternalUserID string    `gorm:"type:uuid;not null;index:idx_share_fav_user_card,priority:1" json:"external_user_id"`
+	CardID         string    `gorm:"type:uuid;not null;index:idx_share_fav_user_card,priority:2" json:"card_id"`
+	CreatedAt      time.Time `json:"created_at"`
+
+	User *ShareExternalUser `gorm:"foreignKey:ExternalUserID" json:"-"`
+	Card *SharePlatformCard `gorm:"foreignKey:CardID" json:"-"`
+}
+
+func (SharePlatformCardFavorite) TableName() string {
+	return "share_platform_card_favorites"
+}
+
 // SharePlatformCardAsset stores card files grouped by fixed content slots.
 type SharePlatformCardAsset struct {
 	ID                 string         `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`

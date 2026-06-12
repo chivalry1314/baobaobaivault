@@ -22,6 +22,7 @@ import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type {
   DashboardResponse,
   ExternalSessionUser,
+  FavoriteItem,
 } from "@/lib/shared";
 
 export function useCreatorStudio() {
@@ -36,6 +37,11 @@ export function useCreatorStudio() {
     useState<ShareAccessModeFilter>("all");
   const [cardsPage, setCardsPage] = useState(1);
   const [historyPage, setHistoryPage] = useState(1);
+  const [favoritesPage, setFavoritesPage] = useState(1);
+  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+  const [favoritesTotal, setFavoritesTotal] = useState(0);
+  const [favoritesLoading, setFavoritesLoading] = useState(false);
+  const [favoritesError, setFavoritesError] = useState("");
 
   const currentUser = user;
   const allCards = useMemo(() => dashboard?.cards ?? [], [dashboard?.cards]);
@@ -90,6 +96,11 @@ export function useCreatorStudio() {
     () => Math.max(1, Math.ceil(historyItems.length / HISTORY_PAGE_SIZE)),
     [historyItems.length],
   );
+  const favoritesPageSize = CARDS_PAGE_SIZE;
+  const favoritesTotalPages = useMemo(
+    () => Math.max(1, Math.ceil(favoritesTotal / favoritesPageSize)),
+    [favoritesTotal, favoritesPageSize],
+  );
 
   const pagedCards = useMemo(() => {
     const safePage = Math.min(Math.max(cardsPage, 1), cardsTotalPages);
@@ -106,6 +117,7 @@ export function useCreatorStudio() {
   useEffect(() => {
     setCardsPage(1);
     setHistoryPage(1);
+    setFavoritesPage(1);
   }, [dashboard, accessModeFilter]);
 
   useEffect(() => {
@@ -130,10 +142,20 @@ export function useCreatorStudio() {
   }, [currentUser]);
 
   const loadDashboard = useCallback(async () => {
-    const [cardsPayload, accessCodesPayload] = await Promise.all([
+    const [cardsPayload, accessCodesPayload, favoritesPayload] = await Promise.all([
       shareApi.myCards(),
       shareApi.myAccessCodes().catch(() => null),
+      shareApi.myFavorites({ page: 1, size: favoritesPageSize }).catch(() => null),
     ]);
+
+    if (favoritesPayload) {
+      setFavorites(favoritesPayload.cards);
+      setFavoritesTotal(favoritesPayload.pagination.total);
+      setFavoritesError("");
+    } else {
+      setFavorites([]);
+      setFavoritesTotal(0);
+    }
 
     const activeAccessCodeByCardId = new Map<string, string>();
     const hasConfiguredAccessCodeCardIds = new Set<string>();
@@ -164,7 +186,7 @@ export function useCreatorStudio() {
     setUser(cardsPayload.user);
     setDashboard({ ...cardsPayload, cards: mergedCards });
     setLoadError("");
-  }, [setUser]);
+  }, [favoritesPageSize, setUser]);
 
   useEffect(() => {
     let active = true;
@@ -212,6 +234,26 @@ export function useCreatorStudio() {
     }
   }
 
+  async function loadFavoritesPage(page: number) {
+    setFavoritesLoading(true);
+    setFavoritesError("");
+    try {
+      const payload = await shareApi.myFavorites({ page, size: favoritesPageSize });
+      setFavorites(payload.cards);
+      setFavoritesTotal(payload.pagination.total);
+      setFavoritesPage(page);
+    } catch (error) {
+      setFavoritesError(getShareErrorMessage(error, "加载收藏列表失败，请稍后重试"));
+    } finally {
+      setFavoritesLoading(false);
+    }
+  }
+
+  function removeFavoriteFromList(cardId: string) {
+    setFavorites((current) => current.filter((item) => item.card.id !== cardId));
+    setFavoritesTotal((current) => Math.max(0, current - 1));
+  }
+
   async function handleLogout() {
     await shareApi.logout().catch(() => null);
     clearSession();
@@ -244,6 +286,14 @@ export function useCreatorStudio() {
     historyTotalPages,
     pagedCards,
     pagedHistoryItems,
+    favorites,
+    favoritesPage,
+    favoritesTotalPages,
+    favoritesLoading,
+    favoritesError,
+    favoritesPageSize,
+    loadFavoritesPage,
+    removeFavoriteFromList,
     heroSurfaceStyle,
     handleProfileSaved,
     openCreatePanel,

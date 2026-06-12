@@ -1,5 +1,5 @@
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { buildCardViewModel } from "@/components/share/card-detail/helpers";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
@@ -64,6 +64,25 @@ export function useCardDetail({ cardId }: UseCardDetailArgs) {
   const viewModel = useMemo(
     () => buildCardViewModel(detail, unlockCode),
     [detail, unlockCode],
+  );
+
+  const toggleFavorite = useCallback(
+    (nextFavorited: boolean, nextCount: number) => {
+      setDetail((current) => {
+        if (!current) {
+          return current;
+        }
+        return {
+          ...current,
+          isFavorited: nextFavorited,
+          stats: {
+            ...current.stats,
+            favoriteCount: nextCount,
+          },
+        };
+      });
+    },
+    [],
   );
 
   async function handleAssetDownload(asset: CardAsset) {
@@ -141,5 +160,6 @@ export function useCardDetail({ cardId }: UseCardDetailArgs) {
     setDownloadError,
     viewModel,
     handleAssetDownload,
+    toggleFavorite,
   };
 }

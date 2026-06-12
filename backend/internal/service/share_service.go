@@ -80,6 +80,7 @@ var (
 	ErrSharePasswordResetFailed            = errors.New("password reset failed")
 	ErrShareAdminResetUnavailable          = errors.New("admin password reset unavailable")
 	ErrShareCardAssetRequired              = errors.New("card must keep at least one category file")
+	ErrShareFavoriteNotFound               = errors.New("favorite not found")
 	ErrShareInvalidReviewStatus            = errors.New("invalid review status")
 	ErrShareReviewReasonRequired           = errors.New("review reason is required")
 	ErrShareInvalidSystemThemePackage      = errors.New("invalid system theme package")
@@ -346,6 +347,7 @@ type ShareCardView struct {
 type ShareCardStats struct {
 	DownloadCount    int64      `json:"downloadCount"`
 	LastDownloadedAt *time.Time `json:"lastDownloadedAt"`
+	FavoriteCount    int64      `json:"favoriteCount"`
 }
 
 type SharePublicUser struct {
@@ -356,9 +358,10 @@ type SharePublicUser struct {
 }
 
 type ShareDiscoverCardItem struct {
-	Card    ShareCardView   `json:"card"`
-	Creator SharePublicUser `json:"creator"`
-	Stats   ShareCardStats  `json:"stats"`
+	Card        ShareCardView   `json:"card"`
+	Creator     SharePublicUser `json:"creator"`
+	Stats       ShareCardStats  `json:"stats"`
+	IsFavorited bool            `json:"isFavorited"`
 }
 
 type ShareCardDetail struct {
@@ -370,6 +373,7 @@ type ShareCardDetail struct {
 	CanEdit          bool                  `json:"canEdit"`
 	CanDownload      bool                  `json:"canDownload"`
 	AccessCodeStatus ShareCardAccessStatus `json:"accessCodeStatus"`
+	IsFavorited      bool                  `json:"isFavorited"`
 }
 
 type ShareCardAccessStatus string
@@ -566,7 +570,7 @@ type ShareChangePasswordInput struct {
 	NewPassword string
 }
 
-func (s *ShareService) ListDiscoverCards(ctx context.Context, page, size int) ([]ShareDiscoverCardItem, int64, error) {
+func (s *ShareService) ListDiscoverCards(ctx context.Context, page, size int, viewerUserID string) ([]ShareDiscoverCardItem, int64, error) {
 	if page <= 0 {
 		page = 1
 	}
@@ -611,7 +615,7 @@ func (s *ShareService) ListDiscoverCards(ctx context.Context, page, size int) ([
 		return nil, 0, err
 	}
 
-	items, err := s.mapDiscoverCards(ctx, cards, assetsByCardID)
+	items, err := s.mapDiscoverCards(ctx, cards, assetsByCardID, viewerUserID)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -646,7 +650,11 @@ func (s *ShareService) ListDashboardByUser(ctx context.Context, userID string) (
 		}
 	}
 
-	statsByCard, totalDownloads := aggregateStatsFromCards(cards)
+	favoriteCounts, err := s.CountFavorites(ctx, cardIDs)
+	if err != nil {
+		return nil, err
+	}
+	statsByCard, totalDownloads := aggregateStatsFromCards(cards, favoriteCounts)
 	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, cardIDs)
 	if err != nil {
 		return nil, err
@@ -696,7 +704,11 @@ func (s *ShareService) ListAccessCodeDashboardByUser(ctx context.Context, userID
 		cardIDs = append(cardIDs, card.ID)
 	}
 
-	statsByCard, _ := aggregateStatsFromCards(cards)
+	favoriteCounts, err := s.CountFavorites(ctx, cardIDs)
+	if err != nil {
+		return nil, err
+	}
+	statsByCard, _ := aggregateStatsFromCards(cards, favoriteCounts)
 	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, cardIDs)
 	if err != nil {
 		return nil, err
@@ -759,6 +771,7 @@ func (s *ShareService) mapDiscoverCards(
 	ctx context.Context,
 	cards []model.SharePlatformCard,
 	assetsByCardID map[string][]model.SharePlatformCardAsset,
+	viewerUserID string,
 ) ([]ShareDiscoverCardItem, error) {
 	cardIDs := make([]string, 0, len(cards))
 	creatorIDs := make([]string, 0, len(cards))
@@ -780,7 +793,16 @@ func (s *ShareService) mapDiscoverCards(
 		creatorMap[creator.ID] = creator
 	}
 
-	statsByCard, _ := aggregateStatsFromCards(cards)
+	favoriteCounts, err := s.CountFavorites(ctx, cardIDs)
+	if err != nil {
+		return nil, err
+	}
+	favoritedMap, err := s.BatchIsFavorited(ctx, viewerUserID, cardIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	statsByCard, _ := aggregateStatsFromCards(cards, favoriteCounts)
 
 	items := make([]ShareDiscoverCardItem, 0, len(cards))
 	for _, card := range cards {
@@ -795,22 +817,24 @@ func (s *ShareService) mapDiscoverCards(
 			creatorView = toSharePublicUser(&creator)
 		}
 		items = append(items, ShareDiscoverCardItem{
-			Card:    toShareCardView(&card, assetsByCardID[card.ID]),
-			Creator: creatorView,
-			Stats:   statsByCard[card.ID],
+			Card:        toShareCardView(&card, assetsByCardID[card.ID]),
+			Creator:     creatorView,
+			Stats:       statsByCard[card.ID],
+			IsFavorited: favoritedMap[card.ID],
 		})
 	}
 
 	return items, nil
 }
 
-func aggregateStatsFromCards(cards []model.SharePlatformCard) (map[string]ShareCardStats, int64) {
+func aggregateStatsFromCards(cards []model.SharePlatformCard, favoriteCounts map[string]int64) (map[string]ShareCardStats, int64) {
 	stats := make(map[string]ShareCardStats, len(cards))
 	totalDownloads := int64(0)
 	for _, card := range cards {
 		stats[card.ID] = ShareCardStats{
 			DownloadCount:    card.DownloadCount,
 			LastDownloadedAt: card.LastDownloadedAt,
+			FavoriteCount:    favoriteCounts[card.ID],
 		}
 		totalDownloads += card.DownloadCount
 	}

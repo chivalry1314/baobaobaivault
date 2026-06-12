@@ -11,6 +11,7 @@
   DiscoverCardItem,
   DiscoverCardsPagination,
   DiscoverSystemThemeItem,
+  FavoritesResponse,
   ExternalSessionUser,
   PlatformCard,
   RegisterResendResponse,
@@ -400,6 +401,39 @@ export const shareApi = {
     const query = params.toString();
     const path = query ? `${API_ROOT}/discover/system-themes?${query}` : `${API_ROOT}/discover/system-themes`;
     return request<{ items: DiscoverSystemThemeItem[]; pagination: DiscoverCardsPagination }>(path);
+  },
+
+  favoriteCard(cardId: string) {
+    return request<{ ok: true }>(
+      `${API_ROOT}/me/favorites/${encodeURIComponent(cardId)}`,
+      {
+        method: "POST",
+      },
+    );
+  },
+
+  unfavoriteCard(cardId: string) {
+    return request<{ ok: true }>(
+      `${API_ROOT}/me/favorites/${encodeURIComponent(cardId)}`,
+      {
+        method: "DELETE",
+      },
+    );
+  },
+
+  myFavorites(input?: { page?: number; size?: number }) {
+    const params = new URLSearchParams();
+    if (input?.page && input.page > 0) {
+      params.set("page", String(input.page));
+    }
+    if (input?.size && input.size > 0) {
+      params.set("size", String(input.size));
+    }
+    const query = params.toString();
+    const path = query ? `${API_ROOT}/me/favorites?${query}` : `${API_ROOT}/me/favorites`;
+    return request<FavoritesResponse>(path, {
+      cache: "no-store",
+    });
   },
 
   cardDetail(cardId: string) {

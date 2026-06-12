@@ -11,6 +11,8 @@ export type HomeFeedCard = {
   description: string;
   creatorName: string;
   metric: string;
+  favoriteCount: number;
+  isFavorited: boolean;
   accessMode: "free" | "paid";
   href: string;
   imageUrl: string;

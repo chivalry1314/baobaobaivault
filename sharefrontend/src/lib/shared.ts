@@ -80,6 +80,7 @@ export type PlatformCard = {
 export type CardStats = {
   downloadCount: number;
   lastDownloadedAt: string | null;
+  favoriteCount: number;
 };
 
 export type PublicCreator = {
@@ -93,6 +94,7 @@ export type DiscoverCardItem = {
   card: PlatformCard;
   creator: PublicCreator;
   stats: CardStats;
+  isFavorited?: boolean;
 };
 
 export type ShareSystemTheme = {
@@ -496,6 +498,19 @@ export type CardDetailResponse = {
   canEdit: boolean;
   canDownload: boolean;
   accessCodeStatus?: "none" | "required" | "expired" | "exhausted";
+  isFavorited?: boolean;
+};
+
+export type FavoriteItem = {
+  card: PlatformCard;
+  creator: PublicCreator;
+  stats: CardStats;
+  isFavorited?: boolean;
+};
+
+export type FavoritesResponse = {
+  cards: FavoriteItem[];
+  pagination: DiscoverCardsPagination;
 };
 
 export type CardAssetUpdateResponse = {
