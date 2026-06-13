@@ -1,0 +1,14 @@
+# Normalize line endings to LF for source and deployment files.
+.gitattributes text eol=lf
+* text=auto
+*.go text eol=lf
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.conf text eol=lf
+*.env text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.css text eol=lf
