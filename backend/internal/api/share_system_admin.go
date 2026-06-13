@@ -497,6 +497,9 @@ func (h *Handler) shareSystemUploadSiteBrandingLogo(c *gin.Context) {
 }
 
 func (h *Handler) sharePublicSiteBrandingSettings(c *gin.Context) {
+	c.Header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate")
+	c.Header("Pragma", "no-cache")
+	c.Header("Expires", "0")
 	c.JSON(http.StatusOK, gin.H{
 		"settings": h.shareService.GetSharePublicSiteBrandingSettings(),
 	})

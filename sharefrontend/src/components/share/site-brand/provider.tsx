@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
+import { shareApi } from "@/lib/share-api";
 import type { ShareSiteBrandingSettings } from "@/lib/shared";
 import { shareSiteBrand, updateShareSiteBrandRuntime } from "@/lib/site-config";
 
@@ -29,6 +30,28 @@ export function ShareSiteBrandProvider(props: {
   useEffect(() => {
     updateShareSiteBrandRuntime(brand);
   }, [brand]);
+
+  // Refresh the brand from the backend after hydration. This defends against
+  // stale SSR/edge caches and ensures the latest saved values are shown after
+  // logout/login or a full-page reload.
+  useEffect(() => {
+    let cancelled = false;
+    shareApi
+      .publicSiteBrandingSettings()
+      .then((response) => {
+        if (cancelled || !response?.settings) {
+          return;
+        }
+        const next = { ...response.settings, canUpdate: false };
+        setBrandState(next);
+      })
+      .catch(() => {
+        // Ignore: fallback to the SSR-provided brand.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const value = useMemo(
     () => ({ brand, setBrand: setBrandState }),
