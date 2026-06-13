@@ -42,6 +42,7 @@
 - [.env.public.example](./.env.public.example)
 - [deploy/backend/config.public.example.yaml](./deploy/backend/config.public.example.yaml)
 - [deploy/nginx/default.public.conf](./deploy/nginx/default.public.conf)
+- [scripts/init-production.sh](./scripts/init-production.sh)
 - [.github/workflows/publish-images.yml](./.github/workflows/publish-images.yml)
 
 ## Published Images
@@ -54,11 +55,13 @@
 1. Read one deployment guide first:
    - Chinese: `README.zh-CN.md`
    - English: `README.en.md`
-2. Copy the public deployment templates:
+2. Run the production bootstrap script:
+   - `./scripts/init-production.sh`
+3. Or copy the public deployment templates manually:
    - `docker-compose.public.yml`
    - `.env.public.example`
    - `deploy/backend/config.public.example.yaml`
    - `deploy/nginx/default.public.conf`
-3. Fill in your real domain, database password, Redis password, JWT secret, and admin email.
+   and fill in your real domain, database password, Redis password, JWT secret, and admin email.
 4. Start the stack with `docker compose up -d`.
 5. If you want email verification or OSS media storage, continue with the dedicated guides above.

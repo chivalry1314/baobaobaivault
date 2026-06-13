@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -14,7 +16,9 @@ import (
 	"github.com/baobaobai/baobaobaivault/pkg/crypto"
 	"github.com/baobaobai/baobaobaivault/pkg/database"
 	"github.com/baobaobai/baobaobaivault/pkg/redis"
+	goredis "github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // @title Baobaobai Vault API
@@ -37,50 +41,137 @@ import (
 // @description Type "Bearer" followed by a space and JWT token.
 
 func main() {
-	// 加载配置
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "migrate":
+			if err := runMigrate(); err != nil {
+				fmt.Printf("migrate failed: %v\n", err)
+				os.Exit(1)
+			}
+			return
+		case "create-admin":
+			if err := runCreateAdmin(os.Args[2:]); err != nil {
+				fmt.Printf("create-admin failed: %v\n", err)
+				os.Exit(1)
+			}
+			return
+		case "bootstrap":
+			if err := runBootstrap(os.Args[2:]); err != nil {
+				fmt.Printf("bootstrap failed: %v\n", err)
+				os.Exit(1)
+			}
+			return
+		}
+	}
+
+	if err := runServer(); err != nil {
+		fmt.Printf("server failed: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func initDeps() (*config.Config, *gorm.DB, *goredis.Client, *zap.Logger, error) {
 	cfg, err := config.Load()
 	if err != nil {
-		fmt.Printf("Failed to load config: %v\n", err)
-		os.Exit(1)
+		return nil, nil, nil, nil, fmt.Errorf("load config: %w", err)
 	}
 
-	// 初始化字段加密：空密钥仍可运行，但不会加密数据
 	if err := crypto.SetFieldEncryptionKey(cfg.Security.FieldEncryptionKey); err != nil {
-		fmt.Printf("Failed to configure field encryption: %v\n", err)
-		os.Exit(1)
+		return nil, nil, nil, nil, fmt.Errorf("configure field encryption: %w", err)
 	}
 
-	// 初始化日志
 	logger, err := zap.NewProduction()
 	if err != nil {
-		fmt.Printf("Failed to init logger: %v\n", err)
-		os.Exit(1)
+		return nil, nil, nil, nil, fmt.Errorf("init logger: %w", err)
 	}
-	defer logger.Sync()
 
-	// 初始化数据库
 	db, err := database.NewPostgresDB(cfg.Server, cfg.Database, logger)
 	if err != nil {
-		logger.Fatal("Failed to connect database", zap.Error(err))
+		logger.Sync()
+		return nil, nil, nil, nil, fmt.Errorf("connect database: %w", err)
 	}
-	defer database.Close(db)
 
-	// 初始化 Redis
 	rdb, err := redis.NewClient(cfg.Redis, logger)
 	if err != nil {
-		logger.Fatal("Failed to connect redis", zap.Error(err))
+		database.Close(db)
+		logger.Sync()
+		return nil, nil, nil, nil, fmt.Errorf("connect redis: %w", err)
 	}
-	defer redis.Close(rdb)
 
-	// 自动迁移数据库表
+	return cfg, db, rdb, logger, nil
+}
+
+func runMigrate() error {
+	_, db, _, logger, err := initDeps()
+	if err != nil {
+		return err
+	}
+	defer database.Close(db)
+	defer logger.Sync()
+
+	if err := database.AutoMigrate(db); err != nil {
+		return err
+	}
+	logger.Info("database migration completed")
+	return nil
+}
+
+func runCreateAdmin(args []string) error {
+	cfg, db, _, logger, err := initDeps()
+	if err != nil {
+		return err
+	}
+	defer database.Close(db)
+	defer logger.Sync()
+
+	if err := database.AutoMigrate(db); err != nil {
+		return fmt.Errorf("migrate database: %w", err)
+	}
+
+	fs := flag.NewFlagSet("create-admin", flag.ExitOnError)
+	email := fs.String("email", "", "admin email address")
+	password := fs.String("password", "", "admin password")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	adminEmail := strings.TrimSpace(*email)
+	if adminEmail == "" {
+		adminEmail = strings.TrimSpace(cfg.Server.AdminEmail)
+	}
+	if adminEmail == "" {
+		return fmt.Errorf("admin email is required, provide --email or set server.admin_email in config")
+	}
+	if strings.TrimSpace(*password) == "" {
+		return fmt.Errorf("admin password is required, provide --password")
+	}
+	if len(*password) < 6 {
+		return fmt.Errorf("admin password must be at least 6 characters")
+	}
+
+	if err := createOrUpdateAdmin(db, adminEmail, *password, logger); err != nil {
+		return err
+	}
+
+	fmt.Printf("Admin user ready: %s\n", adminEmail)
+	return nil
+}
+
+func runServer() error {
+	cfg, db, rdb, logger, err := initDeps()
+	if err != nil {
+		return err
+	}
+	defer database.Close(db)
+	defer redis.Close(rdb)
+	defer logger.Sync()
+
 	if err := database.AutoMigrate(db); err != nil {
 		logger.Fatal("Failed to migrate database", zap.Error(err))
 	}
 
-	// 初始化 API 路由
 	router := api.NewRouter(cfg, db, rdb, logger)
 
-	// 启动 HTTP 服务器
 	srv := &http.Server{
 		Addr:         ":" + cfg.Server.Port,
 		Handler:      router,
@@ -88,7 +179,6 @@ func main() {
 		WriteTimeout: time.Duration(cfg.Server.WriteTimeout) * time.Second,
 	}
 
-	// 优雅关闭
 	go func() {
 		logger.Info("Server starting", zap.String("port", cfg.Server.Port))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -96,7 +186,6 @@ func main() {
 		}
 	}()
 
-	// 等待中断信号
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -111,4 +200,5 @@ func main() {
 	}
 
 	logger.Info("Server exited properly")
+	return nil
 }

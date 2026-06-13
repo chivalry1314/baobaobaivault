@@ -11,6 +11,7 @@ Core deployment files:
 - [.env.public.example](../.env.public.example)
 - [deploy/backend/config.public.example.yaml](./backend/config.public.example.yaml)
 - [deploy/nginx/default.public.conf](./nginx/default.public.conf)
+- [scripts/init-production.sh](../scripts/init-production.sh)
 
 Email verification docs:
 

@@ -33,7 +33,7 @@
 ## 3. 目录与部署文件
 
 - [ ] 已准备部署目录，例如 `/opt/baobaobaivault`
-- [ ] 已复制并重命名：
+- [ ] 已运行 `./scripts/init-production.sh`，或已手动复制并重命名：
   - `docker-compose.public.yml` -> `docker-compose.yml`
   - `.env.public.example` -> `.env`
   - `deploy/backend/config.public.example.yaml` -> `backend/config/config.yaml`
@@ -48,8 +48,8 @@
 
 - [ ] `POSTGRES_DB` 已设置
 - [ ] `POSTGRES_USER` 已设置
-- [ ] `POSTGRES_PASSWORD` 已改为强密码
-- [ ] `REDIS_PASSWORD` 已改为强密码
+- [ ] `POSTGRES_PASSWORD` 是强随机密码（初始化脚本已自动生成）
+- [ ] `REDIS_PASSWORD` 是强随机密码（初始化脚本已自动生成）
 - [ ] `BACKEND_IMAGE` 已确认版本
 - [ ] `SHAREFRONTEND_IMAGE` 已确认版本
 
@@ -67,18 +67,17 @@
 - [ ] `database.user` / `database.password` / `database.dbname` 已与 `.env` 对齐
 - [ ] `redis.host=redis`
 - [ ] `redis.password` 已与 `.env` 对齐
-- [ ] `jwt.secret` 已改为高强度随机密钥
-- [ ] `security.field_encryption_key` 已设置为 32 字节高强度随机密钥（base64 或原始字符串）用于加密存储凭证
+- [ ] `jwt.secret` 是强随机密钥（初始化脚本已自动生成）
+- [ ] `security.field_encryption_key` 是 32 字节高强度随机密钥（base64 或原始字符串），用于加密存储凭证
 - [ ] `log.level` 已确认
 - [ ] `log.format=json` 或符合你的运维习惯
 
 ## 6. 系统超级管理员
 
 - [ ] `server.admin_email` 对应的邮箱已经明确
-- [ ] 准备用这个邮箱注册或登录系统
-- [ ] 登录后确认 `/api/share/auth/session` 返回：
-  - `role: manager`
-  - `isConfiguredSuperAdmin: true`
+- [ ] 已通过 `scripts/init-production.sh` 或 `server create-admin` 创建初始管理员
+- [ ] 准备用这个邮箱登录系统
+- [ ] 登录后确认 `/api/share/auth/session` 返回 `role: manager`
 - [ ] 前端主菜单中可以看到“系统管理”
 
 ## 7. 邮箱验证功能

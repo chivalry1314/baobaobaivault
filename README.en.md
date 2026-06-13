@@ -98,14 +98,40 @@ sudo mkdir -p /opt/baobaobaivault/data/redis
 sudo mkdir -p /opt/baobaobaivault/data/storage
 ```
 
-## 4. Files You Need
+## 4. Configuration and Deployment Files
 
-Copy and rename:
+The recommended way to generate a production-ready configuration is the
+bootstrap script:
+
+```bash
+./scripts/init-production.sh
+```
+
+It interactively asks for:
+
+- your public domain
+- the initial super admin email
+- optional pinned image tags
+
+and then:
+
+- generates `.env` with random database / Redis passwords
+- generates `backend/config/config.yaml` with random JWT and field-encryption keys
+- copies `docker-compose.public.yml` to `docker-compose.yml`
+- starts the stack
+- creates the first super admin and prints the one-time password
+
+If you prefer to prepare files manually, copy and rename the templates:
 
 - `docker-compose.public.yml` -> `docker-compose.yml`
 - `.env.public.example` -> `.env`
 - `deploy/backend/config.public.example.yaml` -> `backend/config/config.yaml`
 - `deploy/nginx/default.public.conf` -> `deploy/nginx/default.conf`
+
+Then edit `.env` and `backend/config/config.yaml` to replace all placeholder
+secrets and set `server.admin_email` and `cors.allow_origins` to your real
+domain. Use strong random values for `POSTGRES_PASSWORD`, `REDIS_PASSWORD`,
+`jwt.secret`, and `security.field_encryption_key`.
 
 ## 5. Docker Compose Reference
 
@@ -520,11 +546,30 @@ They will be mounted into the container as:
 
 ## 10. Deployment Steps
 
-Assuming all files are already in `/opt/baobaobaivault`:
+Assuming the project is already in `/opt/baobaobaivault` and your SSL
+certificates are in place, run the bootstrap script:
+
+```bash
+cd /opt/baobaobaivault
+./scripts/init-production.sh
+```
+
+The script will generate `.env` and `backend/config/config.yaml` with secure
+random secrets, start the stack, and create the initial super admin.
+
+If you prepared the files manually instead:
 
 ```bash
 cd /opt/baobaobaivault
 docker compose up -d
+```
+
+and then create the first admin:
+
+```bash
+docker compose exec backend /app/server create-admin \
+  --email admin@example.com \
+  --password "$(openssl rand -base64 24)"
 ```
 
 If you want to pull the newest published images first:
@@ -705,7 +750,13 @@ Common cause:
   - `data/postgres`
   - `backend/storage`
   - `deploy/nginx/ssl`
-- use strong secrets in `.env` and `config.yaml`
+  - `.env`
+  - `backend/config/config.yaml`
+- keep `jwt.secret` and `security.field_encryption_key` secret and persistent;
+  losing `security.field_encryption_key` makes existing storage credentials
+  unrecoverable
+- use strong random secrets in `.env` and `config.yaml` (the bootstrap script
+  generates them automatically)
 - clean up unused image versions regularly
 - validate in staging before upgrading production
 

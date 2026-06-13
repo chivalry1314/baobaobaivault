@@ -98,14 +98,39 @@ sudo mkdir -p /opt/baobaobaivault/data/redis
 sudo mkdir -p /opt/baobaobaivault/data/storage
 ```
 
-## 4. 需要准备的文件
+## 4. 配置文件与部署文件
 
-从仓库复制并重命名：
+推荐的生产环境配置生成方式是使用初始化脚本：
+
+```bash
+./scripts/init-production.sh
+```
+
+脚本会交互式地询问：
+
+- 你的公网域名
+- 初始超级管理员邮箱
+- 可选的镜像固定标签
+
+随后自动完成：
+
+- 生成包含随机数据库 / Redis 密码的 `.env`
+- 生成包含随机 JWT 密钥与字段加密密钥的 `backend/config/config.yaml`
+- 将 `docker-compose.public.yml` 复制为 `docker-compose.yml`
+- 启动服务栈
+- 创建第一位超级管理员并打印一次性密码
+
+如果你希望手动准备文件，请复制并重命名模板：
 
 - `docker-compose.public.yml` -> `docker-compose.yml`
 - `.env.public.example` -> `.env`
 - `deploy/backend/config.public.example.yaml` -> `backend/config/config.yaml`
 - `deploy/nginx/default.public.conf` -> `deploy/nginx/default.conf`
+
+然后手动编辑 `.env` 和 `backend/config/config.yaml`，替换所有占位密码，
+并将 `server.admin_email` 和 `cors.allow_origins` 设置为你的真实域名。
+`POSTGRES_PASSWORD`、`REDIS_PASSWORD`、`jwt.secret`、
+`security.field_encryption_key` 请使用强随机值。
 
 ## 5. Docker Compose 参考配置
 
@@ -521,11 +546,30 @@ deploy/nginx/ssl/privkey.pem
 
 ## 10. 部署步骤
 
-假设所有文件已经放到 `/opt/baobaobaivault`：
+假设项目已经放到 `/opt/baobaobaivault`，并且 SSL 证书已经放好后，
+直接运行初始化脚本：
+
+```bash
+cd /opt/baobaobaivault
+./scripts/init-production.sh
+```
+
+脚本会自动生成包含强随机密钥的 `.env` 和
+`backend/config/config.yaml`，启动服务栈，并创建第一位超级管理员。
+
+如果你是手动准备的配置文件：
 
 ```bash
 cd /opt/baobaobaivault
 docker compose up -d
+```
+
+然后手动创建第一位管理员：
+
+```bash
+docker compose exec backend /app/server create-admin \
+  --email admin@example.com \
+  --password "$(openssl rand -base64 24)"
 ```
 
 如果希望先拉取最新镜像再启动：
@@ -706,7 +750,11 @@ docker compose logs -f
   - `data/postgres`
   - `backend/storage`
   - `deploy/nginx/ssl`
-- `.env` 和 `config.yaml` 使用强密码和随机密钥
+  - `.env`
+  - `backend/config/config.yaml`
+- 妥善保管 `jwt.secret` 和 `security.field_encryption_key`；
+  一旦丢失 `security.field_encryption_key`，已加密的存储凭证将无法解密
+- `.env` 和 `config.yaml` 使用强密码和随机密钥（初始化脚本会自动生成）
 - 定期清理不用的镜像版本
 - 先在测试环境验证，再升级生产环境
 

@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -134,6 +135,7 @@ func Load() (*Config, error) {
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
 	viper.AddConfigPath("./config")
+	viper.AddConfigPath("./backend/config")
 	viper.AddConfigPath("/etc/baobaobaivault")
 
 	// 鐜鍙橀噺
@@ -259,6 +261,17 @@ func setDefaults() {
 }
 
 func (c *Config) validate() error {
+	if strings.TrimSpace(c.Server.AdminEmail) == "" {
+		return fmt.Errorf("server.admin_email is required")
+	}
+	if c.Server.Mode == "release" {
+		if len(c.JWT.Secret) < 32 {
+			return fmt.Errorf("jwt.secret must be at least 32 characters in release mode")
+		}
+		if len(c.Security.FieldEncryptionKey) == 0 {
+			return fmt.Errorf("security.field_encryption_key is required in release mode")
+		}
+	}
 	if c.ShareAuth.VerificationCodeTTLSeconds <= 0 {
 		c.ShareAuth.VerificationCodeTTLSeconds = 600
 	}
