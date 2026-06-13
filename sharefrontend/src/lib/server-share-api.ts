@@ -7,7 +7,6 @@ import type {
   SessionResponse,
   ShareSiteBrandingSettingsResponse,
 } from "@/lib/shared";
-import { SHARE_SITE_BRANDING_CACHE_TAG } from "@/lib/site-branding-cache";
 
 const backendOrigin =
   process.env.SHARE_BACKEND_ORIGIN ?? "http://127.0.0.1:8080";
@@ -109,9 +108,7 @@ export async function getServerSiteBrandingSettings() {
     const response = await requestServer<ShareSiteBrandingSettingsResponse>(
       "/api/share/discover/site-branding",
       {
-        next: {
-          tags: [SHARE_SITE_BRANDING_CACHE_TAG],
-        },
+        cache: "no-store",
       },
     );
     return response.settings;

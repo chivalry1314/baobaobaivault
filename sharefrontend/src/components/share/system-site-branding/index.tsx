@@ -35,6 +35,7 @@ export function ShareSystemSiteBrandingPage() {
       const response = await shareApi.systemSiteBrandingSettings();
       setSettings(response.settings);
       setDraft(response.settings);
+      setGlobalBrand({ ...response.settings, canUpdate: false });
     } catch (error) {
       setLoadError(
         getShareErrorMessage(error, "加载站点品牌配置失败，请稍后重试。"),
@@ -42,7 +43,7 @@ export function ShareSystemSiteBrandingPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setGlobalBrand]);
 
   useEffect(() => {
     if (user?.isConfiguredSuperAdmin) {

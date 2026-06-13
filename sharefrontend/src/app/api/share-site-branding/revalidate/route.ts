@@ -38,7 +38,7 @@ export async function POST() {
     return NextResponse.json({ error: "configured super admin required" }, { status: 403 });
   }
 
-  revalidateTag(SHARE_SITE_BRANDING_CACHE_TAG, "max");
+  revalidateTag(SHARE_SITE_BRANDING_CACHE_TAG, { expire: 0 });
   revalidatePath("/", "layout");
   revalidatePath("/login");
   revalidatePath("/system/site-branding");

@@ -1,9 +1,9 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 import type { ShareSiteBrandingSettings } from "@/lib/shared";
-import { shareSiteBrand } from "@/lib/site-config";
+import { shareSiteBrand, updateShareSiteBrandRuntime } from "@/lib/site-config";
 
 type ShareSiteBrandContextValue = {
   brand: ShareSiteBrandingSettings;
@@ -23,6 +23,12 @@ export function ShareSiteBrandProvider(props: {
   children: React.ReactNode;
 }) {
   const [brand, setBrandState] = useState(props.brand);
+
+  // Keep the shared fallback singleton in sync with the runtime brand so that
+  // helper functions outside React also use the latest saved values.
+  useEffect(() => {
+    updateShareSiteBrandRuntime(brand);
+  }, [brand]);
 
   const value = useMemo(
     () => ({ brand, setBrand: setBrandState }),

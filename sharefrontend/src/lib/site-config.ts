@@ -81,3 +81,15 @@ export function applyShareSiteBrand(
   }
   return { ...shareSiteBrand, ...next };
 }
+
+// Updates the shared singleton so helper functions that read fallback values
+// (e.g. defaultDisplayName, defaultCreatorName) use the runtime brand instead
+// of the build-time defaults.
+export function updateShareSiteBrandRuntime(
+  next: Partial<ShareSiteBrandConfig> | null | undefined,
+) {
+  if (!next) {
+    return;
+  }
+  Object.assign(shareSiteBrand, next);
+}
