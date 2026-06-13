@@ -1,11 +1,13 @@
 import { cookies } from "next/headers";
 
 import type {
+  CardDetailResponse,
   DiscoverCardItem,
   DiscoverCardsPagination,
   SessionResponse,
   ShareSiteBrandingSettingsResponse,
 } from "@/lib/shared";
+import { SHARE_SITE_BRANDING_CACHE_TAG } from "@/lib/site-branding-cache";
 
 const backendOrigin =
   process.env.SHARE_BACKEND_ORIGIN ?? "http://127.0.0.1:8080";
@@ -89,12 +91,27 @@ export async function getServerDiscoverCards(input?: {
   }
 }
 
+export async function getServerCardDetail(cardId: string) {
+  try {
+    return await requestServer<CardDetailResponse>(
+      `/api/share/cards/${encodeURIComponent(cardId)}`,
+      {
+        cache: "no-store",
+      },
+    );
+  } catch {
+    return null;
+  }
+}
+
 export async function getServerSiteBrandingSettings() {
   try {
     const response = await requestServer<ShareSiteBrandingSettingsResponse>(
       "/api/share/discover/site-branding",
       {
-        cache: "no-store",
+        next: {
+          tags: [SHARE_SITE_BRANDING_CACHE_TAG],
+        },
       },
     );
     return response.settings;

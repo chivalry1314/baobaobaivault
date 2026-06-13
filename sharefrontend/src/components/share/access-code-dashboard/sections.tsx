@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { AccessModeBadge } from "@/components/share/access-mode-badge";
+import { ShareImage } from "@/components/share/share-image";
 import {
   formatDate,
   formatDateTime,
@@ -60,17 +61,19 @@ export function CardWithoutCodeRow(props: {
   const { card, onConfigureAccessCode } = props;
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1rem] border border-[var(--outline)]/15 bg-white px-3.5 py-2.5 text-left shadow-sm">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-black text-[var(--foreground)]">{card.title}</p>
-        <p className="mt-0.5 text-[11px] font-bold text-[var(--foreground)]/56">{card.originalFileName || "未命名文件"}</p>
-        <div className="mt-1.5">
-          <AccessModeBadge mode={card.accessMode} compact />
+    <div className="flex items-center gap-2 rounded-[0.85rem] border border-[var(--outline)]/15 bg-white px-3 py-2 text-left shadow-sm">
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <p className="truncate text-sm font-black text-[var(--foreground)]">{card.title}</p>
+          <span className="shrink-0">
+            <AccessModeBadge mode={card.accessMode} compact />
+          </span>
         </div>
+        <p className="mt-0.5 truncate text-[11px] font-bold text-[var(--foreground)]/56">{card.originalFileName || "未命名文件"}</p>
       </div>
       <ActionButton onClick={() => onConfigureAccessCode(card.id)}>
         <EditIcon className="h-3.5 w-3.5" />
-        配置提取码
+        配置
       </ActionButton>
     </div>
   );
@@ -93,15 +96,15 @@ export function AccessCodeCard(props: {
     : "border-[var(--outline)]/12 bg-[var(--surface-container)] text-[var(--foreground)]/42";
 
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-[1.1rem] border-2 border-[var(--outline)] bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-3.5">
+    <article className="flex flex-col overflow-hidden rounded-[1rem] border-2 border-[var(--outline)] bg-white p-2.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       {/* top: image + main info */}
-      <div className="flex gap-3">
+      <div className="flex gap-2.5">
         <Link
           href={`/cards/${encodeURIComponent(item.card.id)}`}
-          className="relative block h-[92px] w-[92px] shrink-0 overflow-hidden rounded-[0.8rem] border border-[var(--outline)]/15 bg-[#4f4a75] sm:h-[104px] sm:w-[104px]"
+          className="relative block h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[0.7rem] border border-[var(--outline)]/15 bg-[#4f4a75] sm:h-[80px] sm:w-[80px]"
         >
           {item.card.mimeType.startsWith("image/") ? (
-            <img src={item.card.previewUrl} alt={item.card.title} className="h-full w-full object-cover" />
+            <ShareImage src={item.card.previewUrl} alt={item.card.title} fill className="object-cover" />
           ) : (
             <div className="flex h-full items-center justify-center px-2 text-center text-[10px] font-medium text-white/92">{item.card.title}</div>
           )}
@@ -126,11 +129,11 @@ export function AccessCodeCard(props: {
             </button>
           </div>
 
-          <div className="mt-1.5">
+          <div className="mt-1">
             <AccessModeBadge mode={item.card.accessMode} compact />
           </div>
 
-          <div className={`mt-auto inline-flex w-fit max-w-full items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-black tracking-[0.04em] ${codeTone}`}>
+          <div className={`mt-1 inline-flex w-fit max-w-full items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-black tracking-[0.04em] ${codeTone}`}>
             {active ? <KeyIcon className="h-3 w-3 shrink-0" /> : <LockIcon className="h-3 w-3 shrink-0" />}
             <span className={`truncate ${active ? "" : "line-through"}`}>{item.config.code}</span>
           </div>
@@ -138,7 +141,7 @@ export function AccessCodeCard(props: {
       </div>
 
       {/* meta row */}
-      <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold text-[var(--foreground)]/60">
+      <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] font-bold text-[var(--foreground)]/60">
         <span className="inline-flex items-center gap-1">
           <CalendarIcon className="h-3 w-3" />
           到期 {formatDateTime(item.config.expiresAt)}
@@ -158,10 +161,10 @@ export function AccessCodeCard(props: {
       </div>
 
       {/* status tip */}
-      <p className="mt-1.5 text-[10px] font-bold leading-4 text-[var(--foreground)]/52">{statusTip}</p>
+      <p className="mt-1 text-[10px] font-bold leading-4 text-[var(--foreground)]/52">{statusTip}</p>
 
       {/* actions */}
-      <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-2.5">
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
         {active ? (
           <>
             <ActionButton disabled={pendingAction === `copy:${item.card.id}`} onClick={onCopy}>
@@ -201,7 +204,7 @@ export function ActionButton(props: {
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${
+      className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${
         danger
           ? "border-[#f1c5cc] bg-white text-[#cf425d] hover:border-[#cf425d] hover:bg-[#fff7f8]"
           : "border-[var(--outline)]/20 bg-white text-[var(--foreground)]/78 hover:bg-[var(--surface-container)]"

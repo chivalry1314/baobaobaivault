@@ -1,6 +1,7 @@
 ﻿import type { ReactNode } from "react";
 
 import { AccessModeBadge } from "@/components/share/access-mode-badge";
+import { ShareImage } from "@/components/share/share-image";
 import {
   formatDate,
   getRarityLabel,
@@ -72,7 +73,7 @@ export function CardPickerListItem({
     >
       <div className="relative h-[210px] w-full overflow-hidden rounded-[24px] bg-[#2d2327] sm:h-[180px] sm:w-[180px] sm:shrink-0">
         {isImageCard(item.card) ? (
-          <img src={item.card.previewUrl} alt={item.card.title} className="h-full w-full object-cover" />
+          <ShareImage src={item.card.previewUrl} alt={item.card.title} fill className="object-cover" />
         ) : (
           <div className="flex h-full items-center justify-center px-4 text-center text-lg font-black text-white/92">{item.card.title}</div>
         )}
@@ -121,7 +122,7 @@ export function CardPickerGridItem({
     >
       <div className="relative overflow-hidden rounded-[26px] bg-[#2d2327]">
         {isImageCard(item.card) ? (
-          <img src={item.card.previewUrl} alt={item.card.title} className="aspect-[4/5] w-full object-cover" />
+          <ShareImage src={item.card.previewUrl} alt={item.card.title} className="aspect-[4/5] w-full object-cover" />
         ) : (
           <div className="flex aspect-[4/5] items-center justify-center px-5 text-center text-xl font-black text-white/92">{item.card.title}</div>
         )}

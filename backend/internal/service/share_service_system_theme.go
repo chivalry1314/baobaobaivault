@@ -5,10 +5,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/baobaobai/baobaobaivault/internal/cache"
 	"github.com/baobaobai/baobaobaivault/internal/model"
 	"gorm.io/gorm"
 )
@@ -105,6 +108,15 @@ func (s *ShareService) ListDiscoverSystemThemes(ctx context.Context, page, size 
 		size = 60
 	}
 
+	cacheKey := cache.Key("discover", "system_themes", fmt.Sprintf("%d", page), fmt.Sprintf("%d", size))
+	var cached struct {
+		Items []ShareDiscoverSystemThemeItem `json:"items"`
+		Total int64                          `json:"total"`
+	}
+	if s.cache.Get(ctx, cacheKey, &cached) {
+		return cached.Items, cached.Total, nil
+	}
+
 	baseQuery := func() *gorm.DB {
 		return s.db.WithContext(ctx).
 			Model(&model.SharePlatformCard{}).
@@ -123,6 +135,10 @@ func (s *ShareService) ListDiscoverSystemThemes(ctx context.Context, page, size 
 		return nil, 0, err
 	}
 	if total == 0 {
+		_ = s.cache.Set(ctx, cacheKey, struct {
+			Items []ShareDiscoverSystemThemeItem `json:"items"`
+			Total int64                          `json:"total"`
+		}{Items: []ShareDiscoverSystemThemeItem{}, Total: 0}, 60*time.Second)
 		return []ShareDiscoverSystemThemeItem{}, 0, nil
 	}
 
@@ -138,6 +154,10 @@ func (s *ShareService) ListDiscoverSystemThemes(ctx context.Context, page, size 
 		return nil, 0, err
 	}
 	if len(cards) == 0 {
+		_ = s.cache.Set(ctx, cacheKey, struct {
+			Items []ShareDiscoverSystemThemeItem `json:"items"`
+			Total int64                          `json:"total"`
+		}{Items: []ShareDiscoverSystemThemeItem{}, Total: total}, 60*time.Second)
 		return []ShareDiscoverSystemThemeItem{}, total, nil
 	}
 
@@ -150,6 +170,10 @@ func (s *ShareService) ListDiscoverSystemThemes(ctx context.Context, page, size 
 	if err != nil {
 		return nil, 0, err
 	}
+	_ = s.cache.Set(ctx, cacheKey, struct {
+		Items []ShareDiscoverSystemThemeItem `json:"items"`
+		Total int64                          `json:"total"`
+	}{Items: items, Total: total}, 60*time.Second)
 	return items, total, nil
 }
 

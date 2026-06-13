@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { AccessModeBadge } from "@/components/share/access-mode-badge";
 import { FavoriteButton } from "@/components/share/favorite-button";
+import { ShareImage } from "@/components/share/share-image";
 import { SLOT_LABEL_MAP } from "@/components/share/card-detail/constants";
 import { formatBytes, formatMetric, getInitials } from "@/components/share/card-detail/helpers";
 import type { CardViewModel } from "@/components/share/card-detail/types";
@@ -68,10 +69,13 @@ export function CardDetailContent(props: {
         <div className="flex h-full flex-col overflow-hidden rounded-[1.4rem] border-2 border-[var(--outline)] bg-white shadow-sm">
           <div className="relative aspect-[3/4] w-full overflow-hidden bg-[var(--secondary)] lg:aspect-auto lg:flex-1">
             {viewModel.heroImageUrl ? (
-              <img
+              <ShareImage
                 src={viewModel.heroImageUrl}
                 alt={detail.card.title}
-                className="h-full w-full object-cover"
+                fill
+                priority
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 50vw"
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-[var(--secondary)] px-8 text-center text-2xl font-black text-[var(--foreground)]/50">
@@ -128,9 +132,11 @@ export function CardDetailContent(props: {
         <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
           <div className="flex items-center gap-3">
             {detail.creator.avatar.trim() ? (
-              <img
+              <ShareImage
                 src={detail.creator.avatar}
                 alt={viewModel.creatorName}
+                width={44}
+                height={44}
                 className="h-11 w-11 shrink-0 rounded-full border-2 border-[var(--outline)]/15 bg-[var(--primary)] object-cover"
               />
             ) : (

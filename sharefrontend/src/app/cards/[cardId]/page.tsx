@@ -1,4 +1,5 @@
 import CardDetailClientPage from "@/components/share/card-detail";
+import { getServerCardDetail } from "@/lib/server-share-api";
 
 export default async function CardDetailPage({
   params,
@@ -6,5 +7,9 @@ export default async function CardDetailPage({
   params: Promise<{ cardId: string }>;
 }) {
   const { cardId } = await params;
-  return <CardDetailClientPage cardId={cardId} />;
+  const initialDetail = await getServerCardDetail(cardId);
+
+  return (
+    <CardDetailClientPage cardId={cardId} initialDetail={initialDetail} />
+  );
 }

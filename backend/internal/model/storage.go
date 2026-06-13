@@ -3,6 +3,7 @@ package model
 import (
 	"time"
 
+	"github.com/baobaobai/baobaobaivault/pkg/crypto"
 	"gorm.io/gorm"
 )
 
@@ -57,11 +58,49 @@ func (StorageConfig) TableName() string {
 	return "storage_configs"
 }
 
+// BeforeSave encrypts sensitive credentials before persisting to the database.
+func (s *StorageConfig) BeforeSave(tx *gorm.DB) error {
+	if s.SecretKey != "" {
+		enc, err := crypto.EncryptField(s.SecretKey)
+		if err != nil {
+			return err
+		}
+		s.SecretKey = enc
+	}
+	if s.AccessKey != "" {
+		enc, err := crypto.EncryptField(s.AccessKey)
+		if err != nil {
+			return err
+		}
+		s.AccessKey = enc
+	}
+	return nil
+}
+
+// AfterFind decrypts sensitive credentials after loading from the database.
+func (s *StorageConfig) AfterFind(tx *gorm.DB) error {
+	if s.SecretKey != "" {
+		dec, err := crypto.DecryptField(s.SecretKey)
+		if err != nil {
+			return err
+		}
+		s.SecretKey = dec
+	}
+	if s.AccessKey != "" {
+		dec, err := crypto.DecryptField(s.AccessKey)
+		if err != nil {
+			return err
+		}
+		s.AccessKey = dec
+	}
+	return nil
+}
+
 // Object stores metadata for the latest live version of one object key.
 type Object struct {
 	ID          string `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	NamespaceID string `gorm:"type:uuid;not null;index" json:"namespace_id"`
-	Key         string `gorm:"type:varchar(1024);not null;index:idx_object_key,namespace_id" json:"key"`
+	NamespaceID string `gorm:"type:uuid;not null;index;index:idx_object_namespace_key,priority:1;index:idx_object_namespace_list,priority:1" json:"namespace_id"`
+	Key         string `gorm:"type:varchar(1024);not null;index:idx_object_namespace_key,priority:2" json:"key"`
 	Name        string `gorm:"type:varchar(255)" json:"name"`
 	Size        int64  `gorm:"not null" json:"size"`
 	ContentType string `gorm:"type:varchar(100)" json:"content_type"`
@@ -74,11 +113,11 @@ type Object struct {
 	UserMetadata string `gorm:"type:text" json:"user_metadata"`
 
 	IsLatest  bool `gorm:"default:true" json:"is_latest"`
-	IsDeleted bool `gorm:"default:false" json:"is_deleted"`
+	IsDeleted bool `gorm:"default:false;index:idx_object_namespace_list,priority:2" json:"is_deleted"`
 
 	LastModified time.Time      `json:"last_modified"`
 	CreatedAt    time.Time      `json:"created_at"`
-	UpdatedAt    time.Time      `json:"updated_at"`
+	UpdatedAt    time.Time      `gorm:"index;index:idx_object_namespace_list,priority:3,sort:desc" json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 
 	Namespace *Namespace      `gorm:"foreignKey:NamespaceID" json:"namespace,omitempty"`
@@ -113,15 +152,15 @@ func (ObjectVersion) TableName() string {
 type AuditLog struct {
 	ID         string  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
 	UserID     *string `gorm:"type:uuid;index" json:"user_id"`
-	Action     string  `gorm:"type:varchar(50);not null;index" json:"action"`
-	Resource   string  `gorm:"type:varchar(100);not null" json:"resource"`
+	Action     string  `gorm:"type:varchar(50);not null;index:idx_audit_logs_search,priority:1" json:"action"`
+	Resource   string  `gorm:"type:varchar(100);not null;index:idx_audit_logs_search,priority:2" json:"resource"`
 	ResourceID string  `gorm:"type:varchar(100);index" json:"resource_id"`
 	Detail     string  `gorm:"type:text" json:"detail"`
 	IPAddress  string  `gorm:"type:varchar(50)" json:"ip_address"`
 	UserAgent  string  `gorm:"type:varchar(500)" json:"user_agent"`
-	Status     string  `gorm:"type:varchar(20)" json:"status"`
+	Status     string  `gorm:"type:varchar(20);index:idx_audit_logs_search,priority:3" json:"status"`
 
-	CreatedAt time.Time `gorm:"index" json:"created_at"`
+	CreatedAt time.Time `gorm:"index;index:idx_audit_logs_search,priority:4,sort:desc" json:"created_at"`
 
 	User *User `gorm:"foreignKey:UserID" json:"user,omitempty"`
 }

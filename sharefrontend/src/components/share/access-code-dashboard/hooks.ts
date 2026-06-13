@@ -13,6 +13,7 @@ import {
   isActiveItem,
 } from "@/components/share/access-code-dashboard/helpers";
 import type { FeedbackState } from "@/components/share/access-code-dashboard/types";
+import { useConfirm } from "@/components/share/confirm-dialog";
 import { ShareApiError, getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type {
   AccessCodeDashboardItem,
@@ -21,6 +22,7 @@ import type {
 
 export function useShareAccessCodeDashboard() {
   const router = useRouter();
+  const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(true);
   const [dashboard, setDashboard] =
@@ -96,8 +98,8 @@ export function useShareAccessCodeDashboard() {
     });
   }, [accessModeFilter, dashboard, searchValue]);
 
-  const availableCards = dashboard?.availableCards ?? [];
   const cardsWithoutCode = useMemo(() => {
+    const availableCards = dashboard?.availableCards ?? [];
     const configuredIds = new Set(
       (dashboard?.items ?? []).map((item) => item.card.id),
     );
@@ -106,7 +108,7 @@ export function useShareAccessCodeDashboard() {
         !configuredIds.has(card.id) &&
         matchesAccessModeFilter(card.accessMode, accessModeFilter),
     );
-  }, [accessModeFilter, availableCards, dashboard?.items]);
+  }, [accessModeFilter, dashboard]);
 
   const cardsWithoutCodeTotalPages = useMemo(
     () =>
@@ -178,7 +180,14 @@ export function useShareAccessCodeDashboard() {
   }
 
   async function handleHide(item: AccessCodeDashboardItem) {
-    if (!window.confirm(`确认停用「${item.card.title}」的提取码吗？`)) {
+    const confirmed = await confirm({
+      title: "停用提取码",
+      description: `确认停用「${item.card.title}」的提取码吗？`,
+      confirmText: "停用",
+      cancelText: "取消",
+      variant: "default",
+    });
+    if (!confirmed) {
       return;
     }
 
@@ -254,9 +263,14 @@ export function useShareAccessCodeDashboard() {
   }
 
   async function handleDelete(item: AccessCodeDashboardItem) {
-    if (
-      !window.confirm(`确认删除「${item.card.title}」的提取码吗？删除后不可恢复。`)
-    ) {
+    const confirmed = await confirm({
+      title: "删除提取码",
+      description: `确认删除「${item.card.title}」的提取码吗？删除后不可恢复。`,
+      confirmText: "删除",
+      cancelText: "取消",
+      variant: "destructive",
+    });
+    if (!confirmed) {
       return;
     }
 
@@ -307,7 +321,6 @@ export function useShareAccessCodeDashboard() {
     cardsWithoutCodePage,
     setCardsWithoutCodePage,
     items,
-    availableCards,
     cardsWithoutCode,
     cardsWithoutCodeTotalPages,
     pagedCardsWithoutCode,

@@ -10,7 +10,7 @@ import type { ReviewDashboardItem } from "@/lib/shared";
 
 export function useShareReviewDashboard() {
   const { user: currentUser, sessionChecking } = useShareSession();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!(currentUser && currentUser.role === "manager"));
   const [items, setItems] = useState<ReviewDashboardItem[]>([]);
   const [loadError, setLoadError] = useState("");
   const [actionError, setActionError] = useState("");
@@ -36,13 +36,9 @@ export function useShareReviewDashboard() {
   }, []);
 
   useEffect(() => {
-    if (!currentUser || currentUser.role !== "manager") {
-      setItems([]);
-      setLoading(false);
-      return;
+    if (currentUser?.role === "manager") {
+      void loadReviews(statusFilter);
     }
-
-    void loadReviews(statusFilter);
   }, [currentUser?.id, currentUser?.role, loadReviews, statusFilter]);
 
   const totalPages = useMemo(
@@ -55,10 +51,6 @@ export function useShareReviewDashboard() {
     const start = (safePage - 1) * REVIEW_PAGE_SIZE;
     return items.slice(start, start + REVIEW_PAGE_SIZE);
   }, [items, page, totalPages]);
-
-  useEffect(() => {
-    setPage((current) => Math.min(Math.max(current, 1), totalPages));
-  }, [totalPages]);
 
   async function handleApprove(cardId: string) {
     setPendingCardId(cardId);

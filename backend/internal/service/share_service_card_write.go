@@ -155,6 +155,8 @@ func (s *ShareService) CreateCard(ctx context.Context, input ShareCreateCardInpu
 		return nil, err
 	}
 
+	s.invalidateDiscoverCache(ctx)
+
 	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, []string{card.ID})
 	if err != nil {
 		return nil, err
@@ -353,6 +355,8 @@ func (s *ShareService) CreateCardBundle(ctx context.Context, input ShareCreateCa
 		return nil, err
 	}
 
+	s.invalidateDiscoverCache(ctx)
+
 	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, []string{card.ID})
 	if err != nil {
 		return nil, err
@@ -444,6 +448,8 @@ func (s *ShareService) UpdateCardByOwner(ctx context.Context, input ShareUpdateC
 	if err != nil {
 		return nil, err
 	}
+
+	s.invalidateDiscoverCache(ctx)
 
 	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, []string{updated.ID})
 	if err != nil {
@@ -589,6 +595,7 @@ func (s *ShareService) ReplaceCardAssetByOwner(ctx context.Context, input ShareU
 		(oldStoredFileName != storedAsset.StoredFileName || oldStorageObjectKey != storedAsset.StorageObjectKey) {
 		_ = s.deleteCardStoredMedia(ctx, ownerID, oldStorageBackend, oldStorageNamespaceID, oldStorageObjectKey, oldStoredFileName)
 	}
+	s.invalidateDiscoverCache(ctx)
 	return s.GetCardDetail(ctx, cardID, ownerID)
 }
 
@@ -697,6 +704,7 @@ func (s *ShareService) ReplaceCardCoverByOwner(
 		(oldStoredFileName != storedCover.StoredFileName || oldStorageObjectKey != storedCover.StorageObjectKey) {
 		_ = s.deleteCardStoredMedia(ctx, ownerID, oldStorageBackend, oldStorageNamespaceID, oldStorageObjectKey, oldStoredFileName)
 	}
+	s.invalidateDiscoverCache(ctx)
 	return s.GetCardDetail(ctx, cardID, ownerID)
 }
 
@@ -773,6 +781,7 @@ func (s *ShareService) DeleteCardCoverByOwner(ctx context.Context, ownerID, card
 	if hasShareStoredMedia(storageBackend, storageNamespaceID, storageObjectKey, storedFileName) {
 		_ = s.deleteCardStoredMedia(ctx, ownerID, storageBackend, storageNamespaceID, storageObjectKey, storedFileName)
 	}
+	s.invalidateDiscoverCache(ctx)
 	return s.GetCardDetail(ctx, cardID, ownerID)
 }
 
@@ -855,6 +864,7 @@ func (s *ShareService) DeleteCardAssetByOwner(ctx context.Context, ownerID, card
 	if hasShareStoredMedia(storageBackend, storageNamespaceID, storageObjectKey, storedFileName) {
 		_ = s.deleteCardStoredMedia(ctx, ownerID, storageBackend, storageNamespaceID, storageObjectKey, storedFileName)
 	}
+	s.invalidateDiscoverCache(ctx)
 	return s.GetCardDetail(ctx, cardID, ownerID)
 }
 
@@ -930,5 +940,6 @@ func (s *ShareService) DeleteCardByOwner(ctx context.Context, ownerID, cardID st
 			)
 		}
 	}
+	s.invalidateDiscoverCache(ctx)
 	return nil
 }

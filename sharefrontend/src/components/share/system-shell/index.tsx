@@ -11,7 +11,6 @@ const SYSTEM_NAV_ITEMS = [
   { href: "/system/namespaces", label: "命名空间" },
   { href: "/system/objects", label: "对象管理" },
   { href: "/system/audit", label: "操作审计" },
-  { href: "/system/access-keys", label: "访问密钥" },
   { href: "/system/roles", label: "角色权限" },
   { href: "/system/users", label: "用户管理" },
   { href: "/system/media-storage", label: "媒体存储" },

@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/baobaobai/baobaobaivault/internal/cache"
 	"github.com/baobaobai/baobaobaivault/internal/config"
 	"github.com/baobaobai/baobaobaivault/internal/model"
 	"github.com/baobaobai/baobaobaivault/internal/service"
@@ -52,6 +53,7 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, logger *zap
 	registry := storage.NewRegistry()
 	storageService := service.NewStorageService(db, logger, registry)
 	emailService := service.NewEmailService(cfg.Email)
+	cacheClient := cache.New(rdb, 5*time.Minute, logger)
 	h := &Handler{
 		cfg:              cfg,
 		db:               db,
@@ -60,7 +62,7 @@ func NewRouter(cfg *config.Config, db *gorm.DB, rdb *goredis.Client, logger *zap
 		namespaceService: service.NewNamespaceService(db, logger),
 		storageService:   storageService,
 		registry:         registry,
-		shareService:     service.NewShareService(db, logger, storageService, filepath.Join("storage", "share", "files"), cfg.ShareAuth, emailService, cfg.Server.AdminEmail),
+		shareService:     service.NewShareService(db, logger, cacheClient, storageService, filepath.Join("storage", "share", "files"), cfg.ShareAuth, emailService, cfg.Server.AdminEmail),
 		shareSMTPTestAt:  make(map[string]time.Time),
 	}
 

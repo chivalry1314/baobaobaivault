@@ -1,4 +1,5 @@
 import { useShareSiteBrand } from "@/components/share/site-brand/provider";
+import { ShareImage } from "@/components/share/share-image";
 
 type ShareSiteBrandMarkProps = {
   iconClassName?: string;
@@ -11,7 +12,7 @@ function BrandBadge({ className }: { className?: string }) {
   const shareSiteBrand = useShareSiteBrand();
   if (shareSiteBrand.logoImageSrc) {
     return (
-      <img
+      <ShareImage
         src={shareSiteBrand.logoImageSrc}
         alt={shareSiteBrand.siteShortName}
         className={`${className} object-cover`}

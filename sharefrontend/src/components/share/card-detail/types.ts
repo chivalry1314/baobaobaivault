@@ -2,6 +2,7 @@ import type { CardAsset, CardContentSlot, CardDetailResponse } from "@/lib/share
 
 export type CardDetailClientPageProps = {
   cardId: string;
+  initialDetail?: CardDetailResponse | null;
 };
 
 export type SlotLabelMap = Record<CardContentSlot, string>;

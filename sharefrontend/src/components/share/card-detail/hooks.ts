@@ -7,30 +7,41 @@ import type { CardAsset, CardDetailResponse } from "@/lib/shared";
 
 type UseCardDetailArgs = {
   cardId: string;
+  initialDetail?: CardDetailResponse | null;
 };
 
-export function useCardDetail({ cardId }: UseCardDetailArgs) {
+export function useCardDetail({ cardId, initialDetail }: UseCardDetailArgs) {
   const searchParams = useSearchParams();
   const codeFromQuery = useMemo(
     () => searchParams.get("code")?.trim().toUpperCase() ?? "",
     [searchParams],
   );
 
-  const [detail, setDetail] = useState<CardDetailResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [detail, setDetail] = useState<CardDetailResponse | null>(
+    initialDetail ?? null,
+  );
+  const [loading, setLoading] = useState(!initialDetail);
   const [error, setError] = useState("");
   const [unlockCode, setUnlockCode] = useState(codeFromQuery);
   const [downloadPendingSlot, setDownloadPendingSlot] = useState("");
   const [downloadError, setDownloadError] = useState("");
 
   useEffect(() => {
-    setUnlockCode(codeFromQuery);
-  }, [codeFromQuery]);
+    if (initialDetail) {
+      setDetail(initialDetail);
+      setLoading(false);
+      setError("");
+    }
+  }, [initialDetail]);
 
   useEffect(() => {
     let active = true;
 
     async function load() {
+      if (initialDetail) {
+        return;
+      }
+
       setLoading(true);
       setError("");
       setDownloadError("");
@@ -59,7 +70,7 @@ export function useCardDetail({ cardId }: UseCardDetailArgs) {
     return () => {
       active = false;
     };
-  }, [cardId]);
+  }, [cardId, initialDetail]);
 
   const viewModel = useMemo(
     () => buildCardViewModel(detail, unlockCode),

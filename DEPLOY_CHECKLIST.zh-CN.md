@@ -68,6 +68,7 @@
 - [ ] `redis.host=redis`
 - [ ] `redis.password` 已与 `.env` 对齐
 - [ ] `jwt.secret` 已改为高强度随机密钥
+- [ ] `security.field_encryption_key` 已设置为 32 字节高强度随机密钥（base64 或原始字符串）用于加密存储凭证
 - [ ] `log.level` 已确认
 - [ ] `log.format=json` 或符合你的运维习惯
 

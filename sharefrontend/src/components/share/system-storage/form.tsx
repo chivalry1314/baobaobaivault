@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import { useShareSession } from "@/components/share/session-provider";
+import { useToast } from "@/components/share/toast";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 
 export type StorageFormMode = "create" | "edit";
@@ -44,22 +45,12 @@ export function StorageConfigForm(props: StorageConfigFormProps) {
   const { mode, storageConfigID = "", onSuccess, className = "" } = props;
   const { user, sessionChecking } = useShareSession();
   const [form, setForm] = useState<StorageFormState>(emptyStorageForm);
-  const [loading, setLoading] = useState(mode === "edit");
+  const [loading, setLoading] = useState(mode === "edit" && !!user?.isConfiguredSuperAdmin);
   const [saving, setSaving] = useState(false);
-  const [actionError, setActionError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const showToast = useToast();
 
-  useEffect(() => {
-    if (mode !== "edit" || !user?.isConfiguredSuperAdmin) {
-      setLoading(false);
-      return;
-    }
-    void loadCurrentConfig();
-  }, [mode, storageConfigID, user?.id, user?.isConfiguredSuperAdmin]);
-
-  async function loadCurrentConfig() {
+  const loadCurrentConfig = useCallback(async () => {
     setLoading(true);
-    setActionError("");
     try {
       const response = await shareApi.systemStorageConfig(storageConfigID);
       const item = response.item;
@@ -76,17 +67,21 @@ export function StorageConfigForm(props: StorageConfigFormProps) {
         extraConfig: item.extra_config || "",
       });
     } catch (error) {
-      setActionError(getShareErrorMessage(error, "加载存储配置失败，请稍后重试。"));
+      showToast(getShareErrorMessage(error, "加载存储配置失败，请稍后重试。"), "error");
     } finally {
       setLoading(false);
     }
-  }
+  }, [storageConfigID, showToast]);
+
+  useEffect(() => {
+    if (mode === "edit" && user?.isConfiguredSuperAdmin) {
+      void loadCurrentConfig();
+    }
+  }, [mode, storageConfigID, user?.id, user?.isConfiguredSuperAdmin, loadCurrentConfig]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
-    setActionError("");
-    setSuccessMessage("");
 
     try {
       if (mode === "create") {
@@ -102,8 +97,6 @@ export function StorageConfigForm(props: StorageConfigFormProps) {
           is_default: form.isDefault,
           extra_config: form.extraConfig.trim(),
         });
-        setForm(emptyStorageForm);
-        setSuccessMessage("存储配置已创建。");
       } else {
         const updatePayload: Parameters<typeof shareApi.updateSystemStorageConfig>[1] = {
           name: form.name.trim(),
@@ -122,20 +115,15 @@ export function StorageConfigForm(props: StorageConfigFormProps) {
           updatePayload.secret_key = form.secretKey.trim();
         }
         await shareApi.updateSystemStorageConfig(storageConfigID, updatePayload);
-        setForm((current) => ({
-          ...current,
-          accessKey: "",
-          secretKey: "",
-        }));
-        setSuccessMessage("存储配置已更新。");
       }
       onSuccess?.();
     } catch (error) {
-      setActionError(
+      showToast(
         getShareErrorMessage(
           error,
           mode === "create" ? "创建存储配置失败，请稍后重试。" : "更新存储配置失败，请稍后重试。",
         ),
+        "error",
       );
     } finally {
       setSaving(false);
@@ -160,9 +148,6 @@ export function StorageConfigForm(props: StorageConfigFormProps) {
 
   return (
     <div className={className}>
-      {actionError ? <ErrorNotice message={actionError} /> : null}
-      {successMessage ? <SuccessNotice message={successMessage} /> : null}
-
       <form className="mt-3 space-y-3" onSubmit={handleSubmit}>
         <FormSection title="基本信息">
           <TextField
@@ -346,10 +331,4 @@ function ToggleField(props: { label: string; checked: boolean; onChange: (checke
   );
 }
 
-function ErrorNotice({ message }: { message: string }) {
-  return <p className="rounded-xl border border-[#f3c8ad] bg-[#fff4ec] px-3 py-2 text-xs font-black text-[#9a3412]">{message}</p>;
-}
 
-function SuccessNotice({ message }: { message: string }) {
-  return <p className="rounded-xl border border-[#d9eed6] bg-[#f3fbf1] px-3 py-2 text-xs font-black text-[#2f6d37]">{message}</p>;
-}

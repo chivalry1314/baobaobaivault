@@ -5,38 +5,21 @@ import { useEffect, useState } from "react";
 import { AuthRedirect } from "@/components/share/auth-redirect";
 import { useShareSession } from "@/components/share/session-provider";
 import { SystemWorkspace } from "@/components/share/system-shell/index";
+import { useToast } from "@/components/share/toast";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type { ShareAuthSettings, ShareEmailHealth } from "@/lib/shared";
 
 export function ShareSystemAuthSettingsPage() {
   const { user, sessionChecking } = useShareSession();
   const [emailVerificationEnabled, setEmailVerificationEnabled] = useState(false);
-  const [authSettings, setAuthSettings] = useState<ShareAuthSettings | null>(null);
   const [authSettingsDraft, setAuthSettingsDraft] = useState<ShareAuthSettings | null>(null);
   const [authSettingsPending, setAuthSettingsPending] = useState(false);
-  const [authSettingsMessage, setAuthSettingsMessage] = useState("");
   const [emailHealth, setEmailHealth] = useState<ShareEmailHealth | null>(null);
   const [smtpTestPending, setSMTPTestPending] = useState(false);
-  const [smtpTestMessage, setSMTPTestMessage] = useState("");
   const [smtpTestTargetEmail, setSMTPTestTargetEmail] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!user?.isConfiguredSuperAdmin);
   const [loadError, setLoadError] = useState("");
-
-  useEffect(() => {
-    if (!user?.isConfiguredSuperAdmin) {
-      setLoading(false);
-      return;
-    }
-    void loadData();
-  }, [user?.id, user?.isConfiguredSuperAdmin]);
-
-  useEffect(() => {
-    if (!user) {
-      setSMTPTestTargetEmail("");
-      return;
-    }
-    setSMTPTestTargetEmail((current) => (current.trim() ? current : user.email));
-  }, [user?.email]);
+  const showToast = useToast();
 
   async function loadData() {
     setLoading(true);
@@ -49,7 +32,6 @@ export function ShareSystemAuthSettingsPage() {
       ]);
       setEmailVerificationEnabled(authConfigResponse.config.emailVerificationEnabled);
       setEmailHealth(emailHealthResponse.health);
-      setAuthSettings(authSettingsResponse.settings);
       setAuthSettingsDraft(authSettingsResponse.settings);
     } catch (error) {
       setLoadError(getShareErrorMessage(error, "加载认证设置失败，请稍后重试。"));
@@ -58,6 +40,20 @@ export function ShareSystemAuthSettingsPage() {
     }
   }
 
+  useEffect(() => {
+    if (user?.isConfiguredSuperAdmin) {
+      void loadData();
+    }
+  }, [user?.id, user?.isConfiguredSuperAdmin]);
+
+  useEffect(() => {
+    if (!user?.email) {
+      setSMTPTestTargetEmail("");
+      return;
+    }
+    setSMTPTestTargetEmail((current) => (current.trim() ? current : user.email));
+  }, [user?.email]);
+
   function updateAuthSettingsDraft(patch: Partial<ShareAuthSettings>) {
     setAuthSettingsDraft((current) => {
       if (!current) {
@@ -65,7 +61,6 @@ export function ShareSystemAuthSettingsPage() {
       }
       return { ...current, ...patch };
     });
-    setAuthSettingsMessage("");
   }
 
   async function handleSaveAuthSettings() {
@@ -74,7 +69,6 @@ export function ShareSystemAuthSettingsPage() {
     }
 
     setAuthSettingsPending(true);
-    setAuthSettingsMessage("");
     try {
       const response = await shareApi.updateSystemAuthSettings({
         emailVerificationEnabled: authSettingsDraft.emailVerificationEnabled,
@@ -82,12 +76,11 @@ export function ShareSystemAuthSettingsPage() {
         resendIntervalSeconds: authSettingsDraft.resendIntervalSeconds,
         maxVerifyAttempts: authSettingsDraft.maxVerifyAttempts,
       });
-      setAuthSettings(response.settings);
       setAuthSettingsDraft(response.settings);
       setEmailVerificationEnabled(response.settings.emailVerificationEnabled);
-      setAuthSettingsMessage("邮箱注册策略已保存。");
+      showToast("邮箱注册策略已保存。", "success");
     } catch (error) {
-      setAuthSettingsMessage(getShareErrorMessage(error, "保存邮箱注册策略失败，请稍后重试。"));
+      showToast(getShareErrorMessage(error, "保存邮箱注册策略失败，请稍后重试。"), "error");
     } finally {
       setAuthSettingsPending(false);
     }
@@ -100,17 +93,16 @@ export function ShareSystemAuthSettingsPage() {
 
     const targetEmail = smtpTestTargetEmail.trim();
     if (!targetEmail) {
-      setSMTPTestMessage("请先填写测试收件邮箱");
+      showToast("请先填写测试收件邮箱", "error");
       return;
     }
 
     setSMTPTestPending(true);
-    setSMTPTestMessage("");
     try {
       const response = await shareApi.sendSystemSMTPTestEmail({ targetEmail });
-      setSMTPTestMessage(`测试邮件已发送至 ${response.targetEmail}`);
+      showToast(`测试邮件已发送至 ${response.targetEmail}`, "success");
     } catch (error) {
-      setSMTPTestMessage(getShareErrorMessage(error, "测试邮件发送失败，请稍后重试。"));
+      showToast(getShareErrorMessage(error, "测试邮件发送失败，请稍后重试。"), "error");
     } finally {
       setSMTPTestPending(false);
     }
@@ -222,9 +214,6 @@ export function ShareSystemAuthSettingsPage() {
             >
               {authSettingsPending ? "保存中..." : "保存邮箱注册策略"}
             </button>
-            {authSettingsMessage ? (
-              <span className="text-xs font-bold text-[var(--foreground)]/65">{authSettingsMessage}</span>
-            ) : null}
           </div>
         </section>
 
@@ -253,7 +242,6 @@ export function ShareSystemAuthSettingsPage() {
               >
                 {smtpTestPending ? "发送中..." : "发送 SMTP 测试邮件"}
               </button>
-              {smtpTestMessage ? <span className="text-xs font-bold text-[var(--foreground)]/65">{smtpTestMessage}</span> : null}
             </div>
           </section>
 

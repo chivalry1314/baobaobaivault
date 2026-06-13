@@ -11,6 +11,7 @@ import (
 
 	"github.com/baobaobai/baobaobaivault/internal/api"
 	"github.com/baobaobai/baobaobaivault/internal/config"
+	"github.com/baobaobai/baobaobaivault/pkg/crypto"
 	"github.com/baobaobai/baobaobaivault/pkg/database"
 	"github.com/baobaobai/baobaobaivault/pkg/redis"
 	"go.uber.org/zap"
@@ -35,16 +36,17 @@ import (
 // @name Authorization
 // @description Type "Bearer" followed by a space and JWT token.
 
-// @securityDefinitions.apikey AKSKAuth
-// @in header
-// @name Authorization
-// @description AccessKey:Signature format for API authentication
-
 func main() {
 	// 加载配置
 	cfg, err := config.Load()
 	if err != nil {
 		fmt.Printf("Failed to load config: %v\n", err)
+		os.Exit(1)
+	}
+
+	// 初始化字段加密：空密钥仍可运行，但不会加密数据
+	if err := crypto.SetFieldEncryptionKey(cfg.Security.FieldEncryptionKey); err != nil {
+		fmt.Printf("Failed to configure field encryption: %v\n", err)
 		os.Exit(1)
 	}
 

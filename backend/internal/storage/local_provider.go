@@ -13,6 +13,51 @@ import (
 	"time"
 )
 
+// validateLocalKey 校验对象 key，防止路径穿越和非法文件名
+func validateLocalKey(key string) error {
+	if key == "" {
+		return fmt.Errorf("empty key")
+	}
+	if strings.ContainsAny(key, "\x00") {
+		return fmt.Errorf("null bytes not allowed")
+	}
+	// 拒绝绝对路径或 Windows 盘符路径
+	if filepath.IsAbs(key) {
+		return fmt.Errorf("absolute path not allowed")
+	}
+	// 拆分路径段，显式拒绝 . 和 ..
+	for _, segment := range strings.Split(key, "/") {
+		segment = strings.TrimSpace(segment)
+		if segment == "" {
+			continue
+		}
+		if segment == "." || segment == ".." {
+			return fmt.Errorf("relative path segment not allowed")
+		}
+	}
+	return nil
+}
+
+// resolveLocalPath 将 key 解析为 baseDir 下的绝对路径，并确保不会逃逸
+func resolveLocalPath(baseDir, key string) (string, error) {
+	if err := validateLocalKey(key); err != nil {
+		return "", NewAccessDeniedError(key, fmt.Errorf("invalid key: %w", err))
+	}
+	absBase, err := filepath.Abs(baseDir)
+	if err != nil {
+		return "", NewInternalError("failed to resolve base directory", err)
+	}
+	fullPath, err := filepath.Abs(filepath.Join(absBase, key))
+	if err != nil {
+		return "", NewInternalError("failed to resolve object path", err)
+	}
+	// 确保 fullPath 是 baseDir 的子目录或文件
+	if !strings.HasPrefix(fullPath, absBase+string(filepath.Separator)) && fullPath != absBase {
+		return "", NewAccessDeniedError(key, fmt.Errorf("invalid key: path traversal detected"))
+	}
+	return fullPath, nil
+}
+
 // LocalProvider 本地文件系统存储提供者
 // 用于开发测试或小规模部署
 type LocalProvider struct {
@@ -46,12 +91,10 @@ func (p *LocalProvider) Put(ctx context.Context, key string, reader io.Reader, s
 	}
 
 	// 安全检查：防止路径穿越
-	if strings.Contains(key, "..") {
-		return nil, NewAccessDeniedError(key, fmt.Errorf("invalid key: path traversal detected"))
+	fullPath, err := resolveLocalPath(p.baseDir, key)
+	if err != nil {
+		return nil, err
 	}
-
-	// 构建完整路径
-	fullPath := filepath.Join(p.baseDir, key)
 	dir := filepath.Dir(fullPath)
 
 	// 确保目录存在
@@ -115,11 +158,10 @@ func (p *LocalProvider) Put(ctx context.Context, key string, reader io.Reader, s
 
 // Get 获取对象
 func (p *LocalProvider) Get(ctx context.Context, key string) (io.ReadCloser, *ObjectInfo, error) {
-	if strings.Contains(key, "..") {
-		return nil, nil, NewAccessDeniedError(key, fmt.Errorf("invalid key: path traversal detected"))
+	fullPath, err := resolveLocalPath(p.baseDir, key)
+	if err != nil {
+		return nil, nil, err
 	}
-
-	fullPath := filepath.Join(p.baseDir, key)
 
 	f, err := os.Open(fullPath)
 	if err != nil {
@@ -140,11 +182,10 @@ func (p *LocalProvider) Get(ctx context.Context, key string) (io.ReadCloser, *Ob
 
 // Delete 删除对象
 func (p *LocalProvider) Delete(ctx context.Context, key string) error {
-	if strings.Contains(key, "..") {
-		return NewAccessDeniedError(key, fmt.Errorf("invalid key: path traversal detected"))
+	fullPath, err := resolveLocalPath(p.baseDir, key)
+	if err != nil {
+		return err
 	}
-
-	fullPath := filepath.Join(p.baseDir, key)
 
 	if err := os.Remove(fullPath); err != nil {
 		if os.IsNotExist(err) {
@@ -154,16 +195,19 @@ func (p *LocalProvider) Delete(ctx context.Context, key string) error {
 	}
 
 	// 删除元数据
-	metaPath := p.metaPath(key)
-	os.Remove(metaPath)
+	metaPath, err := p.metaPath(key)
+	if err == nil {
+		os.Remove(metaPath)
+	}
 
 	return nil
 }
 
 // Stat 获取对象信息
 func (p *LocalProvider) Stat(ctx context.Context, key string) (*ObjectInfo, error) {
-	if strings.Contains(key, "..") {
-		return nil, NewAccessDeniedError(key, fmt.Errorf("invalid key: path traversal detected"))
+	fullPath, err := resolveLocalPath(p.baseDir, key)
+	if err != nil {
+		return nil, err
 	}
 
 	meta, err := p.loadMeta(key)
@@ -171,7 +215,6 @@ func (p *LocalProvider) Stat(ctx context.Context, key string) (*ObjectInfo, erro
 		return nil, err
 	}
 
-	fullPath := filepath.Join(p.baseDir, key)
 	stat, err := os.Stat(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -204,7 +247,11 @@ func (p *LocalProvider) List(ctx context.Context, prefix string, opts ...ListOpt
 
 	searchDir := p.baseDir
 	if prefix != "" {
-		searchDir = filepath.Join(p.baseDir, prefix)
+		resolved, err := resolveLocalPath(p.baseDir, prefix)
+		if err != nil {
+			return nil, err
+		}
+		searchDir = resolved
 	}
 
 	err := filepath.Walk(searchDir, func(path string, info os.FileInfo, err error) error {
@@ -259,12 +306,14 @@ func (p *LocalProvider) DeleteBatch(ctx context.Context, keys []string) error {
 
 // Copy 拷贝对象
 func (p *LocalProvider) Copy(ctx context.Context, srcKey, dstKey string) error {
-	if strings.Contains(srcKey, "..") || strings.Contains(dstKey, "..") {
-		return NewAccessDeniedError(srcKey, fmt.Errorf("invalid key: path traversal detected"))
+	srcPath, err := resolveLocalPath(p.baseDir, srcKey)
+	if err != nil {
+		return err
 	}
-
-	srcPath := filepath.Join(p.baseDir, srcKey)
-	dstPath := filepath.Join(p.baseDir, dstKey)
+	dstPath, err := resolveLocalPath(p.baseDir, dstKey)
+	if err != nil {
+		return err
+	}
 
 	// 确保目标目录存在
 	if err := os.MkdirAll(filepath.Dir(dstPath), 0755); err != nil {
@@ -320,20 +369,29 @@ func (p *LocalProvider) PresignGet(ctx context.Context, key string, ttl time.Dur
 
 // CreateBucket 创建存储桶（本地存储不支持）
 func (p *LocalProvider) CreateBucket(ctx context.Context, bucket string) error {
-	bucketPath := filepath.Join(p.baseDir, bucket)
+	bucketPath, err := resolveLocalPath(p.baseDir, bucket)
+	if err != nil {
+		return err
+	}
 	return os.MkdirAll(bucketPath, 0755)
 }
 
 // DeleteBucket 删除存储桶
 func (p *LocalProvider) DeleteBucket(ctx context.Context, bucket string) error {
-	bucketPath := filepath.Join(p.baseDir, bucket)
+	bucketPath, err := resolveLocalPath(p.baseDir, bucket)
+	if err != nil {
+		return err
+	}
 	return os.RemoveAll(bucketPath)
 }
 
 // BucketExists 检查存储桶是否存在
 func (p *LocalProvider) BucketExists(ctx context.Context, bucket string) (bool, error) {
-	bucketPath := filepath.Join(p.baseDir, bucket)
-	_, err := os.Stat(bucketPath)
+	bucketPath, err := resolveLocalPath(p.baseDir, bucket)
+	if err != nil {
+		return false, err
+	}
+	_, err = os.Stat(bucketPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return false, nil
@@ -363,13 +421,16 @@ type objectMeta struct {
 }
 
 // metaPath 获取元数据文件路径
-func (p *LocalProvider) metaPath(key string) string {
-	return filepath.Join(p.metaDir, key+".json")
+func (p *LocalProvider) metaPath(key string) (string, error) {
+	return resolveLocalPath(p.metaDir, key+".json")
 }
 
 // saveMeta 保存元数据
 func (p *LocalProvider) saveMeta(key string, meta *objectMeta) error {
-	metaPath := p.metaPath(key)
+	metaPath, err := p.metaPath(key)
+	if err != nil {
+		return err
+	}
 	if err := os.MkdirAll(filepath.Dir(metaPath), 0755); err != nil {
 		return NewInternalError("failed to create meta directory", err)
 	}
@@ -388,7 +449,10 @@ func (p *LocalProvider) saveMeta(key string, meta *objectMeta) error {
 
 // loadMeta 加载元数据
 func (p *LocalProvider) loadMeta(key string) (*objectMeta, error) {
-	metaPath := p.metaPath(key)
+	metaPath, err := p.metaPath(key)
+	if err != nil {
+		return nil, err
+	}
 
 	data, err := os.ReadFile(metaPath)
 	if err != nil {

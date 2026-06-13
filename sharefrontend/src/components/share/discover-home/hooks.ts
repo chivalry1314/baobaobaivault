@@ -1,5 +1,12 @@
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useInView } from "react-intersection-observer";
 
 import {
@@ -49,8 +56,53 @@ export function useDiscoverHome({
   const loadedCardIdsRef = useRef<Set<string>>(
     new Set((initialDiscover?.cards ?? []).map((item) => item.card.id)),
   );
-  const { ref: loadMoreRef, inView } = useInView({
-    root: null,
+  const loadMore = useCallback(async () => {
+    if (!hasMore || loading || loadingMore) {
+      return;
+    }
+
+    setLoadingMore(true);
+    const nextPage = page + 1;
+
+    try {
+      const payload = await shareApi.discoverCards({
+        page: nextPage,
+        size: DISCOVER_PAGE_SIZE,
+      });
+      const existingCardIds = loadedCardIdsRef.current;
+      const nextCards = payload.cards.filter(
+        (item) => !existingCardIds.has(item.card.id),
+      );
+
+      if (nextCards.length > 0) {
+        nextCards.forEach((item) => {
+          existingCardIds.add(item.card.id);
+        });
+        setCards((current) => [...current, ...nextCards]);
+      }
+
+      setPage(payload.pagination.page);
+      if (payload.cards.length === 0 || nextCards.length === 0) {
+        setHasMore(false);
+        return;
+      }
+
+      setHasMore(payload.pagination.hasMore);
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error ? loadError.message : "加载失败，请稍后重试。",
+      );
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [hasMore, loading, loadingMore, page]);
+
+  const { ref: loadMoreRef } = useInView({
+    onChange: (inView) => {
+      if (inView) {
+        void loadMore();
+      }
+    },
     rootMargin: "640px 0px",
     threshold: 0,
   });
@@ -120,47 +172,6 @@ export function useDiscoverHome({
       active = false;
     };
   }, [initialDiscover]);
-
-  useEffect(() => {
-    if (!inView || !hasMore || loading || loadingMore) {
-      return;
-    }
-
-    setLoadingMore(true);
-    const nextPage = page + 1;
-
-    void shareApi
-      .discoverCards({ page: nextPage, size: DISCOVER_PAGE_SIZE })
-      .then((payload) => {
-        const existingCardIds = loadedCardIdsRef.current;
-        const nextCards = payload.cards.filter(
-          (item) => !existingCardIds.has(item.card.id),
-        );
-
-        if (nextCards.length > 0) {
-          nextCards.forEach((item) => {
-            existingCardIds.add(item.card.id);
-          });
-          setCards((current) => [...current, ...nextCards]);
-        }
-
-        setPage(payload.pagination.page);
-        if (payload.cards.length === 0 || nextCards.length === 0) {
-          setHasMore(false);
-          return;
-        }
-
-        setHasMore(payload.pagination.hasMore);
-      })
-      .catch((loadError) => {
-        setError(
-          loadError instanceof Error ? loadError.message : "加载失败，请稍后重试。",
-        );
-      })
-      .finally(() => {
-        setLoadingMore(false);
-      });
-  }, [hasMore, inView, loading, loadingMore, page]);
 
   const sourceCards = useMemo(() => toHomeFeedCards(cards), [cards]);
 

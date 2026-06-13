@@ -174,7 +174,7 @@ export function ShareAccessCodeDashboard() {
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <div className="grid items-start gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                       {pagedCardsWithoutCode.map((card) => (
                         <CardWithoutCodeRow
                           key={card.id}
@@ -220,7 +220,7 @@ export function ShareAccessCodeDashboard() {
 
               {items.length > 0 ? (
                 <div className="space-y-4">
-                  <div className="grid w-full items-stretch gap-4 md:grid-cols-2 2xl:grid-cols-3">
+                  <div className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {pagedItems.map((item) => (
                       <AccessCodeCard
                         key={item.card.id}

@@ -5,7 +5,10 @@ import { CardDetailContent, CardDetailError, CardDetailLoading } from "@/compone
 import { useCardDetail } from "@/components/share/card-detail/hooks";
 import type { CardDetailClientPageProps } from "@/components/share/card-detail/types";
 
-export default function CardDetailClientPage({ cardId }: CardDetailClientPageProps) {
+export default function CardDetailClientPage({
+  cardId,
+  initialDetail,
+}: CardDetailClientPageProps) {
   const {
     detail,
     loading,
@@ -18,7 +21,7 @@ export default function CardDetailClientPage({ cardId }: CardDetailClientPagePro
     viewModel,
     handleAssetDownload,
     toggleFavorite,
-  } = useCardDetail({ cardId });
+  } = useCardDetail({ cardId, initialDetail });
 
   return (
     <AppShell currentPath="/">

@@ -11,6 +11,7 @@ import type {
   SecurityModal,
   SettingsDraft,
 } from "@/components/share/profile-settings/types";
+import { useConfirm } from "@/components/share/confirm-dialog";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type { ExternalSessionUser } from "@/lib/shared";
 
@@ -30,6 +31,7 @@ export function useShareProfileSettings({
   onSaved,
 }: UseShareProfileSettingsArgs) {
   const router = useRouter();
+  const confirm = useConfirm();
   const userKey = useMemo(
     () =>
       [
@@ -194,9 +196,13 @@ export function useShareProfileSettings({
       return;
     }
 
-    const confirmed = window.confirm(
-      "确认注销当前账号吗？注销后你将立即退出登录，原邮箱可以重新注册，但会作为全新账号。",
-    );
+    const confirmed = await confirm({
+      title: "注销账号",
+      description: "确认注销当前账号吗？注销后你将立即退出登录，原邮箱可以重新注册，但会作为全新账号。",
+      confirmText: "注销",
+      cancelText: "取消",
+      variant: "destructive",
+    });
     if (!confirmed) {
       return;
     }

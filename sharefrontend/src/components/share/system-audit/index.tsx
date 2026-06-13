@@ -48,18 +48,16 @@ export function ShareSystemAuditPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!user?.isConfiguredSuperAdmin);
   const [submitting, setSubmitting] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [activeLogID, setActiveLogID] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user?.isConfiguredSuperAdmin) {
-      setLoading(false);
-      return;
+    if (user?.isConfiguredSuperAdmin) {
+      void loadLogs(emptyFilter, 1);
     }
-    void loadLogs(emptyFilter, 1);
   }, [user?.id, user?.isConfiguredSuperAdmin]);
 
   async function loadLogs(nextFilter: AuditFilter, nextPage: number) {

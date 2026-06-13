@@ -1,9 +1,9 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 
 import type { ShareSiteBrandingSettings } from "@/lib/shared";
-import { applyShareSiteBrand, shareSiteBrand } from "@/lib/site-config";
+import { shareSiteBrand } from "@/lib/site-config";
 
 type ShareSiteBrandContextValue = {
   brand: ShareSiteBrandingSettings;
@@ -22,23 +22,15 @@ export function ShareSiteBrandProvider(props: {
   brand: ShareSiteBrandingSettings;
   children: React.ReactNode;
 }) {
-  const [brand, setBrandState] = useState(() => {
-    applyShareSiteBrand(props.brand);
-    return props.brand;
-  });
+  const [brand, setBrandState] = useState(props.brand);
 
-  useEffect(() => {
-    applyShareSiteBrand(props.brand);
-    setBrandState(props.brand);
-  }, [props.brand]);
-
-  function setBrand(nextBrand: ShareSiteBrandingSettings) {
-    applyShareSiteBrand(nextBrand);
-    setBrandState(nextBrand);
-  }
+  const value = useMemo(
+    () => ({ brand, setBrand: setBrandState }),
+    [brand],
+  );
 
   return (
-    <ShareSiteBrandContext.Provider value={{ brand, setBrand }}>
+    <ShareSiteBrandContext.Provider value={value}>
       {props.children}
     </ShareSiteBrandContext.Provider>
   );

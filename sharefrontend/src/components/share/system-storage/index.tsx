@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { AuthRedirect } from "@/components/share/auth-redirect";
+import { useConfirm } from "@/components/share/confirm-dialog";
 import { PaginationControls } from "@/components/share/pagination-controls/index";
 import { useShareSession } from "@/components/share/session-provider";
 import { StorageConfigForm } from "@/components/share/system-storage/form";
 import { SystemWorkspace } from "@/components/share/system-shell/index";
+import { useToast } from "@/components/share/toast";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type { ShareStorageConfig } from "@/lib/shared";
 
@@ -17,18 +20,16 @@ export function ShareSystemStoragePage() {
   const { user, sessionChecking } = useShareSession();
   const [items, setItems] = useState<ShareStorageConfig[]>([]);
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!user?.isConfiguredSuperAdmin);
   const [deletingId, setDeletingId] = useState("");
   const [loadError, setLoadError] = useState("");
-  const [actionError, setActionError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const showToast = useToast();
+  const confirm = useConfirm();
 
   useEffect(() => {
-    if (!user?.isConfiguredSuperAdmin) {
-      setLoading(false);
-      return;
+    if (user?.isConfiguredSuperAdmin) {
+      void loadStorageConfigs();
     }
-    void loadStorageConfigs();
   }, [user?.id, user?.isConfiguredSuperAdmin]);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(items.length / PAGE_SIZE)), [items.length]);
@@ -37,10 +38,6 @@ export function ShareSystemStoragePage() {
     const start = (safePage - 1) * PAGE_SIZE;
     return items.slice(start, start + PAGE_SIZE);
   }, [items, safePage]);
-
-  useEffect(() => {
-    setPage((current) => Math.min(Math.max(current, 1), totalPages));
-  }, [totalPages]);
 
   async function loadStorageConfigs() {
     setLoading(true);
@@ -56,20 +53,24 @@ export function ShareSystemStoragePage() {
   }
 
   async function handleDelete(id: string) {
-    const confirmed = window.confirm("确认删除这条存储配置吗？");
+    const confirmed = await confirm({
+      title: "删除存储配置",
+      description: "确认删除这条存储配置吗？",
+      confirmText: "删除",
+      cancelText: "取消",
+      variant: "destructive",
+    });
     if (!confirmed) {
       return;
     }
 
     setDeletingId(id);
-    setActionError("");
-    setSuccessMessage("");
     try {
       await shareApi.deleteSystemStorageConfig(id);
-      setSuccessMessage("存储配置已删除。");
+      showToast("存储配置已删除。", "success");
       await loadStorageConfigs();
     } catch (error) {
-      setActionError(getShareErrorMessage(error, "删除存储配置失败，请稍后重试。"));
+      showToast(getShareErrorMessage(error, "删除存储配置失败，请稍后重试。"), "error");
     } finally {
       setDeletingId("");
     }
@@ -94,8 +95,6 @@ export function ShareSystemStoragePage() {
       description="统一管理本地、阿里云 OSS、S3、MinIO 等对象存储配置。"
     >
       {loadError ? <ErrorNotice message={loadError} /> : null}
-      {actionError ? <ErrorNotice message={actionError} /> : null}
-      {successMessage ? <SuccessNotice message={successMessage} /> : null}
 
       <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-3 border-b border-[var(--outline)]/20 pb-3 sm:flex-row sm:items-center sm:justify-between">
@@ -200,7 +199,8 @@ export function ShareSystemStorageEditPage(props: { storageConfigID: string }) {
 function ShareSystemStorageFormPage(props: { mode: "create" | "edit"; storageConfigID?: string }) {
   const { mode, storageConfigID = "" } = props;
   const { user, sessionChecking } = useShareSession();
-  const [successMessage, setSuccessMessage] = useState("");
+  const router = useRouter();
+  const showToast = useToast();
 
   const pagePath = mode === "create" ? "/system/storage/new" : `/system/storage/${encodeURIComponent(storageConfigID)}/edit`;
 
@@ -222,8 +222,6 @@ function ShareSystemStorageFormPage(props: { mode: "create" | "edit"; storageCon
       title={mode === "create" ? "新增存储配置" : "修改存储配置"}
       description=""
     >
-      {successMessage ? <SuccessNotice message={successMessage} /> : null}
-
       <div className="mx-auto mb-4 flex max-w-3xl items-start gap-3">
         <Link
           href="/system/storage"
@@ -246,7 +244,10 @@ function ShareSystemStorageFormPage(props: { mode: "create" | "edit"; storageCon
         <StorageConfigForm
           mode={mode}
           storageConfigID={storageConfigID}
-          onSuccess={() => setSuccessMessage(mode === "create" ? "存储配置已创建。" : "存储配置已更新。")}
+          onSuccess={() => {
+            showToast(mode === "create" ? "存储配置已创建。" : "存储配置已更新。", "success");
+            router.push("/system/storage");
+          }}
         />
       </section>
     </SystemWorkspace>
@@ -275,6 +276,4 @@ function ErrorNotice({ message }: { message: string }) {
   return <p className="rounded-xl border border-[#f3c8ad] bg-[#fff4ec] px-3 py-2 text-xs font-black text-[#9a3412]">{message}</p>;
 }
 
-function SuccessNotice({ message }: { message: string }) {
-  return <p className="rounded-xl border border-[#d9eed6] bg-[#f3fbf1] px-3 py-2 text-xs font-black text-[#2f6d37]">{message}</p>;
-}
+

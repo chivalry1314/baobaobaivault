@@ -18,6 +18,7 @@ type Config struct {
 	WebPush             WebPushConfig   `mapstructure:"webpush"`
 	Email               EmailConfig     `mapstructure:"email"`
 	ShareAuth           ShareAuthConfig `mapstructure:"share_auth"`
+	Security            SecurityConfig  `mapstructure:"security"`
 	Log                 LogConfig       `mapstructure:"log"`
 }
 
@@ -102,6 +103,13 @@ type ShareAuthConfig struct {
 type LogConfig struct {
 	Level  string `mapstructure:"level"`
 	Format string `mapstructure:"format"` // json, console
+}
+
+type SecurityConfig struct {
+	// FieldEncryptionKey is a 16/24/32 byte AES key used to encrypt sensitive
+	// database fields such as object storage credentials.
+	// It can be provided as a base64-encoded string or a raw string.
+	FieldEncryptionKey string `mapstructure:"field_encryption_key"`
 }
 
 type WebPushConfig struct {
@@ -245,6 +253,9 @@ func setDefaults() {
 	// Log
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("log.format", "json")
+
+	// Security
+	viper.SetDefault("security.field_encryption_key", "")
 }
 
 func (c *Config) validate() error {

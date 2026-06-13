@@ -68,6 +68,7 @@ Recommended:
 - [ ] `redis.host=redis`
 - [ ] `redis.password` matches `.env`
 - [ ] `jwt.secret` has been replaced with a strong random secret
+- [ ] `security.field_encryption_key` is set to a strong 32-byte random key (base64 or raw string) to encrypt storage credentials
 - [ ] `log.level` is confirmed
 - [ ] `log.format=json` or another value that matches your ops model
 

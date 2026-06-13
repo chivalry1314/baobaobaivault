@@ -7,6 +7,7 @@ import {
   getEntryTitle,
   getInitials,
 } from "@/components/share/account-entry/helpers";
+import { ShareImage } from "@/components/share/share-image";
 import type { ExternalSessionUser } from "@/lib/shared";
 
 export function AccountEntryButton(props: {
@@ -27,7 +28,7 @@ export function AccountEntryButton(props: {
       className="inline-flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-[3px] border-[var(--outline)] bg-[#fcb4c7] text-[var(--foreground)] transition-all hover:opacity-90 sm:h-14 sm:w-14"
     >
       {user?.avatar.trim() ? (
-        <img src={user.avatar} alt={getDisplayName(user)} className="h-full w-full object-cover" />
+        <ShareImage src={user.avatar} alt={getDisplayName(user)} fill className="object-cover" />
       ) : user ? (
         <span className="text-sm font-black leading-none text-[var(--foreground)]/78">
           {getInitials(user)}

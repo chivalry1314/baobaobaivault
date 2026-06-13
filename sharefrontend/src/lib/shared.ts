@@ -395,34 +395,6 @@ export type ShareAuditLog = {
   created_at: string;
 };
 
-export type ShareAccessKeyItem = {
-  id: string;
-  user_id?: string | null;
-  access_key: string;
-  description: string;
-  status: string;
-  expires_at?: string | null;
-  created_at: string;
-  updated_at?: string;
-};
-
-export type ShareSystemAccessKeyCreateResult = {
-  id: string;
-  access_key: string;
-  secret_key: string;
-  description: string;
-  status: string;
-  expires_at?: string | null;
-  created_at: string;
-};
-
-export type ShareSystemAccessKeyOwner = {
-  id: string;
-  email: string;
-  username: string;
-  nickname: string;
-};
-
 export type SharePermission = {
   id: string;
   code: string;

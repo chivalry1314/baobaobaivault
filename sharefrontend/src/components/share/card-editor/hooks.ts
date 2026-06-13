@@ -2,6 +2,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 
 import { slotOptions } from "@/components/share/card-editor/constants";
+import { useConfirm } from "@/components/share/confirm-dialog";
 import {
   composeSearchableSummary,
   createEmptySlotItem,
@@ -127,6 +128,7 @@ function formatTagDraftForBlur(value: string): string {
 
 export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
   const router = useRouter();
+  const confirm = useConfirm();
   const { user: currentUser, sessionChecking } = useShareSession();
 
   const [cardLoading, setCardLoading] = useState(mode === "edit");
@@ -535,7 +537,14 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
     if (mode !== "edit" || !cardId) {
       return;
     }
-    if (!window.confirm("确认删除这张卡片吗？删除后将无法恢复。")) {
+    const confirmed = await confirm({
+      title: "删除卡片",
+      description: "确认删除这张卡片吗？删除后将无法恢复。",
+      confirmText: "删除",
+      cancelText: "取消",
+      variant: "destructive",
+    });
+    if (!confirmed) {
       return;
     }
 
@@ -586,7 +595,14 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
     if (!cardId || !loadedCard || !hasCoverOnCard) {
       return;
     }
-    if (!window.confirm("确认删除当前封面图吗？删除后将回退为分类文件预览。")) {
+    const confirmed = await confirm({
+      title: "删除封面图",
+      description: "确认删除当前封面图吗？删除后将回退为分类文件预览。",
+      confirmText: "删除",
+      cancelText: "取消",
+      variant: "destructive",
+    });
+    if (!confirmed) {
       return;
     }
 
@@ -646,11 +662,14 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
     if (!existing) {
       return;
     }
-    if (
-      !window.confirm(
-        `确认删除分类「${getSlotLabel(slot)}」文件吗？删除后将无法恢复。`,
-      )
-    ) {
+    const confirmed = await confirm({
+      title: "删除分类文件",
+      description: `确认删除分类「${getSlotLabel(slot)}」文件吗？删除后将无法恢复。`,
+      confirmText: "删除",
+      cancelText: "取消",
+      variant: "destructive",
+    });
+    if (!confirmed) {
       return;
     }
 

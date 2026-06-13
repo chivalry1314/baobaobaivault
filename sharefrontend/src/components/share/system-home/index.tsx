@@ -55,11 +55,6 @@ export function ShareSystemHome() {
           href="/system/audit"
         />
         <SystemCard
-          title="访问密钥"
-          description="管理平台管理员账号的 AK/SK，用于程序化访问。"
-          href="/system/access-keys"
-        />
-        <SystemCard
           title="角色权限"
           description="管理系统角色、权限绑定以及命名空间作用范围。"
           href="/system/roles"

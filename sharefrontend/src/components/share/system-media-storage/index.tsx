@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { AuthRedirect } from "@/components/share/auth-redirect";
 import { useShareSession } from "@/components/share/session-provider";
 import { SystemWorkspace } from "@/components/share/system-shell/index";
+import { useToast } from "@/components/share/toast";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type {
   ShareMediaStorageMigrationPlan,
@@ -22,24 +23,15 @@ export function ShareSystemMediaStoragePage() {
   const [draft, setDraft] = useState<ShareMediaStorageSettings | null>(null);
   const [migration, setMigration] = useState<ShareMediaStorageMigrationPlan | null>(null);
   const [namespaces, setNamespaces] = useState<ShareNamespace[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!user?.isConfiguredSuperAdmin);
   const [saving, setSaving] = useState(false);
   const [migrating, setMigrating] = useState(false);
   const [loadError, setLoadError] = useState("");
-  const [message, setMessage] = useState("");
-  const [migrationMessage, setMigrationMessage] = useState("");
+  const showToast = useToast();
   const [migrationResult, setMigrationResult] = useState<ShareMediaStorageMigrationRunResult | null>(null);
   const [migrationBatchSize, setMigrationBatchSize] = useState("20");
   const [deleteLocalAfterMigration, setDeleteLocalAfterMigration] = useState(false);
   const [includeMissingFiles, setIncludeMissingFiles] = useState(false);
-
-  useEffect(() => {
-    if (!user?.isConfiguredSuperAdmin) {
-      setLoading(false);
-      return;
-    }
-    void loadData();
-  }, [user?.id, user?.isConfiguredSuperAdmin]);
 
   async function loadData() {
     setLoading(true);
@@ -60,9 +52,14 @@ export function ShareSystemMediaStoragePage() {
     }
   }
 
+  useEffect(() => {
+    if (user?.isConfiguredSuperAdmin) {
+      void loadData();
+    }
+  }, [user?.id, user?.isConfiguredSuperAdmin]);
+
   function updateDraft(patch: Partial<ShareMediaStorageSettings>) {
     setDraft((current) => (current ? { ...current, ...patch } : current));
-    setMessage("");
   }
 
   async function handleSave() {
@@ -71,7 +68,6 @@ export function ShareSystemMediaStoragePage() {
     }
 
     setSaving(true);
-    setMessage("");
     try {
       const response = await shareApi.updateSystemMediaStorageSettings({
         storageMode: draft.storageMode,
@@ -82,9 +78,9 @@ export function ShareSystemMediaStoragePage() {
       setSettings(response.settings);
       setDraft(response.settings);
       setMigration(response.migration);
-      setMessage("媒体存储设置已保存。");
+      showToast("媒体存储设置已保存。", "success");
     } catch (error) {
-      setMessage(getShareErrorMessage(error, "保存媒体存储设置失败，请稍后重试。"));
+      showToast(getShareErrorMessage(error, "保存媒体存储设置失败，请稍后重试。"), "error");
     } finally {
       setSaving(false);
     }
@@ -97,12 +93,11 @@ export function ShareSystemMediaStoragePage() {
 
     const batchSize = Number.parseInt(migrationBatchSize, 10);
     if (!Number.isFinite(batchSize) || batchSize <= 0) {
-      setMigrationMessage("迁移批次大小必须是大于 0 的整数。");
+      showToast("迁移批次大小必须是大于 0 的整数。", "error");
       return;
     }
 
     setMigrating(true);
-    setMigrationMessage("");
     setMigrationResult(null);
     try {
       const response = await shareApi.runSystemMediaStorageMigration({
@@ -114,13 +109,14 @@ export function ShareSystemMediaStoragePage() {
       setDraft(response.settings);
       setMigration(response.migration);
       setMigrationResult(response.result);
-      setMigrationMessage(
+      showToast(
         response.result.failed > 0
           ? "迁移已执行，部分文件失败，请检查下方结果。"
-          : "迁移已执行完成。"
+          : "迁移已执行完成。",
+        response.result.failed > 0 ? "info" : "success",
       );
     } catch (error) {
-      setMigrationMessage(getShareErrorMessage(error, "执行历史文件迁移失败，请稍后重试。"));
+      showToast(getShareErrorMessage(error, "执行历史文件迁移失败，请稍后重试。"), "error");
     } finally {
       setMigrating(false);
     }
@@ -285,9 +281,6 @@ export function ShareSystemMediaStoragePage() {
                 >
                   {saving ? "保存中..." : "保存媒体存储设置"}
                 </button>
-                {message ? (
-                  <span className="text-xs font-bold text-[var(--foreground)]/60">{message}</span>
-                ) : null}
               </div>
             </section>
           ) : (
@@ -357,9 +350,6 @@ export function ShareSystemMediaStoragePage() {
                     >
                       {migrating ? "迁移中..." : "执行一批历史文件迁移"}
                     </button>
-                    {migrationMessage ? (
-                      <span className="text-xs font-bold text-[var(--foreground)]/65">{migrationMessage}</span>
-                    ) : null}
                   </div>
                 </section>
 

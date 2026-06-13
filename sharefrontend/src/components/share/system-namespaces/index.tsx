@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AuthRedirect } from "@/components/share/auth-redirect";
+import { useConfirm } from "@/components/share/confirm-dialog";
 
 import { PaginationControls } from "@/components/share/pagination-controls/index";
 import { useShareSession } from "@/components/share/session-provider";
 import { SystemWorkspace } from "@/components/share/system-shell/index";
 import { parseOptionalPositiveInt } from "@/components/share/system-shared/helpers";
+import { useToast } from "@/components/share/toast";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type { ShareNamespace, ShareStorageConfig } from "@/lib/shared";
 
@@ -40,18 +43,16 @@ export function ShareSystemNamespacesPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!user?.isConfiguredSuperAdmin);
   const [deletingId, setDeletingId] = useState("");
   const [loadError, setLoadError] = useState("");
-  const [actionError, setActionError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const showToast = useToast();
+  const confirm = useConfirm();
 
   useEffect(() => {
-    if (!user?.isConfiguredSuperAdmin) {
-      setLoading(false);
-      return;
+    if (user?.isConfiguredSuperAdmin) {
+      void loadData(1);
     }
-    void loadData(1);
   }, [user?.id, user?.isConfiguredSuperAdmin]);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [pageSize, total]);
@@ -74,21 +75,25 @@ export function ShareSystemNamespacesPage() {
   }
 
   async function handleDelete(id: string) {
-    const confirmed = window.confirm("确认删除这个命名空间吗？如果里面还有对象，需要先清空对象后才能删除。");
+    const confirmed = await confirm({
+      title: "删除命名空间",
+      description: "确认删除这个命名空间吗？如果里面还有对象，需要先清空对象后才能删除。",
+      confirmText: "删除",
+      cancelText: "取消",
+      variant: "destructive",
+    });
     if (!confirmed) {
       return;
     }
 
     setDeletingId(id);
-    setActionError("");
-    setSuccessMessage("");
     try {
       await shareApi.deleteSystemNamespace(id);
-      setSuccessMessage("命名空间已删除。");
+      showToast("命名空间已删除。", "success");
       const nextTotalPages = Math.max(1, Math.ceil(Math.max(total - 1, 0) / pageSize));
       await loadData(Math.min(page, nextTotalPages));
     } catch (error) {
-      setActionError(getShareErrorMessage(error, "删除命名空间失败，请稍后重试。"));
+      showToast(getShareErrorMessage(error, "删除命名空间失败，请稍后重试。"), "error");
     } finally {
       setDeletingId("");
     }
@@ -120,8 +125,6 @@ export function ShareSystemNamespacesPage() {
       description="管理对象存储命名空间、路径前缀、容量配额，以及每个命名空间默认绑定的存储配置。"
     >
       {loadError ? <ErrorNotice message={loadError} /> : null}
-      {actionError ? <ErrorNotice message={actionError} /> : null}
-      {successMessage ? <SuccessNotice message={successMessage} /> : null}
 
       <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-3 border-b border-[var(--outline)]/20 pb-3 sm:flex-row sm:items-center sm:justify-between">
@@ -220,21 +223,13 @@ function ShareSystemNamespaceFormPage(props: { mode: "create" | "edit"; namespac
   const { user, sessionChecking } = useShareSession();
   const [storageConfigs, setStorageConfigs] = useState<ShareStorageConfig[]>([]);
   const [form, setForm] = useState<NamespaceFormState>(emptyNamespaceForm);
-  const [loading, setLoading] = useState(mode === "edit");
+  const [loading, setLoading] = useState(mode === "edit" && !!user?.isConfiguredSuperAdmin);
   const [loadError, setLoadError] = useState("");
-  const [actionError, setActionError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const router = useRouter();
+  const showToast = useToast();
 
-  useEffect(() => {
-    if (!user?.isConfiguredSuperAdmin) {
-      setLoading(false);
-      return;
-    }
-    void loadFormData();
-  }, [user?.id, user?.isConfiguredSuperAdmin, mode, namespaceID]);
-
-  async function loadFormData() {
+  const loadFormData = useCallback(async () => {
     setLoading(true);
     setLoadError("");
     try {
@@ -271,13 +266,17 @@ function ShareSystemNamespaceFormPage(props: { mode: "create" | "edit"; namespac
     } finally {
       setLoading(false);
     }
-  }
+  }, [mode, namespaceID]);
+
+  useEffect(() => {
+    if (mode === "edit" && user?.isConfiguredSuperAdmin) {
+      void loadFormData();
+    }
+  }, [user?.id, user?.isConfiguredSuperAdmin, mode, namespaceID, loadFormData]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
-    setActionError("");
-    setSuccessMessage("");
 
     const payload = {
       name: form.name.trim(),
@@ -292,18 +291,20 @@ function ShareSystemNamespaceFormPage(props: { mode: "create" | "edit"; namespac
     try {
       if (mode === "edit") {
         await shareApi.updateSystemNamespace(namespaceID, payload);
-        setSuccessMessage("命名空间已更新。");
+        showToast("命名空间已更新。", "success");
+        router.push("/system/namespaces");
       } else {
         await shareApi.createSystemNamespace(payload);
-        setForm(emptyNamespaceForm);
-        setSuccessMessage("命名空间已创建。");
+        showToast("命名空间已创建。", "success");
+        router.push("/system/namespaces");
       }
     } catch (error) {
-      setActionError(
+      showToast(
         getShareErrorMessage(
           error,
           mode === "edit" ? "更新命名空间失败，请稍后重试。" : "创建命名空间失败，请稍后重试。",
         ),
+        "error",
       );
     } finally {
       setSaving(false);
@@ -340,8 +341,6 @@ function ShareSystemNamespaceFormPage(props: { mode: "create" | "edit"; namespac
       }
     >
       {loadError ? <ErrorNotice message={loadError} /> : null}
-      {actionError ? <ErrorNotice message={actionError} /> : null}
-      {successMessage ? <SuccessNotice message={successMessage} /> : null}
 
       <div className="mx-auto mb-4 flex max-w-3xl items-start gap-3">
         <Link
@@ -461,9 +460,6 @@ function ErrorNotice({ message }: { message: string }) {
   return <p className="rounded-xl border border-[#f3c8ad] bg-[#fff4ec] px-3 py-2 text-xs font-black text-[#9a3412]">{message}</p>;
 }
 
-function SuccessNotice({ message }: { message: string }) {
-  return <p className="rounded-xl border border-[#d9eed6] bg-[#f3fbf1] px-3 py-2 text-xs font-black text-[#2f6d37]">{message}</p>;
-}
 
 const inputClassName =
   "w-full rounded-xl border-2 border-[var(--outline)]/30 bg-white px-3 py-2 text-sm font-bold text-[var(--foreground)] placeholder:text-[var(--foreground)]/35 focus:border-[var(--primary)] focus:outline-none focus:ring-4 focus:ring-[var(--primary)]/15";

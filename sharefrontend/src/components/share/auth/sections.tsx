@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import type { AuthFormCardProps, FieldProps } from "@/components/share/auth/types";
 import { ShareSiteBrandMark } from "@/components/share/site-brand";
 import { useShareSiteBrand } from "@/components/share/site-brand/provider";
@@ -382,9 +384,9 @@ export function AuthFormCard(props: AuthFormCardProps) {
               {authText.backToLogin}
             </button>
           ) : null}
-          <a href="/" className="transition hover:text-[var(--foreground)] hover:underline">
+          <Link href="/" className="transition hover:text-[var(--foreground)] hover:underline">
             {authText.backHome}
-          </a>
+          </Link>
         </div>
       </div>
     </section>

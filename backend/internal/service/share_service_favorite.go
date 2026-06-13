@@ -42,7 +42,11 @@ func (s *ShareService) FavoriteCard(ctx context.Context, userID, cardID string) 
 		ExternalUserID: userID,
 		CardID:         cardID,
 	}
-	return s.db.WithContext(ctx).Create(&favorite).Error
+	if err := s.db.WithContext(ctx).Create(&favorite).Error; err != nil {
+		return err
+	}
+	s.invalidateDiscoverCache(ctx)
+	return nil
 }
 
 func (s *ShareService) UnfavoriteCard(ctx context.Context, userID, cardID string) error {
@@ -61,6 +65,7 @@ func (s *ShareService) UnfavoriteCard(ctx context.Context, userID, cardID string
 	if result.RowsAffected == 0 {
 		return ErrShareFavoriteNotFound
 	}
+	s.invalidateDiscoverCache(ctx)
 	return nil
 }
 

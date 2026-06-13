@@ -118,6 +118,7 @@ func (h *Handler) shareSystemDeleteObject(c *gin.Context) {
 		jsonError(c, http.StatusInternalServerError, err)
 		return
 	}
+	h.writeAuditLog(c, "delete", "object", namespaceID+"/"+key, "", "success")
 	jsonSuccess(c, gin.H{"deleted": true})
 }
 
@@ -191,6 +192,7 @@ func (h *Handler) shareSystemRollbackObjectVersion(c *gin.Context) {
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
+	h.writeAuditLog(c, "rollback", "object_version", req.NamespaceID+"/"+req.Key, "", "success")
 	jsonSuccess(c, object)
 }
 

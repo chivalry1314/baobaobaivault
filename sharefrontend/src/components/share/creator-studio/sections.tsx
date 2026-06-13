@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { AccessModeBadge } from "@/components/share/access-mode-badge";
 import { FavoriteButton } from "@/components/share/favorite-button";
+import { ShareImage } from "@/components/share/share-image";
 import {
   defaultCardDescription,
   formatCardCode,
@@ -34,7 +35,7 @@ export function Avatar({
 
   if (user.avatar.trim()) {
     return (
-      <img
+      <ShareImage
         src={user.avatar}
         alt={name}
         className={`${dimension} rounded-full object-cover shadow-[0_12px_28px_-20px_rgba(120,85,94,0.45)]`}
@@ -165,10 +166,11 @@ export function CreatorCard({ item }: { item: DashboardCard }) {
     <article className="group flex h-full flex-col overflow-hidden rounded-[1.1rem] border border-[var(--outline)]/20 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md">
       <Link href={editHref} className="relative block aspect-[3/2] w-full overflow-hidden bg-[var(--surface-container)]">
         {isImageCard(item.card) ? (
-          <img
+          <ShareImage
             src={item.card.previewUrl}
             alt={item.card.title}
-            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
+            fill
+            className="object-cover transition-transform duration-200 group-hover:scale-[1.03]"
           />
         ) : (
           <div className="flex h-full items-end p-3">
@@ -254,10 +256,11 @@ export function FavoriteCard({
     <article className="group relative flex h-full flex-col overflow-hidden rounded-[1.1rem] border border-[var(--outline)]/20 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md">
       <Link href={cardHref} className="relative block aspect-[3/2] w-full overflow-hidden bg-[var(--surface-container)]">
         {isImageCard(item.card) ? (
-          <img
+          <ShareImage
             src={item.card.previewUrl}
             alt={item.card.title}
-            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
+            fill
+            className="object-cover transition-transform duration-200 group-hover:scale-[1.03]"
           />
         ) : (
           <div className="flex h-full items-end p-3">

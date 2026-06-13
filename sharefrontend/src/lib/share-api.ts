@@ -22,7 +22,6 @@
   PasswordResetResendResponse,
   ReviewDashboardResponse,
   ShareAuthConfigResponse,
-  ShareAccessKeyItem,
   ShareAuthSettingsResponse,
   ShareAuditLog,
   ShareEmailHealthResponse,
@@ -37,15 +36,12 @@
   SharePagination,
   SharePermission,
   SharePreparedPresignPut,
-  ShareSystemAccessKeyCreateResult,
-  ShareSystemAccessKeyOwner,
   ShareSystemRole,
   ShareStorageConfig,
   ShareStorageObject,
   ShareSMTPTestRequest,
   ShareSystemRolesResponse,
   ShareUserRole,
-  ShareUserRoleManageItem,
   ShareUsersManageResponse,
   ShareAdminResetPasswordResponse,
 } from "@/lib/shared";
@@ -106,7 +102,6 @@ const shareApiErrorMessages: Record<string, string> = {
   "invalid from": "开始时间格式不正确",
   "invalid to": "结束时间格式不正确",
   "id is required": "密钥 ID 不能为空",
-  "aksk not found": "访问密钥不存在",
   "server.admin_email is not configured": "未配置系统超级管理员邮箱",
   "manager or creator role required": "需要创作者或管理员权限",
   "invalid user role": "用户角色不正确",
@@ -986,31 +981,6 @@ export const shareApi = {
       page: response.page || 1,
       pageSize: response.page_size || input?.pageSize || 20,
     }) satisfies SharePagination & { items: ShareAuditLog[] });
-  },
-
-  systemAccessKeys() {
-    return request<{ items: ShareAccessKeyItem[]; owner: ShareSystemAccessKeyOwner }>(
-      `${API_ROOT}/me/system/access-keys`,
-      {
-        cache: "no-store",
-      },
-    );
-  },
-
-  createSystemAccessKey(input: { description: string; expires_in_days: number }) {
-    return request<{ item: ShareSystemAccessKeyCreateResult }>(`${API_ROOT}/me/system/access-keys`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(input),
-    });
-  },
-
-  revokeSystemAccessKey(id: string) {
-    return request<{ ok: true }>(`${API_ROOT}/me/system/access-keys/${encodeURIComponent(id)}`, {
-      method: "DELETE",
-    });
   },
 
   systemPermissions() {

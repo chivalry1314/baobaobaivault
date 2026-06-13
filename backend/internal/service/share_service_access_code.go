@@ -71,6 +71,7 @@ func (s *ShareService) UpdateCardAccessCodeByOwner(ctx context.Context, input Sh
 			return nil, err
 		}
 		config := buildShareCardAccessCodeConfig(card)
+		s.invalidateDiscoverCache(ctx)
 		return &config, nil
 	}
 
@@ -116,6 +117,7 @@ func (s *ShareService) UpdateCardAccessCodeByOwner(ctx context.Context, input Sh
 	}
 
 	config := buildShareCardAccessCodeConfig(card)
+	s.invalidateDiscoverCache(ctx)
 	return &config, nil
 }
 
@@ -134,7 +136,7 @@ func (s *ShareService) DeleteCardAccessCodeByOwner(ctx context.Context, ownerID,
 	card.AccessCodeUsageCount = 0
 	card.UpdatedAt = time.Now().UTC()
 
-	return s.db.WithContext(ctx).
+	if err := s.db.WithContext(ctx).
 		Model(&model.SharePlatformCard{}).
 		Where("id = ?", card.ID).
 		Updates(map[string]any{
@@ -143,5 +145,9 @@ func (s *ShareService) DeleteCardAccessCodeByOwner(ctx context.Context, ownerID,
 			"access_code_usage_limit": card.AccessCodeUsageLimit,
 			"access_code_usage_count": card.AccessCodeUsageCount,
 			"updated_at":              card.UpdatedAt,
-		}).Error
+		}).Error; err != nil {
+		return err
+	}
+	s.invalidateDiscoverCache(ctx)
+	return nil
 }

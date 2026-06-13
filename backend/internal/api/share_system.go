@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -53,9 +54,11 @@ func (h *Handler) shareSystemCreateStorageConfig(c *gin.Context) {
 
 	cfg, err := h.storageService.CreateStorageConfig(c.Request.Context(), &req)
 	if err != nil {
+		h.writeAuditLog(c, "create", "storage_config", "", fmt.Sprintf("provider=%s,name=%s", req.Provider, req.Name), "failure")
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
+	h.writeAuditLog(c, "create", "storage_config", cfg.ID, fmt.Sprintf("provider=%s,name=%s", cfg.Provider, cfg.Name), "success")
 	c.JSON(http.StatusCreated, gin.H{"item": cfg})
 }
 
@@ -91,9 +94,11 @@ func (h *Handler) shareSystemUpdateStorageConfig(c *gin.Context) {
 
 	cfg, err := h.storageService.UpdateStorageConfig(c.Request.Context(), c.Param("id"), &req)
 	if err != nil {
+		h.writeAuditLog(c, "update", "storage_config", c.Param("id"), fmt.Sprintf("provider=%s,name=%s", req.Provider, req.Name), "failure")
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
+	h.writeAuditLog(c, "update", "storage_config", cfg.ID, fmt.Sprintf("provider=%s,name=%s", cfg.Provider, cfg.Name), "success")
 	c.JSON(http.StatusOK, gin.H{"item": cfg})
 }
 
@@ -102,10 +107,13 @@ func (h *Handler) shareSystemDeleteStorageConfig(c *gin.Context) {
 		return
 	}
 
-	if err := h.storageService.DeleteStorageConfig(c.Request.Context(), c.Param("id")); err != nil {
+	id := c.Param("id")
+	if err := h.storageService.DeleteStorageConfig(c.Request.Context(), id); err != nil {
+		h.writeAuditLog(c, "delete", "storage_config", id, "", "failure")
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
+	h.writeAuditLog(c, "delete", "storage_config", id, "", "success")
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
@@ -179,9 +187,11 @@ func (h *Handler) shareSystemCreateNamespace(c *gin.Context) {
 
 	ns, err := h.namespaceService.CreateNamespace(c.Request.Context(), &req)
 	if err != nil {
+		h.writeAuditLog(c, "create", "namespace", "", fmt.Sprintf("name=%s", req.Name), "failure")
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
+	h.writeAuditLog(c, "create", "namespace", ns.ID, fmt.Sprintf("name=%s", ns.Name), "success")
 	c.JSON(http.StatusCreated, gin.H{"item": ns})
 }
 
@@ -210,9 +220,11 @@ func (h *Handler) shareSystemUpdateNamespace(c *gin.Context) {
 
 	ns, err := h.namespaceService.UpdateNamespace(c.Request.Context(), namespaceID, &req)
 	if err != nil {
+		h.writeAuditLog(c, "update", "namespace", namespaceID, fmt.Sprintf("name=%s", req.Name), "failure")
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
+	h.writeAuditLog(c, "update", "namespace", ns.ID, fmt.Sprintf("name=%s", ns.Name), "success")
 	c.JSON(http.StatusOK, gin.H{"item": ns})
 }
 
@@ -228,8 +240,10 @@ func (h *Handler) shareSystemDeleteNamespace(c *gin.Context) {
 	}
 
 	if err := h.namespaceService.DeleteNamespace(c.Request.Context(), namespaceID); err != nil {
+		h.writeAuditLog(c, "delete", "namespace", namespaceID, "", "failure")
 		jsonError(c, http.StatusBadRequest, err)
 		return
 	}
+	h.writeAuditLog(c, "delete", "namespace", namespaceID, "", "success")
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }

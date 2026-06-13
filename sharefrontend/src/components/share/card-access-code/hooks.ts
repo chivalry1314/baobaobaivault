@@ -15,7 +15,7 @@ export function useShareCardAccessCode({
   isWizardFlow,
 }: UseShareCardAccessCodeArgs) {
   const { user: currentUser, sessionChecking } = useShareSession();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!currentUser);
   const [detail, setDetail] = useState<CardDetailResponse | null>(null);
   const [config, setConfig] = useState<CardAccessCodeConfig | null>(null);
 
@@ -31,12 +31,7 @@ export function useShareCardAccessCode({
   useEffect(() => {
     let active = true;
 
-    if (!currentUser) {
-      setLoading(false);
-      setDetail(null);
-      setConfig(null);
-      setError("");
-      setSuccess("");
+    if (!currentUser?.id) {
       return () => {
         active = false;
       };

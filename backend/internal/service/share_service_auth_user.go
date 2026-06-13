@@ -709,7 +709,7 @@ func (s *ShareService) DeleteUserForManage(ctx context.Context, input ShareDelet
 		return ErrShareSelfDelete
 	}
 
-	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := s.ensureShareManagerRoleTx(tx, operatorID); err != nil {
 			return err
 		}
@@ -738,7 +738,11 @@ func (s *ShareService) DeleteUserForManage(ctx context.Context, input ShareDelet
 		}
 
 		return s.softDeleteExternalUserTx(tx, &target, "creator account deleted")
-	})
+	}); err != nil {
+		return err
+	}
+	s.invalidateDiscoverCache(ctx)
+	return nil
 }
 
 func (s *ShareService) DeleteOwnExternalUser(ctx context.Context, input ShareSelfDeleteInput) error {
@@ -751,7 +755,7 @@ func (s *ShareService) DeleteOwnExternalUser(ctx context.Context, input ShareSel
 		return ErrShareDeleteAuthFailed
 	}
 
-	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var user model.ShareExternalUser
 		if err := tx.First(&user, "id = ?", userID).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -766,7 +770,11 @@ func (s *ShareService) DeleteOwnExternalUser(ctx context.Context, input ShareSel
 			return ErrShareProtectedSuperAdmin
 		}
 		return s.softDeleteExternalUserTx(tx, &user, "account self deleted")
-	})
+	}); err != nil {
+		return err
+	}
+	s.invalidateDiscoverCache(ctx)
+	return nil
 }
 
 func (s *ShareService) AdminResetExternalUserPassword(ctx context.Context, input ShareAdminResetUserPasswordInput) (*ShareAdminResetUserPasswordResult, error) {

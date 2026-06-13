@@ -4,6 +4,7 @@ import type { VirtualItem, Virtualizer } from "@tanstack/react-virtual";
 import type { ShareAccessModeFilter } from "@/components/share/access-mode-filter";
 import { AccessModeBadge } from "@/components/share/access-mode-badge";
 import { FavoriteButton } from "@/components/share/favorite-button";
+import { ShareImage } from "@/components/share/share-image";
 import {
   CHIP_LABELS,
   CHIP_VISUALS,
@@ -287,10 +288,12 @@ function CardItem({ card, index }: { card: HomeFeedCard; index: number }) {
         </div>
 
         {card.imageUrl ? (
-          <img
+          <ShareImage
             src={card.imageUrl}
-            className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
             alt={card.title}
+            fill
+            className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-sm font-bold text-[var(--text-subtle)]">

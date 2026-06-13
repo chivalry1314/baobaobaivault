@@ -16,7 +16,6 @@ export function ShareAccessCodeCardPicker() {
     loading,
     authenticated,
     cards,
-    selectedCardId,
     setSelectedCardId,
     viewMode,
     setViewMode,

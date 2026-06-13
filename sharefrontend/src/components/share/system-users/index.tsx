@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { AuthRedirect } from "@/components/share/auth-redirect";
+import { useConfirm } from "@/components/share/confirm-dialog";
 import { PaginationControls } from "@/components/share/pagination-controls/index";
 import { useShareSession } from "@/components/share/session-provider";
 import { SystemWorkspace } from "@/components/share/system-shell/index";
+import { useToast } from "@/components/share/toast";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type { ShareUserRole, ShareUserRoleManageItem } from "@/lib/shared";
 
@@ -21,28 +23,24 @@ export function ShareSystemUsersPage() {
   const [submittedRoleFilter, setSubmittedRoleFilter] = useState<"all" | ShareUserRole>("all");
   const [total, setTotal] = useState(0);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!user?.isConfiguredSuperAdmin);
   const [loadError, setLoadError] = useState("");
-  const [actionError, setActionError] = useState("");
   const [actionNotice, setActionNotice] = useState("");
+  const showToast = useToast();
+  const confirm = useConfirm();
   const [updatePendingByUser, setUpdatePendingByUser] = useState<Record<string, boolean>>({});
   const [deletePendingByUser, setDeletePendingByUser] = useState<Record<string, boolean>>({});
   const [resetPendingByUser, setResetPendingByUser] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    if (!user?.isConfiguredSuperAdmin) {
-      setLoading(false);
-      return;
+    if (user?.isConfiguredSuperAdmin) {
+      void loadUsers(1, submittedSearch, submittedRoleFilter);
     }
-    void loadUsers(1, submittedSearch, submittedRoleFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, user?.isConfiguredSuperAdmin]);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [pageSize, total]);
   const safePage = Math.min(Math.max(page, 1), totalPages);
-
-  useEffect(() => {
-    setPage((current) => Math.min(Math.max(current, 1), totalPages));
-  }, [totalPages]);
 
   async function loadUsers(nextPage: number, keyword: string, role: "all" | ShareUserRole) {
     setLoading(true);
@@ -70,11 +68,11 @@ export function ShareSystemUsersPage() {
       return;
     }
     if (targetUser.id === user.id && nextRole !== "manager") {
-      setActionError("不能将自己的角色降级为非管理员。");
+      showToast("不能将自己的角色降级为非管理员。", "error");
       return;
     }
 
-    setActionError("");
+    const displayName = targetUser.nickname.trim() || targetUser.username.trim() || targetUser.email;
     setActionNotice("");
     setUpdatePendingByUser((current) => ({ ...current, [targetUser.id]: true }));
 
@@ -86,8 +84,9 @@ export function ShareSystemUsersPage() {
       if (targetUser.id === user.id) {
         setUser(payload.user);
       }
+      showToast(`已更新“${displayName}”的角色为${roleLabel(payload.user.role)}。`, "success");
     } catch (error) {
-      setActionError(getShareErrorMessage(error, "更新用户角色失败，请稍后重试。"));
+      showToast(getShareErrorMessage(error, "更新用户角色失败，请稍后重试。"), "error");
     } finally {
       setUpdatePendingByUser((current) => {
         const next = { ...current };
@@ -103,20 +102,26 @@ export function ShareSystemUsersPage() {
     }
 
     const displayName = targetUser.nickname.trim() || targetUser.username.trim() || targetUser.email;
-    const confirmed = window.confirm(`确认要注销用户“${displayName}”吗？该操作会逻辑删除账号，并将其卡片转为私有归档。`);
+    const confirmed = await confirm({
+      title: "注销用户",
+      description: `确认要注销用户“${displayName}”吗？该操作会逻辑删除账号，并将其卡片转为私有归档。`,
+      confirmText: "注销",
+      cancelText: "取消",
+      variant: "destructive",
+    });
     if (!confirmed) {
       return;
     }
 
-    setActionError("");
     setActionNotice("");
     setDeletePendingByUser((current) => ({ ...current, [targetUser.id]: true }));
 
     try {
       await shareApi.deleteSystemUser(targetUser.id);
+      showToast(`用户“${displayName}”已注销。`, "success");
       await loadUsers(Math.min(page, Math.max(1, Math.ceil(Math.max(total - 1, 0) / pageSize))), submittedSearch, submittedRoleFilter);
     } catch (error) {
-      setActionError(getShareErrorMessage(error, "注销用户失败，请稍后重试。"));
+      showToast(getShareErrorMessage(error, "注销用户失败，请稍后重试。"), "error");
     } finally {
       setDeletePendingByUser((current) => {
         const next = { ...current };
@@ -132,12 +137,17 @@ export function ShareSystemUsersPage() {
     }
 
     const displayName = targetUser.nickname.trim() || targetUser.username.trim() || targetUser.email;
-    const confirmed = window.confirm(`确认要为用户“${displayName}”重置密码吗？系统会生成一个新的随机密码。`);
+    const confirmed = await confirm({
+      title: "重置密码",
+      description: `确认要为用户“${displayName}”重置密码吗？系统会生成一个新的随机密码。`,
+      confirmText: "重置",
+      cancelText: "取消",
+      variant: "default",
+    });
     if (!confirmed) {
       return;
     }
 
-    setActionError("");
     setActionNotice("");
     setResetPendingByUser((current) => ({ ...current, [targetUser.id]: true }));
 
@@ -159,7 +169,7 @@ export function ShareSystemUsersPage() {
           : `已重置“${displayName}”的密码，请立即复制并发给用户：${response.newPassword}`,
       );
     } catch (error) {
-      setActionError(getShareErrorMessage(error, "重置用户密码失败，请稍后重试。"));
+      showToast(getShareErrorMessage(error, "重置用户密码失败，请稍后重试。"), "error");
     } finally {
       setResetPendingByUser((current) => {
         const next = { ...current };
@@ -203,7 +213,6 @@ export function ShareSystemUsersPage() {
       description="集中管理站点用户角色。你可以筛选用户、调整浏览者 / 创作者 / 管理员权限，并对指定用户执行注销。"
     >
       {loadError ? <ErrorNotice message={loadError} /> : null}
-      {actionError ? <ErrorNotice message={actionError} /> : null}
       {actionNotice ? <SuccessNotice message={actionNotice} /> : null}
 
       <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
@@ -392,3 +401,4 @@ function ErrorNotice({ message }: { message: string }) {
 function SuccessNotice({ message }: { message: string }) {
   return <p className="rounded-[1.1rem] border border-[#b7dfc8] bg-[#effaf3] px-4 py-3 text-xs font-black text-[#166534]">{message}</p>;
 }
+

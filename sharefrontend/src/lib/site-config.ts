@@ -75,10 +75,9 @@ export const shareSiteBrand: ShareSiteBrandConfig = {
 
 export function applyShareSiteBrand(
   next: Partial<ShareSiteBrandConfig> | null | undefined,
-) {
+): ShareSiteBrandConfig {
   if (!next) {
-    return shareSiteBrand;
+    return { ...shareSiteBrand };
   }
-  Object.assign(shareSiteBrand, next);
-  return shareSiteBrand;
+  return { ...shareSiteBrand, ...next };
 }

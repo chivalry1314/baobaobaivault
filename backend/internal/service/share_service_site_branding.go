@@ -166,12 +166,14 @@ func (s *ShareService) GetShareSiteBrandingSettings(ctx context.Context, operato
 	if err := s.ensureShareManagerRole(ctx, operatorID); err != nil {
 		return nil, err
 	}
+	s.loadShareSiteBrandingSettingsFromDB()
 	cfg := s.currentShareSiteBrandingSettings()
 	cfg.CanUpdate = s.isConfiguredShareSuperAdminUserID(ctx, operatorID)
 	return &cfg, nil
 }
 
 func (s *ShareService) GetSharePublicSiteBrandingSettings() ShareSiteBrandingSettingsView {
+	s.loadShareSiteBrandingSettingsFromDB()
 	cfg := s.currentShareSiteBrandingSettings()
 	cfg.CanUpdate = false
 	return cfg

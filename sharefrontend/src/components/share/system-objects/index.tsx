@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AuthRedirect } from "@/components/share/auth-redirect";
+import { useConfirm } from "@/components/share/confirm-dialog";
 
 import { PaginationControls } from "@/components/share/pagination-controls/index";
 import { useShareSession } from "@/components/share/session-provider";
 import { SystemWorkspace } from "@/components/share/system-shell/index";
+import { useToast } from "@/components/share/toast";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type {
   ShareNamespace,
@@ -40,7 +43,7 @@ export function ShareSystemObjectsPage() {
   const [versionPage, setVersionPage] = useState(1);
   const [versionPageSize, setVersionPageSize] = useState(VERSION_PAGE_SIZE);
   const [versionTotal, setVersionTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!user?.isConfiguredSuperAdmin);
   const [loadingObjects, setLoadingObjects] = useState(false);
   const [loadingVersions, setLoadingVersions] = useState(false);
   const [deletingKey, setDeletingKey] = useState("");
@@ -48,8 +51,8 @@ export function ShareSystemObjectsPage() {
   const [presigningKey, setPresigningKey] = useState("");
   const [presignGetUrl, setPresignGetUrl] = useState("");
   const [loadError, setLoadError] = useState("");
-  const [actionError, setActionError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const showToast = useToast();
+  const confirm = useConfirm();
 
   const selectedNamespace = useMemo(
     () => namespaces.find((item) => item.id === selectedNamespaceID) || null,
@@ -63,30 +66,7 @@ export function ShareSystemObjectsPage() {
   const objectTotalPages = Math.max(1, Math.ceil(objectTotal / objectPageSize));
   const versionTotalPages = Math.max(1, Math.ceil(versionTotal / versionPageSize));
 
-  useEffect(() => {
-    if (!user?.isConfiguredSuperAdmin) {
-      setLoading(false);
-      return;
-    }
-    void loadNamespaces();
-  }, [user?.id, user?.isConfiguredSuperAdmin]);
-
-  useEffect(() => {
-    if (!selectedNamespaceID) {
-      setObjects([]);
-      setVersions([]);
-      setSelectedObjectKey("");
-      setPresignGetUrl("");
-      setObjectPage(1);
-      setObjectTotal(0);
-      setVersionPage(1);
-      setVersionTotal(0);
-      return;
-    }
-    void loadObjects(selectedNamespaceID, prefix, 1);
-  }, [selectedNamespaceID]);
-
-  async function loadNamespaces() {
+  const loadNamespaces = useCallback(async () => {
     setLoading(true);
     setLoadError("");
     try {
@@ -101,11 +81,10 @@ export function ShareSystemObjectsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [selectedNamespaceID]);
 
-  async function loadObjects(namespaceID: string, nextPrefix: string, nextPage: number) {
+  const loadObjects = useCallback(async (namespaceID: string, nextPrefix: string, nextPage: number) => {
     setLoadingObjects(true);
-    setActionError("");
     try {
       const response = await shareApi.systemObjects({
         namespaceID,
@@ -126,15 +105,35 @@ export function ShareSystemObjectsPage() {
         setVersionTotal(0);
       }
     } catch (error) {
-      setActionError(getShareErrorMessage(error, "加载对象列表失败，请稍后重试。"));
+      showToast(getShareErrorMessage(error, "加载对象列表失败，请稍后重试。"), "error");
     } finally {
       setLoadingObjects(false);
     }
-  }
+  }, [selectedObjectKey, showToast]);
+
+  useEffect(() => {
+    if (user?.isConfiguredSuperAdmin) {
+      void loadNamespaces();
+    }
+  }, [user?.id, user?.isConfiguredSuperAdmin, loadNamespaces]);
+
+  useEffect(() => {
+    if (!selectedNamespaceID) {
+      setObjects([]);
+      setVersions([]);
+      setSelectedObjectKey("");
+      setPresignGetUrl("");
+      setObjectPage(1);
+      setObjectTotal(0);
+      setVersionPage(1);
+      setVersionTotal(0);
+      return;
+    }
+    void loadObjects(selectedNamespaceID, prefix, 1);
+  }, [selectedNamespaceID, prefix, loadObjects]);
 
   async function loadVersions(namespaceID: string, key: string, nextPage: number) {
     setLoadingVersions(true);
-    setActionError("");
     try {
       const response = await shareApi.systemObjectVersions({
         namespaceID,
@@ -147,15 +146,10 @@ export function ShareSystemObjectsPage() {
       setVersionPageSize(response.pageSize || VERSION_PAGE_SIZE);
       setVersionTotal(response.total || 0);
     } catch (error) {
-      setActionError(getShareErrorMessage(error, "加载对象版本失败，请稍后重试。"));
+      showToast(getShareErrorMessage(error, "加载对象版本失败，请稍后重试。"), "error");
     } finally {
       setLoadingVersions(false);
     }
-  }
-
-  function resetActionFeedback() {
-    setActionError("");
-    setSuccessMessage("");
   }
 
   async function handleFilterSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -177,19 +171,24 @@ export function ShareSystemObjectsPage() {
       return;
     }
 
-    const confirmed = window.confirm(`确认删除对象“${item.key}”吗？该对象的所有版本也会一起删除。`);
+    const confirmed = await confirm({
+      title: "删除对象",
+      description: `确认删除对象“${item.key}”吗？该对象的所有版本也会一起删除。`,
+      confirmText: "删除",
+      cancelText: "取消",
+      variant: "destructive",
+    });
     if (!confirmed) {
       return;
     }
 
     setDeletingKey(item.key);
-    resetActionFeedback();
     try {
       await shareApi.deleteSystemObject({
         namespaceID: selectedNamespaceID,
         key: item.key,
       });
-      setSuccessMessage("对象已删除。");
+      showToast("对象已删除。", "success");
       if (selectedObjectKey === item.key) {
         setSelectedObjectKey("");
         setVersions([]);
@@ -199,7 +198,7 @@ export function ShareSystemObjectsPage() {
       const nextTotalPages = Math.max(1, Math.ceil(Math.max(objectTotal - 1, 0) / objectPageSize));
       await loadObjects(selectedNamespaceID, appliedPrefix, Math.min(objectPage, nextTotalPages));
     } catch (error) {
-      setActionError(getShareErrorMessage(error, "删除对象失败，请稍后重试。"));
+      showToast(getShareErrorMessage(error, "删除对象失败，请稍后重试。"), "error");
     } finally {
       setDeletingKey("");
     }
@@ -210,7 +209,6 @@ export function ShareSystemObjectsPage() {
       return;
     }
 
-    resetActionFeedback();
     try {
       const result = await shareApi.downloadSystemObject({
         namespaceID: selectedNamespaceID,
@@ -225,7 +223,7 @@ export function ShareSystemObjectsPage() {
       anchor.remove();
       window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
     } catch (error) {
-      setActionError(getShareErrorMessage(error, "下载对象失败，请稍后重试。"));
+      showToast(getShareErrorMessage(error, "下载对象失败，请稍后重试。"), "error");
     }
   }
 
@@ -245,18 +243,17 @@ export function ShareSystemObjectsPage() {
     }
 
     setRollingBackVersionID(versionID);
-    resetActionFeedback();
     try {
       await shareApi.rollbackSystemObjectVersion({
         namespaceID: selectedNamespaceID,
         key: selectedObjectKey,
         versionID,
       });
-      setSuccessMessage("版本回滚成功。");
+      showToast("版本回滚成功。", "success");
       await loadObjects(selectedNamespaceID, appliedPrefix, objectPage);
       await loadVersions(selectedNamespaceID, selectedObjectKey, versionPage);
     } catch (error) {
-      setActionError(getShareErrorMessage(error, "版本回滚失败，请稍后重试。"));
+      showToast(getShareErrorMessage(error, "版本回滚失败，请稍后重试。"), "error");
     } finally {
       setRollingBackVersionID("");
     }
@@ -268,7 +265,6 @@ export function ShareSystemObjectsPage() {
     }
 
     setPresigningKey(item.key);
-    resetActionFeedback();
     try {
       const response = await shareApi.systemPresignGetObject({
         namespaceID: selectedNamespaceID,
@@ -276,9 +272,9 @@ export function ShareSystemObjectsPage() {
         ttlSeconds: 300,
       });
       setPresignGetUrl(response.data.url);
-      setSuccessMessage("预签名下载地址已生成。");
+      showToast("预签名下载地址已生成。", "success");
     } catch (error) {
-      setActionError(getShareErrorMessage(error, "生成预签名下载地址失败，请稍后重试。"));
+      showToast(getShareErrorMessage(error, "生成预签名下载地址失败，请稍后重试。"), "error");
     } finally {
       setPresigningKey("");
     }
@@ -317,8 +313,6 @@ export function ShareSystemObjectsPage() {
       description="这里用于查询对象、查看版本、回滚历史版本，以及测试下载与预签名下载。上传操作已拆到独立页面。"
     >
       {loadError ? <ErrorNotice message={loadError} /> : null}
-      {actionError ? <ErrorNotice message={actionError} /> : null}
-      {successMessage ? <SuccessNotice message={successMessage} /> : null}
 
       <div className="grid gap-4">
         <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
@@ -617,6 +611,8 @@ export function ShareSystemObjectsPage() {
 
 export function ShareSystemObjectsCreatePage() {
   const { user, sessionChecking } = useShareSession();
+  const router = useRouter();
+  const showToast = useToast();
   const [namespaces, setNamespaces] = useState<ShareNamespace[]>([]);
   const [selectedNamespaceID, setSelectedNamespaceID] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -626,16 +622,6 @@ export function ShareSystemObjectsCreatePage() {
   const [presigningKey, setPresigningKey] = useState("");
   const [presignPutInfo, setPresignPutInfo] = useState<SharePreparedPresignPut | null>(null);
   const [loadError, setLoadError] = useState("");
-  const [actionError, setActionError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-
-  useEffect(() => {
-    if (!user?.isConfiguredSuperAdmin) {
-      setLoading(false);
-      return;
-    }
-    void loadNamespaces();
-  }, [user?.id, user?.isConfiguredSuperAdmin]);
 
   async function loadNamespaces() {
     setLoading(true);
@@ -654,24 +640,26 @@ export function ShareSystemObjectsCreatePage() {
     }
   }
 
-  function resetActionFeedback() {
-    setActionError("");
-    setSuccessMessage("");
-  }
+  useEffect(() => {
+    if (!user?.isConfiguredSuperAdmin) {
+      setLoading(false);
+      return;
+    }
+    void loadNamespaces();
+  }, [user?.id, user?.isConfiguredSuperAdmin]);
 
   async function handleUpload(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedNamespaceID) {
-      setActionError("请先选择命名空间。");
+      showToast("请先选择命名空间。", "error");
       return;
     }
     if (!uploadFile) {
-      setActionError("请先选择上传文件。");
+      showToast("请先选择上传文件。", "error");
       return;
     }
 
     setUploading(true);
-    resetActionFeedback();
     try {
       await shareApi.createSystemObject({
         namespaceID: selectedNamespaceID,
@@ -683,9 +671,10 @@ export function ShareSystemObjectsCreatePage() {
       setUploadFile(null);
       setUploadForm(emptyUploadForm);
       setPresignPutInfo(null);
-      setSuccessMessage("对象上传成功。");
+      showToast("对象上传成功。", "success");
+      router.push("/system/objects");
     } catch (error) {
-      setActionError(getShareErrorMessage(error, "上传对象失败，请稍后重试。"));
+      showToast(getShareErrorMessage(error, "上传对象失败，请稍后重试。"), "error");
     } finally {
       setUploading(false);
     }
@@ -693,17 +682,16 @@ export function ShareSystemObjectsCreatePage() {
 
   async function handlePresignPut() {
     if (!selectedNamespaceID) {
-      setActionError("请先选择命名空间。");
+      showToast("请先选择命名空间。", "error");
       return;
     }
     const key = uploadForm.key.trim();
     if (!key) {
-      setActionError("请先填写对象 Key。");
+      showToast("请先填写对象 Key。", "error");
       return;
     }
 
     setPresigningKey("put");
-    resetActionFeedback();
     try {
       const response = await shareApi.systemPresignPutObject({
         namespaceID: selectedNamespaceID,
@@ -711,9 +699,9 @@ export function ShareSystemObjectsCreatePage() {
         ttlSeconds: 300,
       });
       setPresignPutInfo(response.data);
-      setSuccessMessage("预签名上传地址已生成。");
+      showToast("预签名上传地址已生成。", "success");
     } catch (error) {
-      setActionError(getShareErrorMessage(error, "生成预签名上传地址失败，请稍后重试。"));
+      showToast(getShareErrorMessage(error, "生成预签名上传地址失败，请稍后重试。"), "error");
     } finally {
       setPresigningKey("");
     }
@@ -721,7 +709,7 @@ export function ShareSystemObjectsCreatePage() {
 
   async function handleCompletePresignPut() {
     if (!selectedNamespaceID || !presignPutInfo?.key || !presignPutInfo.version_id) {
-      setActionError("请先生成预签名上传地址。");
+      showToast("请先生成预签名上传地址。", "error");
       return;
     }
 
@@ -731,18 +719,17 @@ export function ShareSystemObjectsCreatePage() {
       try {
         const parsed = JSON.parse(rawMetadata) as unknown;
         if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-          setActionError("Metadata 必须是 JSON 对象。");
+          showToast("Metadata 必须是 JSON 对象。", "error");
           return;
         }
         metadata = Object.fromEntries(Object.entries(parsed).map(([key, value]) => [key, String(value)]));
       } catch {
-        setActionError("Metadata 不是合法的 JSON。");
+        showToast("Metadata 不是合法的 JSON。", "error");
         return;
       }
     }
 
     setPresigningKey("complete");
-    resetActionFeedback();
     try {
       await shareApi.completeSystemPresignPutObject({
         namespaceID: selectedNamespaceID,
@@ -751,9 +738,9 @@ export function ShareSystemObjectsCreatePage() {
         contentType: uploadForm.contentType.trim() || undefined,
         metadata,
       });
-      setSuccessMessage("预签名上传结果已回写。");
+      showToast("预签名上传结果已回写。", "success");
     } catch (error) {
-      setActionError(getShareErrorMessage(error, "回写预签名上传结果失败，请稍后重试。"));
+      showToast(getShareErrorMessage(error, "回写预签名上传结果失败，请稍后重试。"), "error");
     } finally {
       setPresigningKey("");
     }
@@ -778,8 +765,6 @@ export function ShareSystemObjectsCreatePage() {
       description="这里用于直接上传对象，或生成预签名上传地址后由外部客户端上传。"
     >
       {loadError ? <ErrorNotice message={loadError} /> : null}
-      {actionError ? <ErrorNotice message={actionError} /> : null}
-      {successMessage ? <SuccessNotice message={successMessage} /> : null}
 
       <div className="mx-auto mb-4 flex max-w-6xl items-start gap-3">
         <Link
@@ -997,9 +982,6 @@ function ErrorNotice({ message }: { message: string }) {
   return <p className="rounded-xl border border-[#f3c8ad] bg-[#fff4ec] px-3 py-2 text-xs font-black text-[#9a3412]">{message}</p>;
 }
 
-function SuccessNotice({ message }: { message: string }) {
-  return <p className="rounded-xl border border-[#d9eed6] bg-[#f3fbf1] px-3 py-2 text-xs font-black text-[#2f6d37]">{message}</p>;
-}
 
 function OverviewPill(props: { label: string; value: string }) {
   const { label, value } = props;

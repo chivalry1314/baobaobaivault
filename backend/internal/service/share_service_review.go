@@ -32,6 +32,8 @@ func (s *ShareService) SubmitCardForReview(ctx context.Context, ownerID, cardID 
 		return nil, err
 	}
 
+	s.invalidateDiscoverCache(ctx)
+
 	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, []string{card.ID})
 	if err != nil {
 		return nil, err
@@ -136,6 +138,8 @@ func (s *ShareService) ApproveCard(ctx context.Context, operatorID, cardID strin
 		return nil, err
 	}
 
+	s.invalidateDiscoverCache(ctx)
+
 	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, []string{updated.ID})
 	if err != nil {
 		return nil, err
@@ -179,6 +183,8 @@ func (s *ShareService) RejectCard(ctx context.Context, operatorID, cardID, reaso
 	if err != nil {
 		return nil, err
 	}
+
+	s.invalidateDiscoverCache(ctx)
 
 	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, []string{updated.ID})
 	if err != nil {

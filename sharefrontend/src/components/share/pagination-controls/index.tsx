@@ -11,15 +11,15 @@ export function PaginationControls({
   onPageChange,
   className = "",
 }: PaginationControlsProps) {
-  if (totalPages <= 1) {
-    return null;
-  }
-
   const safePage = Math.min(Math.max(page, 1), totalPages);
   const visiblePages = useMemo(
     () => buildVisiblePages(safePage, totalPages),
     [safePage, totalPages],
   );
+
+  if (totalPages <= 1) {
+    return null;
+  }
 
   return (
     <div className={`flex flex-wrap items-center justify-center gap-2 sm:justify-end ${className}`}>

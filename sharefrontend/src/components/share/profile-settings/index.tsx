@@ -3,11 +3,11 @@
 import { useId, useRef } from "react";
 
 import {
-  createDraft,
   getInitials,
   maskPhone,
 } from "@/components/share/profile-settings/helpers";
 import { useShareProfileSettings } from "@/components/share/profile-settings/hooks";
+import { ShareImage } from "@/components/share/share-image";
 import {
   ModalCard,
   ProfileSettingsIcons,
@@ -94,7 +94,7 @@ export function ShareProfileSettings({
             <div className="flex items-center gap-4">
               <div className="overflow-hidden rounded-full border-2 border-white bg-white shadow-[0_16px_32px_-24px_rgba(120,85,94,0.4)]">
                 {draft.avatar ? (
-                  <img
+                  <ShareImage
                     src={draft.avatar}
                     alt={draft.nickname || "头像"}
                     className="h-16 w-16 object-cover"
@@ -197,7 +197,7 @@ export function ShareProfileSettings({
         <div className="mt-3 rounded-[1.2rem] border border-[var(--outline)]/15 bg-[var(--surface-container)] p-4 sm:p-5">
           <div className="relative overflow-hidden rounded-[1rem] border-2 border-dashed border-[var(--outline-variant)] bg-[linear-gradient(135deg,#e9f6ff_0%,#f6f2ff_60%,#ffeef5_100%)]">
             {draft.coverImage ? (
-              <img
+              <ShareImage
                 src={draft.coverImage}
                 alt="主页封面"
                 className="h-[180px] w-full object-cover sm:h-[220px]"

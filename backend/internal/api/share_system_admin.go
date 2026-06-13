@@ -83,6 +83,7 @@ func (h *Handler) shareSystemUpdateUserRole(c *gin.Context) {
 	}
 
 	updated.IsConfiguredSuperAdmin = h.isConfiguredShareSuperAdmin(updated)
+	h.writeAuditLog(c, "update_role", "user", c.Param("userId"), fmt.Sprintf("role updated to %s", req.Role), "success")
 	c.JSON(http.StatusOK, gin.H{"user": updated})
 }
 
@@ -115,6 +116,7 @@ func (h *Handler) shareSystemDeleteUser(c *gin.Context) {
 		return
 	}
 
+	h.writeAuditLog(c, "delete", "user", c.Param("userId"), "", "success")
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
@@ -143,6 +145,7 @@ func (h *Handler) shareSystemResetUserPassword(c *gin.Context) {
 		return
 	}
 
+	h.writeAuditLog(c, "reset_password", "user", c.Param("userId"), "", "success")
 	c.JSON(http.StatusOK, gin.H{
 		"ok":          true,
 		"newPassword": result.NewPassword,
@@ -276,6 +279,7 @@ func (h *Handler) shareSystemUpdateMediaStorageSettings(c *gin.Context) {
 		return
 	}
 
+	h.writeAuditLog(c, "update", "media_storage", "", fmt.Sprintf("storageMode=%s", req.StorageMode), "success")
 	c.JSON(http.StatusOK, gin.H{
 		"settings":  settings,
 		"migration": migration,
@@ -331,6 +335,7 @@ func (h *Handler) shareSystemRunMediaStorageMigration(c *gin.Context) {
 		return
 	}
 
+	h.writeAuditLog(c, "run_migration", "media_storage", "", fmt.Sprintf("processed=%d", result.Processed), "success")
 	c.JSON(http.StatusOK, gin.H{
 		"settings":  settings,
 		"migration": migration,
@@ -375,6 +380,7 @@ func (h *Handler) shareSystemUpdateAuthSettings(c *gin.Context) {
 		return
 	}
 
+	h.writeAuditLog(c, "update", "auth_settings", "", fmt.Sprintf("emailVerificationEnabled=%v", req.EmailVerificationEnabled), "success")
 	c.JSON(http.StatusOK, gin.H{"settings": settings})
 }
 
@@ -445,6 +451,7 @@ func (h *Handler) shareSystemUpdateSiteBrandingSettings(c *gin.Context) {
 		return
 	}
 
+	h.writeAuditLog(c, "update", "site_branding", "", "site branding settings updated", "success")
 	c.JSON(http.StatusOK, gin.H{"settings": settings})
 }
 
@@ -485,6 +492,7 @@ func (h *Handler) shareSystemUploadSiteBrandingLogo(c *gin.Context) {
 		return
 	}
 
+	h.writeAuditLog(c, "upload_logo", "site_branding_logo", "", fmt.Sprintf("filename=%s", header.Filename), "success")
 	c.JSON(http.StatusOK, gin.H{"settings": settings})
 }
 
@@ -554,10 +562,12 @@ func (h *Handler) shareSystemSendSMTPTest(c *gin.Context) {
 
 	emailService := service.NewEmailService(h.cfg.Email)
 	if err := emailService.SendTestEmail(targetEmail); err != nil {
+		h.writeAuditLog(c, "smtp_test", "email", "", fmt.Sprintf("target=%s", targetEmail), "failure")
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	h.writeAuditLog(c, "smtp_test", "email", "", fmt.Sprintf("target=%s", targetEmail), "success")
 	h.markShareSMTPTestSent(user.ID)
 	c.JSON(http.StatusOK, gin.H{
 		"ok":          true,

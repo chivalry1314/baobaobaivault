@@ -67,7 +67,6 @@ func AutoMigrate(db *gorm.DB) error {
 		&model.StorageConfig{},
 		&model.Object{},
 		&model.ObjectVersion{},
-		&model.AKSK{},
 		&model.AuditLog{},
 		&model.WebPushSubscription{},
 		&model.WebPushEvent{},

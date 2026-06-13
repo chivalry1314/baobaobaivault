@@ -12,10 +12,13 @@ export function AccessModeBadge(props: {
   const toneClass = isPaid
     ? "border-[#d67a33] bg-[#fff1df] text-[#8d4708]"
     : "border-[#2d8d62] bg-[#e9fff2] text-[#11613f]";
+  const sizeClass = compact
+    ? "px-2 py-0.5 text-[10px]"
+    : "px-3 py-1 text-xs";
 
   return (
     <span
-      className={`inline-flex whitespace-nowrap items-center gap-1.5 rounded-full border-2 px-3 py-1 text-xs font-black ${toneClass} ${className}`.trim()}
+      className={`inline-flex whitespace-nowrap items-center gap-1.5 rounded-full border-2 font-black ${sizeClass} ${toneClass} ${className}`.trim()}
     >
       <span
         className={`h-2.5 w-2.5 rounded-full ${isPaid ? "bg-[#f59e0b]" : "bg-[#2fbf71]"}`}

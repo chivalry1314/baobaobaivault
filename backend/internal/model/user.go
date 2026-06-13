@@ -23,7 +23,6 @@ type User struct {
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 
 	Roles     []Role     `gorm:"many2many:user_roles;" json:"roles,omitempty"`
-	AKSKs     []AKSK     `gorm:"foreignKey:UserID" json:"ak_sks,omitempty"`
 	AuditLogs []AuditLog `gorm:"foreignKey:UserID" json:"audit_logs,omitempty"`
 }
 
@@ -120,33 +119,3 @@ func (RoleNamespace) TableName() string {
 	return "role_namespaces"
 }
 
-// AKSK stores access key pair metadata for programmatic calls.
-type AKSK struct {
-	ID                  string     `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	UserID              string     `gorm:"type:uuid;not null;index" json:"user_id"`
-	ShareExternalUserID *string    `gorm:"type:uuid;index" json:"share_external_user_id,omitempty"`
-	AccessKey           string     `gorm:"type:varchar(50);not null;uniqueIndex" json:"access_key"`
-	SecretKey           string     `gorm:"type:varchar(100);not null" json:"-"`
-	Description         string     `gorm:"type:text" json:"description"`
-	Status              AKSKStatus `gorm:"type:varchar(20);default:'active'" json:"status"`
-	ExpiresAt           *time.Time `json:"expires_at,omitempty"`
-
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
-
-	User              *User              `gorm:"foreignKey:UserID" json:"user,omitempty"`
-	ShareExternalUser *ShareExternalUser `gorm:"foreignKey:ShareExternalUserID" json:"share_external_user,omitempty"`
-}
-
-type AKSKStatus string
-
-const (
-	AKSKStatusActive  AKSKStatus = "active"
-	AKSKStatusRevoked AKSKStatus = "revoked"
-	AKSKStatusExpired AKSKStatus = "expired"
-)
-
-func (AKSK) TableName() string {
-	return "ak_sks"
-}

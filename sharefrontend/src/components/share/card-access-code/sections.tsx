@@ -7,6 +7,7 @@ import {
   getSubmitButtonLabel,
   getUsageHelperText,
 } from "@/components/share/card-access-code/helpers";
+import { ShareImage } from "@/components/share/share-image";
 import type {
   CardAccessCodeConfig,
   CardDetailResponse,
@@ -84,7 +85,7 @@ export function AccessCodeCardPreview(props: { detail: CardDetailResponse }) {
 
       <div className="mt-4 overflow-hidden rounded-[1.1rem] border border-[var(--outline)]/15 bg-[var(--surface-container)]">
         {detail.card.mimeType.startsWith("image/") ? (
-          <img
+          <ShareImage
             src={detail.card.previewUrl}
             alt={detail.card.title}
             className="aspect-[3/2] w-full object-cover"

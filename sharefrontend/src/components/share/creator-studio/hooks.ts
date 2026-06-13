@@ -192,7 +192,7 @@ export function useCreatorStudio() {
     let active = true;
 
     async function bootstrap() {
-      if (!currentUser) {
+      if (!currentUser?.id) {
         setDashboard(null);
         setLoadError("");
         return;

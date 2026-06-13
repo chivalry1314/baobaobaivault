@@ -25,15 +25,14 @@ export function ShareSystemRolesPage() {
   const [submittedScopeFilter, setSubmittedScopeFilter] = useState<RoleScope>("all");
   const [total, setTotal] = useState(0);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!user?.isConfiguredSuperAdmin);
   const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
-    if (!user?.isConfiguredSuperAdmin) {
-      setLoading(false);
-      return;
+    if (user?.isConfiguredSuperAdmin) {
+      void loadRoles(1, submittedSearch, submittedScopeFilter);
     }
-    void loadRoles(1, submittedSearch, submittedScopeFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, user?.isConfiguredSuperAdmin]);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [pageSize, total]);

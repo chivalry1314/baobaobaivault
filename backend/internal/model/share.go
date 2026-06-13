@@ -49,12 +49,12 @@ type ShareExternalUser struct {
 	Bio                 string         `gorm:"type:text;default:''" json:"bio"`
 	CoverImage          string         `gorm:"type:text;default:''" json:"cover_image"`
 	Phone               string         `gorm:"type:varchar(30);default:''" json:"phone"`
-	Role                string         `gorm:"type:varchar(20);not null;default:'viewer';index" json:"role"`
-	Status              string         `gorm:"type:varchar(20);not null;default:'active'" json:"status"`
+	Role                string         `gorm:"type:varchar(20);not null;default:'viewer';index:idx_share_external_users_role_status_updated,priority:1" json:"role"`
+	Status              string         `gorm:"type:varchar(20);not null;default:'active';index:idx_share_external_users_role_status_updated,priority:2" json:"status"`
 	ForcePasswordChange bool           `gorm:"not null;default:false" json:"force_password_change"`
 	LastLoginAt         *time.Time     `json:"last_login_at,omitempty"`
 	CreatedAt           time.Time      `json:"created_at"`
-	UpdatedAt           time.Time      `json:"updated_at"`
+	UpdatedAt           time.Time      `gorm:"index:idx_share_external_users_role_status_updated,priority:3,sort:desc" json:"updated_at"`
 	DeletedAt           gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
@@ -86,7 +86,7 @@ func (u *ShareExternalUser) NormalizedDisplayName() string {
 // SharePlatformCard stores platform-level cards created by sharefrontend users.
 type SharePlatformCard struct {
 	ID                     string         `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	CreatorExternalUserID  string         `gorm:"type:uuid;not null;index:idx_share_platform_cards_creator_created,priority:1" json:"creator_external_user_id"`
+	CreatorExternalUserID  string         `gorm:"type:uuid;not null;index:idx_share_platform_cards_creator_created,priority:1;index:idx_share_platform_cards_creator_updated,priority:1" json:"creator_external_user_id"`
 	Title                  string         `gorm:"type:varchar(200);not null" json:"title"`
 	Description            string         `gorm:"type:text;default:''" json:"description"`
 	TagsText               string         `gorm:"column:tags;type:text;default:''" json:"-"`
@@ -113,7 +113,7 @@ type SharePlatformCard struct {
 	DownloadCount          int64          `gorm:"not null;default:0" json:"download_count"`
 	LastDownloadedAt       *time.Time     `json:"last_downloaded_at,omitempty"`
 	CreatedAt              time.Time      `gorm:"index:idx_share_platform_cards_creator_created,priority:2" json:"created_at"`
-	UpdatedAt              time.Time      `gorm:"index:idx_share_platform_cards_discover,priority:4" json:"updated_at"`
+	UpdatedAt              time.Time      `gorm:"index:idx_share_platform_cards_discover,priority:4;index:idx_share_platform_cards_creator_updated,priority:2,sort:desc" json:"updated_at"`
 	DeletedAt              gorm.DeletedAt `gorm:"index" json:"-"`
 
 	Creator *ShareExternalUser `gorm:"foreignKey:CreatorExternalUserID" json:"creator,omitempty"`
@@ -127,7 +127,7 @@ func (SharePlatformCard) TableName() string {
 type SharePlatformCardFavorite struct {
 	ID             string    `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
 	ExternalUserID string    `gorm:"type:uuid;not null;index:idx_share_fav_user_card,priority:1" json:"external_user_id"`
-	CardID         string    `gorm:"type:uuid;not null;index:idx_share_fav_user_card,priority:2" json:"card_id"`
+	CardID         string    `gorm:"type:uuid;not null;index:idx_share_fav_user_card,priority:2;index" json:"card_id"`
 	CreatedAt      time.Time `json:"created_at"`
 
 	User *ShareExternalUser `gorm:"foreignKey:ExternalUserID" json:"-"`
@@ -164,10 +164,10 @@ func (SharePlatformCardAsset) TableName() string {
 // SharePlatformDownloadLog records downloads for discover metrics.
 type SharePlatformDownloadLog struct {
 	ID                       string    `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	CardID                   string    `gorm:"type:uuid;not null;index" json:"card_id"`
+	CardID                   string    `gorm:"type:uuid;not null;index;index:idx_share_download_logs_card_time,priority:1" json:"card_id"`
 	DownloaderExternalUserID *string   `gorm:"type:uuid;index" json:"downloader_external_user_id"`
 	Source                   string    `gorm:"type:varchar(20);not null" json:"source"`
-	DownloadedAt             time.Time `gorm:"index" json:"downloaded_at"`
+	DownloadedAt             time.Time `gorm:"index;index:idx_share_download_logs_card_time,priority:2,sort:desc" json:"downloaded_at"`
 }
 
 func (SharePlatformDownloadLog) TableName() string {

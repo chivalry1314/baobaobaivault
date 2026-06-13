@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { PaginationControls } from "@/components/share/pagination-controls/index";
+import { ShareImage } from "@/components/share/share-image";
 import {
   formatDateTime,
   getReviewStatusLabel,
@@ -116,10 +117,11 @@ export function ReviewGrid(props: {
                 className="relative block aspect-[3/2] w-full overflow-hidden rounded-[0.8rem] bg-[var(--surface-container)]"
               >
                 {item.card.mimeType.startsWith("image/") ? (
-                  <img
+                  <ShareImage
                     src={item.card.previewUrl}
                     alt={item.card.title}
-                    className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
+                    fill
+                    className="object-cover transition-transform duration-200 group-hover:scale-[1.03]"
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center px-4 text-center text-sm font-black text-[var(--foreground)]/72">

@@ -134,22 +134,22 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
 
         <section className="relative z-10 mx-auto max-w-[1200px] px-4 pb-16 pt-10">
           {mode === "edit" ? (
-            <div className="mb-6 flex justify-start">
-              <Link href="/creator" className="btn-subtle inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-black shadow-[2px_2px_0px_var(--line-strong)] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none">
+            <div className="mb-4 flex justify-start">
+              <Link href="/creator" className="inline-flex items-center gap-1.5 rounded-full border-2 border-[var(--outline)]/20 bg-white px-3 py-1.5 text-xs font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)]">
                 返回创作中心
               </Link>
             </div>
           ) : null}
 
-          <div className="mb-10 text-center">
-            <h1 className="mt-3 text-[2rem] font-black tracking-tight text-[var(--foreground)] sm:text-4xl">{pageTitle}</h1>
-            <p className="mt-3 text-sm font-bold text-[var(--foreground)]/62">{pageDescription}</p>
+          <div className="mb-6 text-center">
+            <h1 className="text-2xl font-black tracking-tight text-[var(--foreground)] sm:text-3xl">{pageTitle}</h1>
+            <p className="mt-2 text-xs font-bold text-[var(--foreground)]/60">{pageDescription}</p>
           </div>
 
-          {formError ? <div className="mb-6 rounded-[20px] border border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-sm text-[#9a3412]">{formError}</div> : null}
+          {formError ? <div className="mb-4 rounded-[1.1rem] border border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-xs font-black text-[#9a3412]">{formError}</div> : null}
 
-          <form className="flex flex-col gap-6 lg:flex-row lg:items-start" onSubmit={handleSubmit}>
-            <div className="w-full space-y-6 lg:w-[55%]">
+          <form className="flex flex-col gap-4 lg:flex-row lg:items-start" onSubmit={handleSubmit}>
+            <div className="w-full space-y-4 lg:w-[55%]">
               <CardAssetsPanel
                 mode={mode}
                 createMode={createMode}
@@ -202,7 +202,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
               />
             </div>
 
-            <div className="w-full space-y-6 lg:w-[45%]">
+            <div className="w-full space-y-4 lg:w-[45%]">
               <RealtimePreviewPanel previewUrl={previewUrl} previewTitle={previewTitle} previewDescription={previewDescription} authorName={authorName} />
 
               <PublishActionsPanel

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AuthRedirect } from "@/components/share/auth-redirect";
 import { ShareSiteBrandMark } from "@/components/share/site-brand";
@@ -10,6 +10,7 @@ import {
 } from "@/components/share/site-brand/provider";
 import { useShareSession } from "@/components/share/session-provider";
 import { SystemWorkspace } from "@/components/share/system-shell/index";
+import { useToast } from "@/components/share/toast";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 import { shareSiteBrand } from "@/lib/site-config";
 import type { ShareSiteBrandingSettings } from "@/lib/shared";
@@ -19,25 +20,35 @@ export function ShareSystemSiteBrandingPage() {
   const setGlobalBrand = useShareSiteBrandControls();
   const [settings, setSettings] = useState<ShareSiteBrandingSettings | null>(null);
   const [draft, setDraft] = useState<ShareSiteBrandingSettings | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!user?.isConfiguredSuperAdmin);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
   const [loadError, setLoadError] = useState("");
-  const [saveMessage, setSaveMessage] = useState("");
-  const [logoMessage, setLogoMessage] = useState("");
-  const [logoMessageTone, setLogoMessageTone] = useState<"success" | "info">(
-    "info",
-  );
+  const showToast = useToast();
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setLoadError("");
+    try {
+      const response = await shareApi.systemSiteBrandingSettings();
+      setSettings(response.settings);
+      setDraft(response.settings);
+    } catch (error) {
+      setLoadError(
+        getShareErrorMessage(error, "加载站点品牌配置失败，请稍后重试。"),
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (!user?.isConfiguredSuperAdmin) {
-      setLoading(false);
-      return;
+    if (user?.isConfiguredSuperAdmin) {
+      void loadData();
     }
-    void loadData();
-  }, [user?.id, user?.isConfiguredSuperAdmin]);
+  }, [user?.id, user?.isConfiguredSuperAdmin, loadData]);
 
   useEffect(() => {
     if (!logoFile) {
@@ -49,29 +60,11 @@ export function ShareSystemSiteBrandingPage() {
     return () => URL.revokeObjectURL(nextUrl);
   }, [logoFile]);
 
-  async function loadData() {
-    setLoading(true);
-    setLoadError("");
-    try {
-      const response = await shareApi.systemSiteBrandingSettings();
-      setSettings(response.settings);
-      setDraft(response.settings);
-      setGlobalBrand({ ...response.settings, canUpdate: false });
-    } catch (error) {
-      setLoadError(
-        getShareErrorMessage(error, "加载站点品牌配置失败，请稍后重试。"),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
   function updateDraft<K extends keyof ShareSiteBrandingSettings>(
     key: K,
     value: ShareSiteBrandingSettings[K],
   ) {
     setDraft((current) => (current ? { ...current, [key]: value } : current));
-    setSaveMessage("");
   }
 
   async function syncBrandAfterMutation(
@@ -91,16 +84,14 @@ export function ShareSystemSiteBrandingPage() {
 
     try {
       await shareApi.revalidateSiteBrandingCache();
-      setSaveMessage(successMessage);
+      showToast(successMessage, "success");
       if (options?.logoSuccessMessage) {
-        setLogoMessage(options.logoSuccessMessage);
-        setLogoMessageTone("success");
+        showToast(options.logoSuccessMessage, "success");
       }
     } catch {
-      setSaveMessage(`${successMessage} 品牌缓存会在稍后自动同步。`);
+      showToast(`${successMessage} 品牌缓存会在稍后自动同步。`, "info");
       if (options?.logoSuccessMessage) {
-        setLogoMessage(`${options.logoSuccessMessage} 品牌缓存会在稍后自动同步。`);
-        setLogoMessageTone("info");
+        showToast(`${options.logoSuccessMessage} 品牌缓存会在稍后自动同步。`, "info");
       }
     }
   }
@@ -111,7 +102,6 @@ export function ShareSystemSiteBrandingPage() {
     }
 
     setSaving(true);
-    setSaveMessage("");
     try {
       const response = await shareApi.updateSystemSiteBrandingSettings({
         siteName: draft.siteName,
@@ -135,8 +125,9 @@ export function ShareSystemSiteBrandingPage() {
       });
       await syncBrandAfterMutation(response.settings, "站点品牌配置已保存。");
     } catch (error) {
-      setSaveMessage(
+      showToast(
         getShareErrorMessage(error, "保存站点品牌配置失败，请稍后重试。"),
+        "error",
       );
     } finally {
       setSaving(false);
@@ -149,8 +140,6 @@ export function ShareSystemSiteBrandingPage() {
     }
 
     setUploadingLogo(true);
-    setLogoMessage("");
-    setLogoMessageTone("info");
     try {
       const response = await shareApi.uploadSystemSiteBrandingLogo({
         file: logoFile,
@@ -161,8 +150,7 @@ export function ShareSystemSiteBrandingPage() {
         logoSuccessMessage: "Logo 已上传并应用到当前品牌配置。",
       });
     } catch (error) {
-      setLogoMessage(getShareErrorMessage(error, "上传 Logo 失败，请稍后重试。"));
-      setLogoMessageTone("info");
+      showToast(getShareErrorMessage(error, "上传 Logo 失败，请稍后重试。"), "error");
     } finally {
       setUploadingLogo(false);
     }
@@ -302,14 +290,6 @@ export function ShareSystemSiteBrandingPage() {
               />
             </div>
 
-            {logoMessage ? (
-              <InlineNotice
-                tone={logoMessageTone}
-                message={logoMessage}
-                className="mt-3"
-              />
-            ) : null}
-
             <div className="mt-3 rounded-[1.2rem] border border-[var(--outline)]/20 bg-[var(--surface-container)] p-3">
               <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--foreground)]/45">
                 图片地址
@@ -447,11 +427,6 @@ export function ShareSystemSiteBrandingPage() {
               >
                 {saving ? "保存中..." : "保存站点品牌"}
               </button>
-              {saveMessage ? (
-                <span className="text-xs font-bold text-[var(--foreground)]/65">
-                  {saveMessage}
-                </span>
-              ) : null}
             </div>
           </section>
         </section>
@@ -527,24 +502,6 @@ function ErrorNotice({ message }: { message: string }) {
   return (
     <p className="rounded-[1.1rem] border border-[#f3c8ad] bg-[#fff4ec] px-4 py-3 text-xs font-black text-[#9a3412]">
       {message}
-    </p>
-  );
-}
-
-function InlineNotice(props: {
-  message: string;
-  tone: "success" | "info";
-  className?: string;
-}) {
-  const toneClassName =
-    props.tone === "success"
-      ? "border-[#d5e8d1] bg-[#f3fbf1] text-[#2f6d37]"
-      : "border-[#c9ddf4] bg-[#eef6ff] text-[#285f87]";
-  return (
-    <p
-      className={`${props.className || ""} rounded-[1.1rem] border px-3 py-2 text-xs font-bold ${toneClassName}`}
-    >
-      {props.message}
     </p>
   );
 }

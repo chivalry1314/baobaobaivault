@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 
 import { ShareSiteBrandProvider } from "@/components/share/site-brand/provider";
 import { ShareSessionProvider } from "@/components/share/session-provider";
+import { ConfirmDialogProvider } from "@/components/share/confirm-dialog";
+import { ToastProvider } from "@/components/share/toast";
 import { getServerSiteBrandingSettings } from "@/lib/server-share-api";
-import { applyShareSiteBrand, shareSiteBrand } from "@/lib/site-config";
+import { shareSiteBrand } from "@/lib/site-config";
 import type { ShareSiteBrandingSettings } from "@/lib/shared";
 
 import "./globals.css";
@@ -45,7 +47,6 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const runtimeBrand = mergeBrandWithFallback(await getServerSiteBrandingSettings());
-  applyShareSiteBrand(runtimeBrand);
   const runtimeMetadata: Metadata = {
     title: runtimeBrand.siteName,
     description: runtimeBrand.siteDescription,
@@ -59,7 +60,11 @@ export default async function RootLayout({
       </head>
       <body>
         <ShareSiteBrandProvider brand={runtimeBrand}>
-          <ShareSessionProvider>{children}</ShareSessionProvider>
+          <ShareSessionProvider>
+            <ToastProvider>
+              <ConfirmDialogProvider>{children}</ConfirmDialogProvider>
+            </ToastProvider>
+          </ShareSessionProvider>
         </ShareSiteBrandProvider>
       </body>
     </html>

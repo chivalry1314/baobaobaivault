@@ -7,7 +7,35 @@ import (
 
 	"github.com/baobaobai/baobaobaivault/internal/model"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
+
+// writeAuditLog 记录一条管理操作审计日志；错误仅内部记录，不中断请求
+func (h *Handler) writeAuditLog(c *gin.Context, action, resource, resourceID, detail, status string) {
+	user, _ := c.Get(ctxShareUser)
+	shareUser, _ := user.(*model.ShareExternalUser)
+	var userID *string
+	if shareUser != nil {
+		userID = &shareUser.ID
+	}
+
+	ip := c.ClientIP()
+	ua := c.Request.UserAgent()
+
+	log := &model.AuditLog{
+		UserID:     userID,
+		Action:     action,
+		Resource:   resource,
+		ResourceID: resourceID,
+		Detail:     detail,
+		IPAddress:  ip,
+		UserAgent:  ua,
+		Status:     status,
+	}
+	if err := h.db.WithContext(c.Request.Context()).Create(log).Error; err != nil {
+		h.logger.Error("failed to write audit log", zap.Error(err))
+	}
+}
 
 func (h *Handler) shareSystemListAuditLogs(c *gin.Context) {
 	if _, ok := h.requireConfiguredShareSuperAdmin(c); !ok {
