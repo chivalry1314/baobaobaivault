@@ -75,7 +75,7 @@
 ## 6. 系统超级管理员
 
 - [ ] `server.admin_email` 对应的邮箱已经明确
-- [ ] 已通过 `scripts/init-production.sh` 或 `server create-admin` 创建初始管理员
+- [ ] 已通过 `scripts/create-admin.sh` 或 `server create-admin` 创建初始管理员
 - [ ] 准备用这个邮箱登录系统
 - [ ] 登录后确认 `/api/share/auth/session` 返回 `role: manager`
 - [ ] 前端主菜单中可以看到“系统管理”

@@ -100,7 +100,11 @@ sudo mkdir -p /opt/baobaobaivault/data/storage
 
 ## 4. 配置文件与部署文件
 
-推荐的生产环境配置生成方式是使用初始化脚本：
+推荐的生产环境配置生成方式是使用初始化脚本。
+脚本必须在项目根目录运行，且以下模板文件必须位于对应路径：
+
+- `docker-compose.public.yml`
+- `deploy/nginx/default.public.conf`
 
 ```bash
 ./scripts/init-production.sh
@@ -117,8 +121,11 @@ sudo mkdir -p /opt/baobaobaivault/data/storage
 - 生成包含随机数据库 / Redis 密码的 `.env`
 - 生成包含随机 JWT 密钥与字段加密密钥的 `backend/config/config.yaml`
 - 将 `docker-compose.public.yml` 复制为 `docker-compose.yml`
-- 启动服务栈
-- 创建第一位超级管理员并打印一次性密码
+- 将 `deploy/nginx/default.public.conf` 复制为 `deploy/nginx/default.conf`
+
+脚本**不会**启动容器，也**不会**创建管理员。这样你可以在启动服务前
+先检查并编辑 `backend/config/config.yaml`（如邮箱验证、WebPush 等），
+然后再单独创建管理员。
 
 如果你希望手动准备文件，请复制并重命名模板：
 
@@ -546,38 +553,63 @@ deploy/nginx/ssl/privkey.pem
 
 ## 10. 部署步骤
 
-假设项目已经放到 `/opt/baobaobaivault`，并且 SSL 证书已经放好后，
-直接运行初始化脚本：
+假设项目已经放到 `/opt/baobaobaivault`：
+
+### 1. 生成配置文件
 
 ```bash
 cd /opt/baobaobaivault
 ./scripts/init-production.sh
 ```
 
-脚本会自动生成包含强随机密钥的 `.env` 和
-`backend/config/config.yaml`，启动服务栈，并创建第一位超级管理员。
+如果你的文件系统不保留可执行权限，出现 `Permission denied`，
+可以直接用 `bash` 运行：
+
+```bash
+bash scripts/init-production.sh
+```
+
+这一步会生成：
+
+- `.env`
+- `backend/config/config.yaml`
+- `docker-compose.yml`
+- `deploy/nginx/default.conf`
+
+### 2. 检查并自定义配置
+
+按需编辑 `backend/config/config.yaml`（如开启邮箱验证、WebPush 等）。
+如果要启用 HTTPS，请把 TLS 证书放到：
+
+```text
+deploy/nginx/ssl/fullchain.pem
+deploy/nginx/ssl/privkey.pem
+```
+
+### 3. 拉取镜像并启动服务
+
+```bash
+cd /opt/baobaobaivault
+docker compose pull
+docker compose up -d
+```
+
+### 4. 创建初始超级管理员
+
+```bash
+bash scripts/create-admin.sh
+```
+
+脚本会自动生成随机密码、创建管理员并打印出来。请立即保存密码。
 
 如果你是手动准备的配置文件：
 
 ```bash
 cd /opt/baobaobaivault
 docker compose up -d
-```
-
-然后手动创建第一位管理员：
-
-```bash
 docker compose exec backend /app/server create-admin \
   --email admin@example.com \
   --password "$(openssl rand -base64 24)"
-```
-
-如果希望先拉取最新镜像再启动：
-
-```bash
-cd /opt/baobaobaivault
-docker compose pull
-docker compose up -d
 ```
 
 ## 11. 部署后验证

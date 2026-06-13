@@ -101,7 +101,11 @@ sudo mkdir -p /opt/baobaobaivault/data/storage
 ## 4. Configuration and Deployment Files
 
 The recommended way to generate a production-ready configuration is the
-bootstrap script:
+bootstrap script. It must be run from the project root, where the following
+template files are present:
+
+- `docker-compose.public.yml`
+- `deploy/nginx/default.public.conf`
 
 ```bash
 ./scripts/init-production.sh
@@ -118,8 +122,11 @@ and then:
 - generates `.env` with random database / Redis passwords
 - generates `backend/config/config.yaml` with random JWT and field-encryption keys
 - copies `docker-compose.public.yml` to `docker-compose.yml`
-- starts the stack
-- creates the first super admin and prints the one-time password
+- copies `deploy/nginx/default.public.conf` to `deploy/nginx/default.conf`
+
+It does **not** start containers or create the admin user. That lets you review
+and edit `backend/config/config.yaml` (for email, webpush, etc.) before starting
+the stack, and then create the admin separately.
 
 If you prefer to prepare files manually, copy and rename the templates:
 
@@ -546,38 +553,64 @@ They will be mounted into the container as:
 
 ## 10. Deployment Steps
 
-Assuming the project is already in `/opt/baobaobaivault` and your SSL
-certificates are in place, run the bootstrap script:
+Assuming the project is already in `/opt/baobaobaivault`:
+
+### 1. Generate configuration files
 
 ```bash
 cd /opt/baobaobaivault
 ./scripts/init-production.sh
 ```
 
-The script will generate `.env` and `backend/config/config.yaml` with secure
-random secrets, start the stack, and create the initial super admin.
+If your filesystem does not honor the executable bit and you see
+`Permission denied`, run it with `bash` instead:
+
+```bash
+bash scripts/init-production.sh
+```
+
+This generates:
+
+- `.env`
+- `backend/config/config.yaml`
+- `docker-compose.yml`
+- `deploy/nginx/default.conf`
+
+### 2. Review and customize configuration
+
+Edit `backend/config/config.yaml` if you need email verification, webpush,
+or other custom settings. Place your TLS certificates at:
+
+```text
+deploy/nginx/ssl/fullchain.pem
+deploy/nginx/ssl/privkey.pem
+```
+
+### 3. Pull and start the stack
+
+```bash
+cd /opt/baobaobaivault
+docker compose pull
+docker compose up -d
+```
+
+### 4. Create the initial super admin
+
+```bash
+bash scripts/create-admin.sh
+```
+
+The script will generate a random password, create the admin, and print it.
+Save the password immediately.
 
 If you prepared the files manually instead:
 
 ```bash
 cd /opt/baobaobaivault
 docker compose up -d
-```
-
-and then create the first admin:
-
-```bash
 docker compose exec backend /app/server create-admin \
   --email admin@example.com \
   --password "$(openssl rand -base64 24)"
-```
-
-If you want to pull the newest published images first:
-
-```bash
-cd /opt/baobaobaivault
-docker compose pull
-docker compose up -d
 ```
 
 ## 11. Post-Deployment Verification

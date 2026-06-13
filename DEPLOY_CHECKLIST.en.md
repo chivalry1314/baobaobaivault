@@ -75,7 +75,7 @@ Recommended:
 ## 6. System Super Admin
 
 - [ ] The `server.admin_email` target account is clearly chosen
-- [ ] The initial admin was created by `scripts/init-production.sh` or by `server create-admin`
+- [ ] The initial admin was created by `scripts/create-admin.sh` or by `server create-admin`
 - [ ] You are ready to sign in with this email
 - [ ] After login, `/api/share/auth/session` shows `role: manager`
 - [ ] The main frontend menu shows `System Management`

@@ -55,13 +55,22 @@
 1. Read one deployment guide first:
    - Chinese: `README.zh-CN.md`
    - English: `README.en.md`
-2. Run the production bootstrap script:
+2. Generate production configuration from the project root
+   (where `docker-compose.public.yml` and `deploy/nginx/default.public.conf` are present).
+   For HTTPS, place certificates at `deploy/nginx/ssl/fullchain.pem` and
+   `deploy/nginx/ssl/privkey.pem` before starting Nginx:
    - `./scripts/init-production.sh`
-3. Or copy the public deployment templates manually:
+   - If you get `Permission denied`, use `bash scripts/init-production.sh`
+3. (Optional) Edit `backend/config/config.yaml` for email, webpush, etc.
+4. Pull and start the stack:
+   - `docker compose pull`
+   - `docker compose up -d`
+5. Create the initial super admin:
+   - `bash scripts/create-admin.sh`
+6. Or copy the public deployment templates manually:
    - `docker-compose.public.yml`
    - `.env.public.example`
    - `deploy/backend/config.public.example.yaml`
    - `deploy/nginx/default.public.conf`
    and fill in your real domain, database password, Redis password, JWT secret, and admin email.
-4. Start the stack with `docker compose up -d`.
-5. If you want email verification or OSS media storage, continue with the dedicated guides above.
+7. If you want email verification or OSS media storage, continue with the dedicated guides above.

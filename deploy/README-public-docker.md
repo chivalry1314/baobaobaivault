@@ -12,6 +12,7 @@ Core deployment files:
 - [deploy/backend/config.public.example.yaml](./backend/config.public.example.yaml)
 - [deploy/nginx/default.public.conf](./nginx/default.public.conf)
 - [scripts/init-production.sh](../scripts/init-production.sh)
+- [scripts/create-admin.sh](../scripts/create-admin.sh)
 
 Email verification docs:
 
