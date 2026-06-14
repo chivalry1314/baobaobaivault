@@ -104,7 +104,7 @@ export function AccessCodeCard(props: {
           className="relative block h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[0.7rem] border border-[var(--outline)]/15 bg-[#4f4a75] sm:h-[80px] sm:w-[80px]"
         >
           {item.card.mimeType.startsWith("image/") ? (
-            <ShareImage src={item.card.previewUrl} alt={item.card.title} fill className="object-cover" />
+            <ShareImage src={item.card.previewUrl} alt={item.card.title} fill sizes="(max-width: 640px) 72px, 80px" className="object-cover" />
           ) : (
             <div className="flex h-full items-center justify-center px-2 text-center text-[10px] font-medium text-white/92">{item.card.title}</div>
           )}

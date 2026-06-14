@@ -25,6 +25,17 @@ function canUseNextImage(src: string): boolean {
   return true;
 }
 
+// Dynamic media endpoints may require session cookies or return redirects.
+// The Next.js image optimizer cannot reliably fetch them, so keep next/image
+// for layout/lazy-loading but skip the optimization step.
+function isDynamicMediaEndpoint(src: string): boolean {
+  return (
+    /^\/api\/share\/cards\/[^/]+\/cover\/(preview|download)/.test(src) ||
+    /^\/api\/share\/cards\/[^/]+\/assets\/[^/]+\/(preview|download)/.test(src) ||
+    /^\/api\/share\/users\/[^/]+\/assets\//.test(src)
+  );
+}
+
 export function ShareImage({
   src,
   alt,
@@ -42,6 +53,7 @@ export function ShareImage({
 
   const hasExplicitSize = typeof width === "number" && typeof height === "number";
   const useNextImage = canUseNextImage(src) && (fill || hasExplicitSize);
+  const shouldUnoptimize = unoptimized ?? isDynamicMediaEndpoint(src);
 
   if (useNextImage) {
     return (
@@ -54,7 +66,7 @@ export function ShareImage({
         className={className}
         priority={priority}
         sizes={sizes}
-        unoptimized={unoptimized}
+        unoptimized={shouldUnoptimize}
       />
     );
   }

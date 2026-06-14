@@ -28,7 +28,7 @@ export function AccountEntryButton(props: {
       className="inline-flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-[3px] border-[var(--outline)] bg-[#fcb4c7] text-[var(--foreground)] transition-all hover:opacity-90 sm:h-14 sm:w-14"
     >
       {user?.avatar.trim() ? (
-        <ShareImage src={user.avatar} alt={getDisplayName(user)} fill className="object-cover" />
+        <ShareImage src={user.avatar} alt={getDisplayName(user)} fill sizes="(max-width: 640px) 48px, 56px" className="object-cover" />
       ) : user ? (
         <span className="text-sm font-black leading-none text-[var(--foreground)]/78">
           {getInitials(user)}

@@ -121,6 +121,7 @@ export function ReviewGrid(props: {
                     src={item.card.previewUrl}
                     alt={item.card.title}
                     fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     className="object-cover transition-transform duration-200 group-hover:scale-[1.03]"
                   />
                 ) : (

@@ -389,7 +389,7 @@ export function RealtimePreviewPanel(props: {
 
       <div className="overflow-hidden rounded-[1.2rem] border border-[var(--outline)]/20 bg-white shadow-sm">
         <div className="relative aspect-[4/3] bg-[linear-gradient(135deg,#3b272d_0%,#5a4049_40%,#2e1c21_100%)]">
-          {previewUrl ? <ShareImage src={previewUrl} alt={previewTitle} fill className="object-cover" /> : <div className="flex h-full items-center justify-center text-xs font-bold text-white/76">等待可预览文件...</div>}
+          {previewUrl ? <ShareImage src={previewUrl} alt={previewTitle} fill sizes="(max-width: 640px) 100vw, 50vw" className="object-cover" /> : <div className="flex h-full items-center justify-center text-xs font-bold text-white/76">等待可预览文件...</div>}
         </div>
 
         <div className="p-3">
