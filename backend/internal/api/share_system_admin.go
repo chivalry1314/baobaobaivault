@@ -505,6 +505,10 @@ func (h *Handler) sharePublicSiteBrandingSettings(c *gin.Context) {
 	})
 }
 
+func (h *Handler) sharePublicMediaStorageSettings(c *gin.Context) {
+	c.JSON(http.StatusOK, h.shareService.GetSharePublicMediaStorageSettings())
+}
+
 func (h *Handler) sharePublicSiteBrandingLogo(c *gin.Context) {
 	stream, fileName, mimeType, err := h.shareService.OpenShareSiteBrandingLogo(c.Request.Context())
 	if err != nil {

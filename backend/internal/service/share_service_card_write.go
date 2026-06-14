@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/baobaobai/baobaobaivault/internal/model"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -11,6 +12,35 @@ import (
 	"strings"
 	"time"
 )
+
+func (s *ShareService) loadActiveShareCreator(ctx context.Context, creatorID string) (model.ShareExternalUser, error) {
+	var creator model.ShareExternalUser
+	if err := s.db.WithContext(ctx).First(&creator, "id = ?", strings.TrimSpace(creatorID)).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return model.ShareExternalUser{}, ErrShareUserNotFound
+		}
+		return model.ShareExternalUser{}, err
+	}
+	if creator.Status != model.ShareExternalUserStatusActive {
+		return model.ShareExternalUser{}, ErrShareUserNotFound
+	}
+	if !isShareCreatorRole(creator.Role) {
+		return model.ShareExternalUser{}, ErrShareForbiddenRole
+	}
+	return creator, nil
+}
+
+type savedAsset struct {
+	slot               string
+	storageBackend     string
+	storageNamespaceID *string
+	storageObjectKey   string
+	storageVersionID   string
+	storedFileName     string
+	fileName           string
+	mimeType           string
+	size               int64
+}
 
 func (s *ShareService) CreateCard(ctx context.Context, input ShareCreateCardInput) (*ShareCardView, error) {
 	if strings.TrimSpace(input.Title) == "" {
@@ -216,18 +246,6 @@ func (s *ShareService) CreateCardBundle(ctx context.Context, input ShareCreateCa
 		return nil, ErrShareForbiddenRole
 	}
 
-	type savedAsset struct {
-		slot               string
-		storageBackend     string
-		storageNamespaceID *string
-		storageObjectKey   string
-		storageVersionID   string
-		storedFileName     string
-		fileName           string
-		mimeType           string
-		size               int64
-	}
-
 	cardID := randomUUIDLike()
 	savedAssets := make([]savedAsset, 0, len(input.Assets))
 	coverStoredFileName := ""
@@ -363,6 +381,655 @@ func (s *ShareService) CreateCardBundle(ctx context.Context, input ShareCreateCa
 	}
 	view := toShareCardView(&card, assetsByCardID[card.ID])
 	return &view, nil
+}
+
+func (s *ShareService) PrepareCardBundleUpload(ctx context.Context, input SharePrepareCardBundleUploadInput) (*SharePreparedCardBundleUpload, error) {
+	if strings.TrimSpace(input.Title) == "" {
+		return nil, ErrShareCardTitleRequired
+	}
+	if !isValidShareVisibility(input.Visibility) {
+		return nil, ErrShareInvalidVisibility
+	}
+	if !isValidShareCardAccessMode(input.AccessMode) {
+		return nil, ErrShareInvalidAccessMode
+	}
+	if len(input.Assets) == 0 {
+		return nil, ErrShareFileRequired
+	}
+
+	seen := make(map[string]struct{}, len(input.Assets))
+	for _, asset := range input.Assets {
+		slot := normalizeShareCardSlot(asset.Slot)
+		if !isValidShareCardSlot(slot) {
+			return nil, ErrShareInvalidCardSlot
+		}
+		if _, exists := seen[slot]; exists {
+			return nil, ErrShareInvalidCardSlot
+		}
+		seen[slot] = struct{}{}
+	}
+
+	status := strings.TrimSpace(input.Status)
+	if status == "" {
+		status = model.SharePlatformCardStatusPublished
+	}
+	status = strings.ToLower(status)
+	if !isValidShareStatus(status) {
+		return nil, ErrShareInvalidCardStatus
+	}
+
+	if _, err := s.loadActiveShareCreator(ctx, input.CreatorID); err != nil {
+		return nil, err
+	}
+
+	cfg := s.currentShareMediaStorageSettings()
+	if cfg.StorageMode != model.ShareMediaStorageModeObjectStorage || s.storageService == nil {
+		return nil, errors.New("object storage is not enabled")
+	}
+	if strings.TrimSpace(cfg.CoverNamespaceID) == "" || strings.TrimSpace(cfg.AssetNamespaceID) == "" {
+		return nil, ErrShareSaveFileFailed
+	}
+
+	cardID := randomUUIDLike()
+	ttl := 5 * time.Minute
+	result := &SharePreparedCardBundleUpload{
+		CardID: cardID,
+		Assets: make([]SharePreparedCardBundleAsset, 0, len(input.Assets)),
+	}
+
+	if strings.TrimSpace(input.CoverContentType) != "" {
+		coverKey := s.buildCardCoverObjectKey(input.CreatorID, cardID)
+		presigned, err := s.storageService.PreparePresignPutObject(ctx, cfg.CoverNamespaceID, coverKey, ttl, input.CoverContentType, input.CoverSize)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrShareSaveFileFailed, err)
+		}
+		result.Cover = &SharePresignedUploadEntry{
+			URL:         presigned.URL,
+			ObjectKey:   presigned.Key,
+			VersionID:   presigned.VersionID,
+			StorageKey:  presigned.StorageKey,
+			NamespaceID: cfg.CoverNamespaceID,
+			ContentType: input.CoverContentType,
+		}
+	}
+
+	for _, asset := range input.Assets {
+		slot := normalizeShareCardSlot(asset.Slot)
+		assetKey := s.buildCardAssetObjectKey(input.CreatorID, cardID, slot)
+		presigned, err := s.storageService.PreparePresignPutObject(ctx, cfg.AssetNamespaceID, assetKey, ttl, asset.ContentType, asset.Size)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrShareSaveFileFailed, err)
+		}
+		result.Assets = append(result.Assets, SharePreparedCardBundleAsset{
+			Slot: slot,
+			SharePresignedUploadEntry: SharePresignedUploadEntry{
+				URL:         presigned.URL,
+				ObjectKey:   presigned.Key,
+				VersionID:   presigned.VersionID,
+				StorageKey:  presigned.StorageKey,
+				NamespaceID: cfg.AssetNamespaceID,
+				ContentType: asset.ContentType,
+			},
+		})
+	}
+
+	return result, nil
+}
+
+func (s *ShareService) CreateCardBundleFromPresignedUpload(ctx context.Context, input ShareCreateCardBundleFromPresignedInput) (*ShareCardView, error) {
+	if strings.TrimSpace(input.Title) == "" {
+		return nil, ErrShareCardTitleRequired
+	}
+	if !isValidShareVisibility(input.Visibility) {
+		return nil, ErrShareInvalidVisibility
+	}
+	if !isValidShareCardAccessMode(input.AccessMode) {
+		return nil, ErrShareInvalidAccessMode
+	}
+	if len(input.Assets) == 0 {
+		return nil, ErrShareFileRequired
+	}
+
+	seen := make(map[string]struct{}, len(input.Assets))
+	for _, asset := range input.Assets {
+		slot := normalizeShareCardSlot(asset.Slot)
+		if !isValidShareCardSlot(slot) {
+			return nil, ErrShareInvalidCardSlot
+		}
+		if _, exists := seen[slot]; exists {
+			return nil, ErrShareInvalidCardSlot
+		}
+		seen[slot] = struct{}{}
+
+		if strings.TrimSpace(asset.ObjectKey) == "" || strings.TrimSpace(asset.VersionID) == "" || strings.TrimSpace(asset.FileName) == "" || asset.Size <= 0 {
+			return nil, ErrShareFileRequired
+		}
+		if input.MaxFileSize > 0 && asset.Size > input.MaxFileSize {
+			return nil, ErrShareFileTooLarge
+		}
+	}
+
+	status := strings.TrimSpace(input.Status)
+	if status == "" {
+		status = model.SharePlatformCardStatusPublished
+	}
+	status = strings.ToLower(status)
+	if !isValidShareStatus(status) {
+		return nil, ErrShareInvalidCardStatus
+	}
+
+	creatorID := strings.TrimSpace(input.CreatorID)
+	if _, err := s.loadActiveShareCreator(ctx, creatorID); err != nil {
+		return nil, err
+	}
+
+	cardID := strings.TrimSpace(input.CardID)
+	if cardID == "" {
+		return nil, errors.New("invalid request body")
+	}
+
+	cfg := s.currentShareMediaStorageSettings()
+	if cfg.StorageMode != model.ShareMediaStorageModeObjectStorage || s.storageService == nil {
+		return nil, errors.New("object storage is not enabled")
+	}
+
+	coverStoredFileName := ""
+	coverFileSize := int64(0)
+	coverFileName := ""
+	coverMimeType := ""
+	var coverStorageNamespaceID *string
+	coverStorageObjectKey := ""
+	coverStorageVersionID := ""
+	coverStorageBackend := model.ShareMediaStorageModeLocal
+
+	var presignedRefs []savedAsset
+
+	if input.Cover != nil {
+		cover := input.Cover
+		if strings.TrimSpace(cover.ObjectKey) == "" || strings.TrimSpace(cover.VersionID) == "" || strings.TrimSpace(cover.FileName) == "" || cover.Size <= 0 {
+			return nil, ErrShareFileRequired
+		}
+		if input.MaxFileSize > 0 && cover.Size > input.MaxFileSize {
+			return nil, ErrShareFileTooLarge
+		}
+		coverNamespaceID := strings.TrimSpace(cover.NamespaceID)
+		if coverNamespaceID == "" {
+			coverNamespaceID = cfg.CoverNamespaceID
+		}
+		coverMimeType = detectUploadMimeType(cover.FileName, cover.MimeType)
+		if _, err := s.storageService.FinalizePresignedPut(ctx, coverNamespaceID, cover.ObjectKey, cover.VersionID, coverMimeType, nil); err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrShareSaveFileFailed, err)
+		}
+		coverStorageBackend = model.ShareMediaStorageModeObjectStorage
+		coverStorageNamespaceID = stringPtr(coverNamespaceID)
+		coverStorageObjectKey = strings.TrimSpace(cover.ObjectKey)
+		coverStorageVersionID = strings.TrimSpace(cover.VersionID)
+		coverStoredFileName = ""
+		coverFileName = filepath.Base(cover.FileName)
+		coverFileSize = cover.Size
+		presignedRefs = append(presignedRefs, savedAsset{
+			storageBackend:     coverStorageBackend,
+			storageNamespaceID: coverStorageNamespaceID,
+			storageObjectKey:   coverStorageObjectKey,
+			storageVersionID:   coverStorageVersionID,
+			storedFileName:     "",
+		})
+	}
+
+	savedAssets := make([]savedAsset, 0, len(input.Assets))
+	for _, item := range input.Assets {
+		slot := normalizeShareCardSlot(item.Slot)
+		assetNamespaceID := strings.TrimSpace(item.NamespaceID)
+		if assetNamespaceID == "" {
+			assetNamespaceID = cfg.AssetNamespaceID
+		}
+		mimeType := detectUploadMimeType(item.FileName, item.MimeType)
+		if _, err := s.storageService.FinalizePresignedPut(ctx, assetNamespaceID, item.ObjectKey, item.VersionID, mimeType, nil); err != nil {
+			for _, ref := range presignedRefs {
+				_ = s.deleteCardStoredMedia(ctx, creatorID, ref.storageBackend, ref.storageNamespaceID, ref.storageObjectKey, ref.storedFileName)
+			}
+			return nil, fmt.Errorf("%w: %v", ErrShareSaveFileFailed, err)
+		}
+		savedAssets = append(savedAssets, savedAsset{
+			slot:               slot,
+			storageBackend:     model.ShareMediaStorageModeObjectStorage,
+			storageNamespaceID: stringPtr(assetNamespaceID),
+			storageObjectKey:   strings.TrimSpace(item.ObjectKey),
+			storageVersionID:   strings.TrimSpace(item.VersionID),
+			storedFileName:     "",
+			fileName:           filepath.Base(item.FileName),
+			mimeType:           mimeType,
+			size:               item.Size,
+		})
+		presignedRefs = append(presignedRefs, savedAsset{
+			storageBackend:     model.ShareMediaStorageModeObjectStorage,
+			storageNamespaceID: stringPtr(assetNamespaceID),
+			storageObjectKey:   strings.TrimSpace(item.ObjectKey),
+			storageVersionID:   strings.TrimSpace(item.VersionID),
+			storedFileName:     "",
+		})
+	}
+
+	card := model.SharePlatformCard{
+		ID:                     cardID,
+		CreatorExternalUserID:  creatorID,
+		Title:                  strings.TrimSpace(input.Title),
+		Description:            strings.TrimSpace(input.Description),
+		TagsText:               encodeShareCardTags(input.Tags),
+		Visibility:             normalizeShareVisibility(input.Visibility),
+		Status:                 status,
+		AccessMode:             normalizeShareCardAccessMode(input.AccessMode),
+		ReviewStatus:           defaultReviewStatusForStatus(status),
+		SubmittedAt:            defaultSubmittedAtForReviewStatus(defaultReviewStatusForStatus(status)),
+		ReviewedAt:             nil,
+		ReviewReason:           "",
+		ReviewerExternalUserID: nil,
+		StorageBackend:         coverStorageBackend,
+		StorageNamespaceID:     coverStorageNamespaceID,
+		StorageObjectKey:       coverStorageObjectKey,
+		StorageVersionID:       coverStorageVersionID,
+		StoredFileName:         coverStoredFileName,
+		OriginalFileName:       coverFileName,
+		MimeType:               coverMimeType,
+		Size:                   coverFileSize,
+	}
+
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&card).Error; err != nil {
+			return err
+		}
+		for index, asset := range savedAssets {
+			row := model.SharePlatformCardAsset{
+				CardID:             card.ID,
+				Slot:               asset.slot,
+				StorageBackend:     asset.storageBackend,
+				StorageNamespaceID: asset.storageNamespaceID,
+				StorageObjectKey:   asset.storageObjectKey,
+				StorageVersionID:   asset.storageVersionID,
+				StoredFileName:     asset.storedFileName,
+				OriginalFileName:   asset.fileName,
+				MimeType:           asset.mimeType,
+				Size:               asset.size,
+				SortOrder:          index,
+			}
+			if err := tx.Create(&row).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		for _, ref := range presignedRefs {
+			_ = s.deleteCardStoredMedia(ctx, creatorID, ref.storageBackend, ref.storageNamespaceID, ref.storageObjectKey, ref.storedFileName)
+		}
+		return nil, err
+	}
+
+	s.invalidateDiscoverCache(ctx)
+
+	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, []string{card.ID})
+	if err != nil {
+		return nil, err
+	}
+	view := toShareCardView(&card, assetsByCardID[card.ID])
+	return &view, nil
+}
+
+func (s *ShareService) PrepareCardCoverReplaceUpload(ctx context.Context, input ShareUpdateCardMediaPresignInput) (*ShareUpdateCardMediaPresignResult, error) {
+	ownerID := strings.TrimSpace(input.OwnerID)
+	cardID := strings.TrimSpace(input.CardID)
+	if ownerID == "" || cardID == "" {
+		return nil, ErrShareCardNotFound
+	}
+
+	normalizedMimeType := detectUploadMimeType("", input.ContentType)
+	if !strings.HasPrefix(strings.ToLower(normalizedMimeType), "image/") {
+		return nil, ErrShareInvalidImageData
+	}
+
+	var card model.SharePlatformCard
+	if err := s.db.WithContext(ctx).First(&card, "id = ?", cardID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrShareCardNotFound
+		}
+		return nil, err
+	}
+	if card.CreatorExternalUserID != ownerID {
+		return nil, ErrShareCardForbidden
+	}
+	if _, err := s.loadActiveShareCreator(ctx, ownerID); err != nil {
+		return nil, err
+	}
+
+	cfg := s.currentShareMediaStorageSettings()
+	if cfg.StorageMode != model.ShareMediaStorageModeObjectStorage || s.storageService == nil {
+		return nil, errors.New("object storage is not enabled")
+	}
+	if strings.TrimSpace(cfg.CoverNamespaceID) == "" {
+		return nil, ErrShareSaveFileFailed
+	}
+
+	objectKey := s.buildCardCoverObjectKey(ownerID, cardID)
+	ttl := 5 * time.Minute
+	presigned, err := s.storageService.PreparePresignPutObject(ctx, cfg.CoverNamespaceID, objectKey, ttl, input.ContentType, input.Size)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrShareSaveFileFailed, err)
+	}
+
+	return &ShareUpdateCardMediaPresignResult{
+		CardID:      cardID,
+		NamespaceID: cfg.CoverNamespaceID,
+		URL:         presigned.URL,
+		ObjectKey:   presigned.Key,
+		VersionID:   presigned.VersionID,
+		StorageKey:  presigned.StorageKey,
+	}, nil
+}
+
+func (s *ShareService) PrepareCardAssetReplaceUpload(ctx context.Context, input ShareUpdateCardMediaPresignInput) (*ShareUpdateCardMediaPresignResult, error) {
+	ownerID := strings.TrimSpace(input.OwnerID)
+	cardID := strings.TrimSpace(input.CardID)
+	slot := normalizeShareCardSlot(input.Slot)
+	if ownerID == "" || cardID == "" {
+		return nil, ErrShareCardNotFound
+	}
+	if !isValidShareCardSlot(slot) {
+		return nil, ErrShareInvalidCardSlot
+	}
+
+	var card model.SharePlatformCard
+	if err := s.db.WithContext(ctx).First(&card, "id = ?", cardID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrShareCardNotFound
+		}
+		return nil, err
+	}
+	if card.CreatorExternalUserID != ownerID {
+		return nil, ErrShareCardForbidden
+	}
+	if _, err := s.loadActiveShareCreator(ctx, ownerID); err != nil {
+		return nil, err
+	}
+
+	cfg := s.currentShareMediaStorageSettings()
+	if cfg.StorageMode != model.ShareMediaStorageModeObjectStorage || s.storageService == nil {
+		return nil, errors.New("object storage is not enabled")
+	}
+	if strings.TrimSpace(cfg.AssetNamespaceID) == "" {
+		return nil, ErrShareSaveFileFailed
+	}
+
+	objectKey := s.buildCardAssetObjectKey(ownerID, cardID, slot)
+	ttl := 5 * time.Minute
+	presigned, err := s.storageService.PreparePresignPutObject(ctx, cfg.AssetNamespaceID, objectKey, ttl, input.ContentType, input.Size)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrShareSaveFileFailed, err)
+	}
+
+	return &ShareUpdateCardMediaPresignResult{
+		CardID:      cardID,
+		NamespaceID: cfg.AssetNamespaceID,
+		URL:         presigned.URL,
+		ObjectKey:   presigned.Key,
+		VersionID:   presigned.VersionID,
+		StorageKey:  presigned.StorageKey,
+	}, nil
+}
+
+func (s *ShareService) ReplaceCardCoverFromPresignedUpload(ctx context.Context, input ShareUpdateCardCoverFromPresignedInput) (*ShareCardDetail, error) {
+	ownerID := strings.TrimSpace(input.OwnerID)
+	cardID := strings.TrimSpace(input.CardID)
+	if ownerID == "" || cardID == "" {
+		return nil, ErrShareCardNotFound
+	}
+	if input.Cover == nil {
+		return nil, ErrShareFileRequired
+	}
+	cover := input.Cover
+	if strings.TrimSpace(cover.ObjectKey) == "" || strings.TrimSpace(cover.VersionID) == "" || strings.TrimSpace(cover.FileName) == "" || cover.Size <= 0 {
+		return nil, ErrShareFileRequired
+	}
+	if input.MaxFileSize > 0 && cover.Size > input.MaxFileSize {
+		return nil, ErrShareFileTooLarge
+	}
+
+	normalizedMimeType := detectUploadMimeType(cover.FileName, cover.MimeType)
+	if !strings.HasPrefix(strings.ToLower(normalizedMimeType), "image/") {
+		return nil, ErrShareInvalidImageData
+	}
+
+	cfg := s.currentShareMediaStorageSettings()
+	if cfg.StorageMode != model.ShareMediaStorageModeObjectStorage || s.storageService == nil {
+		return nil, errors.New("object storage is not enabled")
+	}
+
+	coverNamespaceID := strings.TrimSpace(cover.NamespaceID)
+	if coverNamespaceID == "" {
+		coverNamespaceID = cfg.CoverNamespaceID
+	}
+	if _, err := s.storageService.FinalizePresignedPut(ctx, coverNamespaceID, cover.ObjectKey, cover.VersionID, normalizedMimeType, nil); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrShareSaveFileFailed, err)
+	}
+	coverStorageBackend := model.ShareMediaStorageModeObjectStorage
+	coverStorageNamespaceID := stringPtr(coverNamespaceID)
+	coverStorageObjectKey := strings.TrimSpace(cover.ObjectKey)
+	coverStorageVersionID := strings.TrimSpace(cover.VersionID)
+	coverFileName := filepath.Base(cover.FileName)
+	coverFileSize := cover.Size
+
+	oldStoredFileName := ""
+	oldStorageBackend := ""
+	var oldStorageNamespaceID *string
+	oldStorageObjectKey := ""
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var card model.SharePlatformCard
+		if err := tx.First(&card, "id = ?", cardID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrShareCardNotFound
+			}
+			return err
+		}
+		if card.CreatorExternalUserID != ownerID {
+			return ErrShareCardForbidden
+		}
+		if err := s.ensureShareCreatorRoleTx(tx, card.CreatorExternalUserID); err != nil {
+			return err
+		}
+		now := time.Now().UTC()
+		if card.Status == model.SharePlatformCardStatusPublished {
+			card.ReviewStatus = model.SharePlatformCardReviewStatusPending
+			card.SubmittedAt = &now
+			card.ReviewedAt = nil
+			card.ReviewerExternalUserID = nil
+			card.ReviewReason = ""
+		}
+
+		oldStoredFileName = strings.TrimSpace(card.StoredFileName)
+		oldStorageBackend = strings.TrimSpace(card.StorageBackend)
+		oldStorageNamespaceID = card.StorageNamespaceID
+		oldStorageObjectKey = strings.TrimSpace(card.StorageObjectKey)
+		card.StorageBackend = coverStorageBackend
+		card.StorageNamespaceID = coverStorageNamespaceID
+		card.StorageObjectKey = coverStorageObjectKey
+		card.StorageVersionID = coverStorageVersionID
+		card.StoredFileName = ""
+		card.OriginalFileName = coverFileName
+		card.MimeType = normalizedMimeType
+		card.Size = coverFileSize
+		card.UpdatedAt = time.Now().UTC()
+		return tx.Model(&model.SharePlatformCard{}).
+			Where("id = ?", card.ID).
+			Updates(map[string]any{
+				"storage_backend":           card.StorageBackend,
+				"storage_namespace_id":      card.StorageNamespaceID,
+				"storage_object_key":        card.StorageObjectKey,
+				"storage_version_id":        card.StorageVersionID,
+				"stored_file_name":          card.StoredFileName,
+				"original_file_name":        card.OriginalFileName,
+				"mime_type":                 card.MimeType,
+				"size":                      card.Size,
+				"updated_at":                card.UpdatedAt,
+				"review_status":             card.ReviewStatus,
+				"submitted_at":              card.SubmittedAt,
+				"reviewed_at":               card.ReviewedAt,
+				"review_reason":             card.ReviewReason,
+				"reviewer_external_user_id": card.ReviewerExternalUserID,
+			}).Error
+	})
+	if err != nil {
+		_ = s.deleteCardStoredMedia(ctx, ownerID, coverStorageBackend, coverStorageNamespaceID, coverStorageObjectKey, "")
+		return nil, err
+	}
+
+	if hasShareStoredMedia(oldStorageBackend, oldStorageNamespaceID, oldStorageObjectKey, oldStoredFileName) &&
+		(oldStoredFileName != "" || oldStorageObjectKey != coverStorageObjectKey) {
+		_ = s.deleteCardStoredMedia(ctx, ownerID, oldStorageBackend, oldStorageNamespaceID, oldStorageObjectKey, oldStoredFileName)
+	}
+	s.invalidateDiscoverCache(ctx)
+	return s.GetCardDetail(ctx, cardID, ownerID)
+}
+
+func (s *ShareService) ReplaceCardAssetFromPresignedUpload(ctx context.Context, input ShareUpdateCardAssetFromPresignedInput) (*ShareCardDetail, error) {
+	ownerID := strings.TrimSpace(input.OwnerID)
+	cardID := strings.TrimSpace(input.CardID)
+	slot := normalizeShareCardSlot(input.Slot)
+	if ownerID == "" || cardID == "" {
+		return nil, ErrShareCardNotFound
+	}
+	if !isValidShareCardSlot(slot) {
+		return nil, ErrShareInvalidCardSlot
+	}
+	if input.Asset == nil {
+		return nil, ErrShareFileRequired
+	}
+	asset := input.Asset
+	if strings.TrimSpace(asset.ObjectKey) == "" || strings.TrimSpace(asset.VersionID) == "" || strings.TrimSpace(asset.FileName) == "" || asset.Size <= 0 {
+		return nil, ErrShareFileRequired
+	}
+	if input.MaxFileSize > 0 && asset.Size > input.MaxFileSize {
+		return nil, ErrShareFileTooLarge
+	}
+
+	mimeType := detectUploadMimeType(asset.FileName, asset.MimeType)
+
+	cfg := s.currentShareMediaStorageSettings()
+	if cfg.StorageMode != model.ShareMediaStorageModeObjectStorage || s.storageService == nil {
+		return nil, errors.New("object storage is not enabled")
+	}
+
+	assetNamespaceID := strings.TrimSpace(asset.NamespaceID)
+	if assetNamespaceID == "" {
+		assetNamespaceID = cfg.AssetNamespaceID
+	}
+	if _, err := s.storageService.FinalizePresignedPut(ctx, assetNamespaceID, asset.ObjectKey, asset.VersionID, mimeType, nil); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrShareSaveFileFailed, err)
+	}
+	storageBackend := model.ShareMediaStorageModeObjectStorage
+	storageNamespaceID := stringPtr(assetNamespaceID)
+	storageObjectKey := strings.TrimSpace(asset.ObjectKey)
+	storageVersionID := strings.TrimSpace(asset.VersionID)
+
+	var oldStoredFileName string
+	var oldStorageBackend string
+	var oldStorageNamespaceID *string
+	var oldStorageObjectKey string
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var card model.SharePlatformCard
+		if err := tx.First(&card, "id = ?", cardID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrShareCardNotFound
+			}
+			return err
+		}
+		if card.CreatorExternalUserID != ownerID {
+			return ErrShareCardForbidden
+		}
+		if err := s.ensureShareCreatorRoleTx(tx, card.CreatorExternalUserID); err != nil {
+			return err
+		}
+		now := time.Now().UTC()
+		if card.Status == model.SharePlatformCardStatusPublished {
+			card.ReviewStatus = model.SharePlatformCardReviewStatusPending
+			card.SubmittedAt = &now
+			card.ReviewedAt = nil
+			card.ReviewerExternalUserID = nil
+			card.ReviewReason = ""
+		}
+
+		var existing model.SharePlatformCardAsset
+		if err := tx.First(&existing, "card_id = ? AND slot = ?", card.ID, slot).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				newAsset := model.SharePlatformCardAsset{
+					CardID:             card.ID,
+					Slot:               slot,
+					StorageBackend:     storageBackend,
+					StorageNamespaceID: storageNamespaceID,
+					StorageObjectKey:   storageObjectKey,
+					StorageVersionID:   storageVersionID,
+					StoredFileName:     "",
+					OriginalFileName:   filepath.Base(asset.FileName),
+					MimeType:           mimeType,
+					Size:               asset.Size,
+					SortOrder:          shareCardSlotSortOrder(slot),
+				}
+				if err := tx.Create(&newAsset).Error; err != nil {
+					return err
+				}
+				card.UpdatedAt = time.Now().UTC()
+				return tx.Model(&model.SharePlatformCard{}).
+					Where("id = ?", card.ID).
+					Updates(map[string]any{
+						"updated_at":                card.UpdatedAt,
+						"review_status":             card.ReviewStatus,
+						"submitted_at":              card.SubmittedAt,
+						"reviewed_at":               card.ReviewedAt,
+						"review_reason":             card.ReviewReason,
+						"reviewer_external_user_id": card.ReviewerExternalUserID,
+					}).Error
+			}
+			return err
+		}
+
+		oldStoredFileName = strings.TrimSpace(existing.StoredFileName)
+		oldStorageBackend = strings.TrimSpace(existing.StorageBackend)
+		oldStorageNamespaceID = existing.StorageNamespaceID
+		oldStorageObjectKey = strings.TrimSpace(existing.StorageObjectKey)
+
+		existing.StorageBackend = storageBackend
+		existing.StorageNamespaceID = storageNamespaceID
+		existing.StorageObjectKey = storageObjectKey
+		existing.StorageVersionID = storageVersionID
+		existing.StoredFileName = ""
+		existing.OriginalFileName = filepath.Base(asset.FileName)
+		existing.MimeType = mimeType
+		existing.Size = asset.Size
+		existing.UpdatedAt = time.Now().UTC()
+		if err := tx.Save(&existing).Error; err != nil {
+			return err
+		}
+
+		card.UpdatedAt = time.Now().UTC()
+		return tx.Model(&model.SharePlatformCard{}).
+			Where("id = ?", card.ID).
+			Updates(map[string]any{
+				"updated_at":                card.UpdatedAt,
+				"review_status":             card.ReviewStatus,
+				"submitted_at":              card.SubmittedAt,
+				"reviewed_at":               card.ReviewedAt,
+				"review_reason":             card.ReviewReason,
+				"reviewer_external_user_id": card.ReviewerExternalUserID,
+			}).Error
+	})
+	if err != nil {
+		_ = s.deleteCardStoredMedia(ctx, ownerID, storageBackend, storageNamespaceID, storageObjectKey, "")
+		return nil, err
+	}
+
+	if hasShareStoredMedia(oldStorageBackend, oldStorageNamespaceID, oldStorageObjectKey, oldStoredFileName) &&
+		(oldStoredFileName != "" || oldStorageObjectKey != storageObjectKey) {
+		_ = s.deleteCardStoredMedia(ctx, ownerID, oldStorageBackend, oldStorageNamespaceID, oldStorageObjectKey, oldStoredFileName)
+	}
+	s.invalidateDiscoverCache(ctx)
+	return s.GetCardDetail(ctx, cardID, ownerID)
 }
 
 func (s *ShareService) UpdateCardByOwner(ctx context.Context, input ShareUpdateCardInput) (*ShareCardView, error) {

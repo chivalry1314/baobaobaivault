@@ -229,11 +229,24 @@ func (p *S3Provider) Move(ctx context.Context, srcKey, dstKey string) error {
 	return p.Delete(ctx, srcKey)
 }
 
-func (p *S3Provider) PresignPut(ctx context.Context, key string, ttl time.Duration) (string, error) {
-	presignResult, err := p.presignClient.PresignPutObject(ctx, &s3.PutObjectInput{
+func (p *S3Provider) PresignPut(ctx context.Context, key string, ttl time.Duration, opts ...PresignOption) (string, error) {
+	options := &PresignOptions{}
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	input := &s3.PutObjectInput{
 		Bucket: aws.String(p.bucket),
 		Key:    aws.String(key),
-	}, func(opts *s3.PresignOptions) {
+	}
+	if options.ContentType != "" {
+		input.ContentType = aws.String(options.ContentType)
+	}
+	if options.Size > 0 {
+		input.ContentLength = aws.Int64(options.Size)
+	}
+
+	presignResult, err := p.presignClient.PresignPutObject(ctx, input, func(opts *s3.PresignOptions) {
 		opts.Expires = ttl
 	})
 	if err != nil {

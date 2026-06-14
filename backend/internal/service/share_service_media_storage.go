@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/baobaobai/baobaobaivault/internal/model"
+	"go.uber.org/zap"
 )
 
 const shareMediaStorageSettingsSingleton = "default"
@@ -101,6 +102,11 @@ func (s *ShareService) GetShareMediaStorageSettings(ctx context.Context, operato
 	cfg := s.currentShareMediaStorageSettings()
 	cfg.CanUpdate = s.isConfiguredShareSuperAdminUserID(ctx, operatorID)
 	return &cfg, nil
+}
+
+func (s *ShareService) GetSharePublicMediaStorageSettings() map[string]string {
+	cfg := s.currentShareMediaStorageSettings()
+	return map[string]string{"storage_mode": cfg.StorageMode}
 }
 
 func (s *ShareService) GetShareMediaStorageMigrationPlan(ctx context.Context, operatorID string) (*ShareMediaStorageMigrationPlanView, error) {
@@ -655,7 +661,15 @@ func (s *ShareService) storeCardMediaToObjectStorage(
 		nil,
 	)
 	if err != nil {
-		return nil, err
+		if s.logger != nil {
+			s.logger.Warn("failed to store card media to object storage",
+				zap.String("namespace_id", namespaceID),
+				zap.String("object_key", objectKey),
+				zap.Int64("size", size),
+				zap.Error(err),
+			)
+		}
+		return nil, fmt.Errorf("%w: %v", ErrShareSaveFileFailed, err)
 	}
 
 	return &shareStoredMediaResult{

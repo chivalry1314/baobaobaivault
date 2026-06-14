@@ -215,7 +215,15 @@ func (h *Handler) shareSystemPresignPutObject(c *gin.Context) {
 		}
 	}
 
-	result, err := h.storageService.PreparePresignPutObject(c.Request.Context(), namespaceID, key, time.Duration(ttlSeconds)*time.Second)
+	contentType := strings.TrimSpace(c.Query("content_type"))
+	var size int64
+	if raw := strings.TrimSpace(c.Query("size")); raw != "" {
+		if v, err := strconv.ParseInt(raw, 10, 64); err == nil && v > 0 {
+			size = v
+		}
+	}
+
+	result, err := h.storageService.PreparePresignPutObject(c.Request.Context(), namespaceID, key, time.Duration(ttlSeconds)*time.Second, contentType, size)
 	if err != nil {
 		jsonError(c, http.StatusBadRequest, err)
 		return

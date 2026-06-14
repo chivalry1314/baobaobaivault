@@ -685,7 +685,7 @@ type PreparedPresignPut struct {
 	StorageKey string `json:"storage_key"`
 }
 
-func (s *StorageService) PreparePresignPutObject(ctx context.Context, namespaceID, key string, ttl time.Duration) (*PreparedPresignPut, error) {
+func (s *StorageService) PreparePresignPutObject(ctx context.Context, namespaceID, key string, ttl time.Duration, contentType string, size int64) (*PreparedPresignPut, error) {
 	key = strings.TrimSpace(key)
 	if key == "" {
 		return nil, errors.New("object key is required")
@@ -703,7 +703,15 @@ func (s *StorageService) PreparePresignPutObject(ctx context.Context, namespaceI
 
 	versionID := newVersionID()
 	storageKey := s.buildVersionedStorageKey(&ns, key, versionID)
-	url, err := provider.PresignPut(ctx, storageKey, ttl)
+
+	var presignOpts []storage.PresignOption
+	if strings.TrimSpace(contentType) != "" {
+		presignOpts = append(presignOpts, storage.WithPresignContentType(contentType))
+	}
+	if size > 0 {
+		presignOpts = append(presignOpts, storage.WithPresignSize(size))
+	}
+	url, err := provider.PresignPut(ctx, storageKey, ttl, presignOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to presign put url: %w", err)
 	}
@@ -716,8 +724,8 @@ func (s *StorageService) PreparePresignPutObject(ctx context.Context, namespaceI
 	}, nil
 }
 
-func (s *StorageService) PresignPutObject(ctx context.Context, namespaceID, key string, ttl time.Duration) (string, error) {
-	result, err := s.PreparePresignPutObject(ctx, namespaceID, key, ttl)
+func (s *StorageService) PresignPutObject(ctx context.Context, namespaceID, key string, ttl time.Duration, contentType string, size int64) (string, error) {
+	result, err := s.PreparePresignPutObject(ctx, namespaceID, key, ttl, contentType, size)
 	if err != nil {
 		return "", err
 	}

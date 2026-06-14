@@ -26,6 +26,7 @@
   ShareAuditLog,
   ShareEmailHealthResponse,
   ShareMediaStorageSettingsResponse,
+  SharePublicMediaStorageSettingsResponse,
   ShareSiteBrandingSettingsResponse,
   SessionResponse,
   ShareCardAccessMode,
@@ -36,6 +37,10 @@
   SharePagination,
   SharePermission,
   SharePreparedPresignPut,
+  SharePreparedCardBundleUpload,
+  ShareUploadedAssetInfo,
+  ShareUploadedMediaInfo,
+  SharePresignedUploadEntry,
   ShareSystemRole,
   ShareStorageConfig,
   ShareStorageObject,
@@ -521,6 +526,65 @@ export const shareApi = {
     });
   },
 
+  presignCardBundle(input: {
+    title: string;
+    description: string;
+    tags: string[];
+    visibility: "private" | "public";
+    status: "draft" | "published" | "archived";
+    accessMode: ShareCardAccessMode;
+    cover?: { contentType: string; size: number };
+    assets: Array<{ slot: CardContentSlot; contentType: string; size: number }>;
+  }) {
+    return request<SharePreparedCardBundleUpload>(`${API_ROOT}/me/admin/cards/presign`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title: input.title,
+        description: input.description,
+        tags: input.tags,
+        visibility: input.visibility,
+        status: input.status,
+        access_mode: input.accessMode,
+        cover_content_type: input.cover?.contentType,
+        cover_size: input.cover?.size,
+        assets: input.assets.map((a) => ({ slot: a.slot, content_type: a.contentType, size: a.size })),
+      }),
+    });
+  },
+
+  completeCardBundle(input: {
+    cardId: string;
+    title: string;
+    description: string;
+    tags: string[];
+    visibility: "private" | "public";
+    status: "draft" | "published" | "archived";
+    accessMode: ShareCardAccessMode;
+    cover?: ShareUploadedMediaInfo;
+    assets: ShareUploadedAssetInfo[];
+  }) {
+    return request<{ card: PlatformCard }>(`${API_ROOT}/me/admin/cards/complete`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        card_id: input.cardId,
+        title: input.title,
+        description: input.description,
+        tags: input.tags,
+        visibility: input.visibility,
+        status: input.status,
+        access_mode: input.accessMode,
+        cover: input.cover,
+        assets: input.assets,
+      }),
+    });
+  },
+
   updateCard(
     cardId: string,
     input: {
@@ -560,6 +624,65 @@ export const shareApi = {
       method: "PUT",
       body: formData,
     });
+  },
+
+  presignCardCoverReplace(cardId: string, contentType: string, size: number) {
+    return request<SharePresignedUploadEntry>(
+      `${API_ROOT}/me/cards/${encodeURIComponent(cardId)}/cover/presign`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content_type: contentType, size }),
+      },
+    );
+  },
+
+  completeCardCoverReplace(
+    cardId: string,
+    media: ShareUploadedMediaInfo,
+  ) {
+    return request<CardAssetUpdateResponse>(
+      `${API_ROOT}/me/cards/${encodeURIComponent(cardId)}/cover/complete`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(media),
+      },
+    );
+  },
+
+  presignCardAssetReplace(cardId: string, slot: CardContentSlot, contentType: string, size: number) {
+    return request<SharePresignedUploadEntry>(
+      `${API_ROOT}/me/cards/${encodeURIComponent(cardId)}/assets/${encodeURIComponent(slot)}/presign`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content_type: contentType, size }),
+      },
+    );
+  },
+
+  completeCardAssetReplace(
+    cardId: string,
+    slot: CardContentSlot,
+    media: ShareUploadedMediaInfo,
+  ) {
+    return request<CardAssetUpdateResponse>(
+      `${API_ROOT}/me/cards/${encodeURIComponent(cardId)}/assets/${encodeURIComponent(slot)}/complete`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(media),
+      },
+    );
   },
 
   deleteCardAsset(cardId: string, slot: CardContentSlot) {
@@ -1134,6 +1257,12 @@ export const shareApi = {
 
   systemMediaStorageSettings() {
     return request<ShareMediaStorageSettingsResponse>(`${API_ROOT}/me/system/media-storage`, {
+      cache: "no-store",
+    });
+  },
+
+  publicMediaStorageSettings() {
+    return request<SharePublicMediaStorageSettingsResponse>(`${API_ROOT}/discover/media-storage`, {
       cache: "no-store",
     });
   },

@@ -22,10 +22,15 @@ import type {
   SubmitMode,
 } from "@/components/share/card-editor/types";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
+import { uploadToPresignedURL } from "@/lib/upload-presigned";
 import type {
+  CardAssetUpdateResponse,
   CardContentSlot,
   CardDetailResponse,
   ShareCardAccessMode,
+  SharePreparedCardBundleUpload,
+  ShareUploadedAssetInfo,
+  ShareUploadedMediaInfo,
 } from "@/lib/shared";
 import { shareSiteBrand } from "@/lib/site-config";
 
@@ -491,16 +496,57 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
     setFormError("");
 
     try {
-      await shareApi.createCardBundle({
-        title: title.trim(),
-        description: description.trim(),
-        tags,
-        visibility: publicChecked ? "public" : "private",
-        status,
-        accessMode,
-        cover: coverFile ?? undefined,
-        items: effectiveItems,
-      });
+      const settingsResponse = await shareApi.publicMediaStorageSettings();
+      const useObjectStorage = settingsResponse.storage_mode === "object_storage";
+
+      if (useObjectStorage) {
+        const presign = await shareApi.presignCardBundle({
+          title: title.trim(),
+          description: description.trim(),
+          tags,
+          visibility: publicChecked ? "public" : "private",
+          status,
+          accessMode,
+          cover: coverFile
+            ? {
+                contentType: coverFile.type || "application/octet-stream",
+                size: coverFile.size,
+              }
+            : undefined,
+          assets: effectiveItems.map((item) => ({
+            slot: item.slot,
+            contentType: item.file.type || "application/octet-stream",
+            size: item.file.size,
+          })),
+        });
+
+        const coverInfo = await uploadPresignedCover(presign.cover, coverFile);
+        const assetInfos = await uploadPresignedAssets(presign.assets, effectiveItems);
+
+        await shareApi.completeCardBundle({
+          cardId: presign.card_id,
+          title: title.trim(),
+          description: description.trim(),
+          tags,
+          visibility: publicChecked ? "public" : "private",
+          status,
+          accessMode,
+          cover: coverInfo,
+          assets: assetInfos,
+        });
+      } else {
+        await shareApi.createCardBundle({
+          title: title.trim(),
+          description: description.trim(),
+          tags,
+          visibility: publicChecked ? "public" : "private",
+          status,
+          accessMode,
+          cover: coverFile ?? undefined,
+          items: effectiveItems,
+        });
+      }
+
       router.push("/creator");
       router.refresh();
     } catch (error) {
@@ -508,6 +554,59 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
     } finally {
       setSubmitMode(null);
     }
+  }
+
+  async function uploadPresignedCover(
+    coverEntry: SharePreparedCardBundleUpload["cover"],
+    file: File | null,
+  ): Promise<ShareUploadedMediaInfo | undefined> {
+    if (!coverEntry || !file) {
+      return undefined;
+    }
+    const result = await uploadToPresignedURL({
+      file,
+      url: coverEntry.url,
+      contentType: coverEntry.content_type || file.type || "application/octet-stream",
+    });
+    return {
+      object_key: coverEntry.object_key,
+      version_id: coverEntry.version_id,
+      etag: result.etag,
+      size: file.size,
+      file_name: file.name,
+      mime_type: file.type || coverEntry.content_type || "application/octet-stream",
+      namespace_id: coverEntry.namespace_id,
+    };
+  }
+
+  async function uploadPresignedAssets(
+    presignAssets: SharePreparedCardBundleUpload["assets"],
+    items: { slot: CardContentSlot; file: File }[],
+  ): Promise<ShareUploadedAssetInfo[]> {
+    const entryBySlot = new Map(presignAssets.map((a) => [a.slot, a]));
+    const results: ShareUploadedAssetInfo[] = [];
+    for (const item of items) {
+      const entry = entryBySlot.get(item.slot);
+      if (!entry) {
+        throw new Error(`找不到分类 ${item.slot} 的上传地址`);
+      }
+      const result = await uploadToPresignedURL({
+        file: item.file,
+        url: entry.url,
+        contentType: entry.content_type || item.file.type || "application/octet-stream",
+      });
+      results.push({
+        slot: item.slot,
+        object_key: entry.object_key,
+        version_id: entry.version_id,
+        etag: result.etag,
+        size: item.file.size,
+        file_name: item.file.name,
+        mime_type: item.file.type || entry.content_type || "application/octet-stream",
+        namespace_id: entry.namespace_id,
+      });
+    }
+    return results;
   }
 
   async function handleSubmitReview() {
@@ -573,7 +672,35 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
     setCoverPending("replace");
     setFormError("");
     try {
-      const payload = await shareApi.replaceCardCover(cardId, file);
+      const settingsResponse = await shareApi.publicMediaStorageSettings();
+      const useObjectStorage = settingsResponse.storage_mode === "object_storage";
+
+      let payload: CardAssetUpdateResponse;
+      if (useObjectStorage) {
+        const presign = await shareApi.presignCardCoverReplace(
+          cardId,
+          file.type || "application/octet-stream",
+          file.size,
+        );
+        const result = await uploadToPresignedURL({
+          file,
+          url: presign.url,
+          contentType: presign.content_type || file.type || "application/octet-stream",
+        });
+        const media: ShareUploadedMediaInfo = {
+          object_key: presign.object_key,
+          version_id: presign.version_id,
+          etag: result.etag,
+          size: file.size,
+          file_name: file.name,
+          mime_type: file.type || presign.content_type || "application/octet-stream",
+          namespace_id: presign.namespace_id,
+        };
+        payload = await shareApi.completeCardCoverReplace(cardId, media);
+      } else {
+        payload = await shareApi.replaceCardCover(cardId, file);
+      }
+
       setLoadedCard((current) => {
         if (!current) {
           return current;
@@ -636,7 +763,36 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
     setFormError("");
 
     try {
-      const payload = await shareApi.replaceCardAsset(cardId, slot, file);
+      const settingsResponse = await shareApi.publicMediaStorageSettings();
+      const useObjectStorage = settingsResponse.storage_mode === "object_storage";
+
+      let payload: CardAssetUpdateResponse;
+      if (useObjectStorage) {
+        const presign = await shareApi.presignCardAssetReplace(
+          cardId,
+          slot,
+          file.type || "application/octet-stream",
+          file.size,
+        );
+        const result = await uploadToPresignedURL({
+          file,
+          url: presign.url,
+          contentType: presign.content_type || file.type || "application/octet-stream",
+        });
+        const media: ShareUploadedMediaInfo = {
+          object_key: presign.object_key,
+          version_id: presign.version_id,
+          etag: result.etag,
+          size: file.size,
+          file_name: file.name,
+          mime_type: file.type || presign.content_type || "application/octet-stream",
+          namespace_id: presign.namespace_id,
+        };
+        payload = await shareApi.completeCardAssetReplace(cardId, slot, media);
+      } else {
+        payload = await shareApi.replaceCardAsset(cardId, slot, file);
+      }
+
       setLoadedCard((current) => {
         if (!current) {
           return current;

@@ -24,7 +24,7 @@ type StorageProvider interface {
 	Move(ctx context.Context, srcKey, dstKey string) error
 
 	// 预签名 URL
-	PresignPut(ctx context.Context, key string, ttl time.Duration) (string, error)
+	PresignPut(ctx context.Context, key string, ttl time.Duration, opts ...PresignOption) (string, error)
 	PresignGet(ctx context.Context, key string, ttl time.Duration) (string, error)
 
 	// 存储桶操作
@@ -84,6 +84,26 @@ func WithMetadata(m map[string]string) Option {
 func WithStorageClass(sc string) Option {
 	return func(o *Options) {
 		o.StorageClass = sc
+	}
+}
+
+// PresignOption 预签名上传选项
+type PresignOption func(*PresignOptions)
+
+type PresignOptions struct {
+	ContentType string
+	Size        int64
+}
+
+func WithPresignContentType(ct string) PresignOption {
+	return func(o *PresignOptions) {
+		o.ContentType = ct
+	}
+}
+
+func WithPresignSize(size int64) PresignOption {
+	return func(o *PresignOptions) {
+		o.Size = size
 	}
 }
 

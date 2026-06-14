@@ -470,6 +470,108 @@ type ShareCreateCardBundleInput struct {
 	MaxFileSize   int64
 }
 
+// 客户端直传卡片 bundle 相关类型
+
+type SharePrepareCardBundleAssetInput struct {
+	Slot        string
+	ContentType string
+	Size        int64
+}
+
+type SharePrepareCardBundleUploadInput struct {
+	CreatorID      string
+	Title          string
+	Description    string
+	Tags           []string
+	Visibility     string
+	Status         string
+	AccessMode     string
+	Assets         []SharePrepareCardBundleAssetInput
+	CoverContentType string
+	CoverSize        int64
+}
+
+type SharePresignedUploadEntry struct {
+	URL           string `json:"url"`
+	ObjectKey     string `json:"object_key"`
+	VersionID     string `json:"version_id"`
+	StorageKey    string `json:"storage_key"`
+	NamespaceID   string `json:"namespace_id"`
+	ContentType   string `json:"content_type"`
+}
+
+type SharePreparedCardBundleAsset struct {
+	Slot      string `json:"slot"`
+	SharePresignedUploadEntry
+}
+
+type SharePreparedCardBundleUpload struct {
+	CardID  string                          `json:"card_id"`
+	Cover   *SharePresignedUploadEntry      `json:"cover,omitempty"`
+	Assets  []SharePreparedCardBundleAsset  `json:"assets"`
+}
+
+type ShareUploadedMediaInfo struct {
+	ObjectKey   string `json:"object_key"`
+	VersionID   string `json:"version_id"`
+	ETag        string `json:"etag"`
+	Size        int64  `json:"size"`
+	FileName    string `json:"file_name"`
+	MimeType    string `json:"mime_type"`
+	NamespaceID string `json:"namespace_id"`
+}
+
+type ShareUploadedAssetInfo struct {
+	Slot string `json:"slot"`
+	ShareUploadedMediaInfo
+}
+
+type ShareCreateCardBundleFromPresignedInput struct {
+	CreatorID     string
+	CardID        string
+	Title         string
+	Description   string
+	Tags          []string
+	Visibility    string
+	Status        string
+	AccessMode    string
+	Assets        []ShareUploadedAssetInfo
+	Cover         *ShareUploadedMediaInfo
+	MaxFileSize   int64
+}
+
+type ShareUpdateCardCoverFromPresignedInput struct {
+	OwnerID     string
+	CardID      string
+	Cover       *ShareUploadedMediaInfo
+	MaxFileSize int64
+}
+
+type ShareUpdateCardAssetFromPresignedInput struct {
+	OwnerID     string
+	CardID      string
+	Slot        string
+	Asset       *ShareUploadedMediaInfo
+	MaxFileSize int64
+}
+
+type ShareUpdateCardMediaPresignInput struct {
+	OwnerID        string
+	CardID         string
+	Slot           string // empty for cover
+	ContentType    string
+	Size           int64
+}
+
+type ShareUpdateCardMediaPresignResult struct {
+	CardID      string `json:"card_id"`
+	NamespaceID string `json:"namespace_id"`
+	URL         string `json:"url"`
+	ObjectKey   string `json:"object_key"`
+	VersionID   string `json:"version_id"`
+	StorageKey  string `json:"storage_key"`
+}
+
 type ShareUpdateCardInput struct {
 	OwnerID     string
 	CardID      string

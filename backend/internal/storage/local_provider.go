@@ -358,7 +358,7 @@ func (p *LocalProvider) Move(ctx context.Context, srcKey, dstKey string) error {
 }
 
 // PresignPut 生成上传预签名 URL（本地存储不支持）
-func (p *LocalProvider) PresignPut(ctx context.Context, key string, ttl time.Duration) (string, error) {
+func (p *LocalProvider) PresignPut(ctx context.Context, key string, ttl time.Duration, opts ...PresignOption) (string, error) {
 	return "", NewInternalError("presign not supported for local storage", nil)
 }
 

@@ -264,6 +264,10 @@ export type ShareAuthSettingsResponse = {
   settings: ShareAuthSettings;
 };
 
+export type SharePublicMediaStorageSettingsResponse = {
+  storage_mode: "local" | "object_storage";
+};
+
 export type ShareMediaStorageSettingsResponse = {
   ok: true;
   settings: ShareMediaStorageSettings;
@@ -381,6 +385,39 @@ export type SharePreparedPresignPut = {
   version_id: string;
   storage_key: string;
 };
+
+export type SharePresignedUploadEntry = {
+  url: string;
+  object_key: string;
+  version_id: string;
+  storage_key: string;
+  namespace_id: string;
+  content_type: string;
+};
+
+export type SharePreparedCardBundleAsset = {
+  slot: CardContentSlot;
+} & SharePresignedUploadEntry;
+
+export type SharePreparedCardBundleUpload = {
+  card_id: string;
+  cover?: SharePresignedUploadEntry;
+  assets: SharePreparedCardBundleAsset[];
+};
+
+export type ShareUploadedMediaInfo = {
+  object_key: string;
+  version_id: string;
+  etag: string;
+  size: number;
+  file_name: string;
+  mime_type: string;
+  namespace_id: string;
+};
+
+export type ShareUploadedAssetInfo = {
+  slot: CardContentSlot;
+} & ShareUploadedMediaInfo;
 
 export type ShareAuditLog = {
   id: string;

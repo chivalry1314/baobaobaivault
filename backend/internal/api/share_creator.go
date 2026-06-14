@@ -350,6 +350,184 @@ func (h *Handler) shareCreateCardBundle(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"card": card})
 }
 
+func (h *Handler) shareCreateCardBundlePresign(c *gin.Context) {
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		jsonError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	var req struct {
+		Title            string `json:"title" binding:"required"`
+		Description      string `json:"description"`
+		Tags             []string `json:"tags"`
+		Visibility       string `json:"visibility" binding:"required"`
+		Status           string `json:"status"`
+		AccessMode       string `json:"access_mode" binding:"required"`
+		CoverContentType string `json:"cover_content_type"`
+		CoverSize        int64  `json:"cover_size"`
+		Assets           []struct {
+			Slot        string `json:"slot" binding:"required"`
+			ContentType string `json:"content_type"`
+			Size        int64  `json:"size"`
+		} `json:"assets" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	assets := make([]service.SharePrepareCardBundleAssetInput, 0, len(req.Assets))
+	for _, a := range req.Assets {
+		assets = append(assets, service.SharePrepareCardBundleAssetInput{
+			Slot:        a.Slot,
+			ContentType: a.ContentType,
+			Size:        a.Size,
+		})
+	}
+
+	result, err := h.shareService.PrepareCardBundleUpload(c.Request.Context(), service.SharePrepareCardBundleUploadInput{
+		CreatorID:        user.ID,
+		Title:            req.Title,
+		Description:      req.Description,
+		Tags:             req.Tags,
+		Visibility:       req.Visibility,
+		Status:           req.Status,
+		AccessMode:       req.AccessMode,
+		CoverContentType: req.CoverContentType,
+		CoverSize:        req.CoverSize,
+		Assets:           assets,
+	})
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareCardTitleRequired),
+			errors.Is(err, service.ErrShareInvalidVisibility),
+			errors.Is(err, service.ErrShareInvalidAccessMode),
+			errors.Is(err, service.ErrShareInvalidCardStatus),
+			errors.Is(err, service.ErrShareInvalidCardSlot),
+			errors.Is(err, service.ErrShareFileRequired):
+			status = http.StatusBadRequest
+		case errors.Is(err, service.ErrShareUserNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareForbiddenRole):
+			status = http.StatusForbidden
+		case errors.Is(err, service.ErrShareSaveFileFailed):
+			status = http.StatusInternalServerError
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+func (h *Handler) shareCreateCardBundleComplete(c *gin.Context) {
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		jsonError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	maxUploadSize := h.cfg.Storage.MaxFileSize
+	if maxUploadSize <= 0 {
+		maxUploadSize = shareFallbackMaxUploadSize
+	}
+
+	var req struct {
+		CardID      string `json:"card_id" binding:"required"`
+		Title       string `json:"title" binding:"required"`
+		Description string `json:"description"`
+		Tags        []string `json:"tags"`
+		Visibility  string `json:"visibility" binding:"required"`
+		Status      string `json:"status"`
+		AccessMode  string `json:"access_mode" binding:"required"`
+		Cover       *struct {
+			ObjectKey   string `json:"object_key" binding:"required"`
+			VersionID   string `json:"version_id" binding:"required"`
+			ETag        string `json:"etag"`
+			Size        int64  `json:"size" binding:"required"`
+			FileName    string `json:"file_name" binding:"required"`
+			MimeType    string `json:"mime_type"`
+			NamespaceID string `json:"namespace_id"`
+		} `json:"cover"`
+		Assets []struct {
+			Slot string `json:"slot" binding:"required"`
+			ObjectKey   string `json:"object_key" binding:"required"`
+			VersionID   string `json:"version_id" binding:"required"`
+			ETag        string `json:"etag"`
+			Size        int64  `json:"size" binding:"required"`
+			FileName    string `json:"file_name" binding:"required"`
+			MimeType    string `json:"mime_type"`
+			NamespaceID string `json:"namespace_id"`
+		} `json:"assets" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	var cover *service.ShareUploadedMediaInfo
+	if req.Cover != nil {
+		cover = &service.ShareUploadedMediaInfo{
+			ObjectKey:   req.Cover.ObjectKey,
+			VersionID:   req.Cover.VersionID,
+			ETag:        req.Cover.ETag,
+			Size:        req.Cover.Size,
+			FileName:    req.Cover.FileName,
+			MimeType:    req.Cover.MimeType,
+			NamespaceID: req.Cover.NamespaceID,
+		}
+	}
+
+	assets := make([]service.ShareUploadedAssetInfo, 0, len(req.Assets))
+	for _, a := range req.Assets {
+		assets = append(assets, service.ShareUploadedAssetInfo{
+			Slot: a.Slot,
+			ShareUploadedMediaInfo: service.ShareUploadedMediaInfo{
+				ObjectKey:   a.ObjectKey,
+				VersionID:   a.VersionID,
+				ETag:        a.ETag,
+				Size:        a.Size,
+				FileName:    a.FileName,
+				MimeType:    a.MimeType,
+				NamespaceID: a.NamespaceID,
+			},
+		})
+	}
+
+	card, err := h.shareService.CreateCardBundleFromPresignedUpload(c.Request.Context(), service.ShareCreateCardBundleFromPresignedInput{
+		CreatorID:   user.ID,
+		CardID:      req.CardID,
+		Title:       req.Title,
+		Description: req.Description,
+		Tags:        req.Tags,
+		Visibility:  req.Visibility,
+		Status:      req.Status,
+		AccessMode:  req.AccessMode,
+		Cover:       cover,
+		Assets:      assets,
+		MaxFileSize: maxUploadSize,
+	})
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareFileTooLarge):
+			status = http.StatusRequestEntityTooLarge
+		case errors.Is(err, service.ErrShareSaveFileFailed):
+			status = http.StatusInternalServerError
+		case errors.Is(err, service.ErrShareUserNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareForbiddenRole):
+			status = http.StatusForbidden
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"card": card})
+}
+
 func (h *Handler) shareUpdateCard(c *gin.Context) {
 	user, err := h.requireShareUser(c)
 	if err != nil {
@@ -713,6 +891,210 @@ func (h *Handler) shareDeleteCard(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+func (h *Handler) shareReplaceCardCoverPresign(c *gin.Context) {
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		jsonError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	var req struct {
+		ContentType string `json:"content_type" binding:"required"`
+		Size        int64  `json:"size"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	result, err := h.shareService.PrepareCardCoverReplaceUpload(c.Request.Context(), service.ShareUpdateCardMediaPresignInput{
+		OwnerID:     user.ID,
+		CardID:      c.Param("cardId"),
+		ContentType: req.ContentType,
+		Size:        req.Size,
+	})
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareCardNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareCardForbidden),
+			errors.Is(err, service.ErrShareForbiddenRole):
+			status = http.StatusForbidden
+		case errors.Is(err, service.ErrShareSaveFileFailed):
+			status = http.StatusInternalServerError
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+func (h *Handler) shareReplaceCardCoverComplete(c *gin.Context) {
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		jsonError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	maxUploadSize := h.cfg.Storage.MaxFileSize
+	if maxUploadSize <= 0 {
+		maxUploadSize = shareFallbackMaxUploadSize
+	}
+
+	var req struct {
+		ObjectKey   string `json:"object_key" binding:"required"`
+		VersionID   string `json:"version_id" binding:"required"`
+		ETag        string `json:"etag"`
+		Size        int64  `json:"size" binding:"required"`
+		FileName    string `json:"file_name" binding:"required"`
+		MimeType    string `json:"mime_type"`
+		NamespaceID string `json:"namespace_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	detail, err := h.shareService.ReplaceCardCoverFromPresignedUpload(c.Request.Context(), service.ShareUpdateCardCoverFromPresignedInput{
+		OwnerID:     user.ID,
+		CardID:      c.Param("cardId"),
+		MaxFileSize: maxUploadSize,
+		Cover: &service.ShareUploadedMediaInfo{
+			ObjectKey:   req.ObjectKey,
+			VersionID:   req.VersionID,
+			ETag:        req.ETag,
+			Size:        req.Size,
+			FileName:    req.FileName,
+			MimeType:    req.MimeType,
+			NamespaceID: req.NamespaceID,
+		},
+	})
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareFileTooLarge):
+			status = http.StatusRequestEntityTooLarge
+		case errors.Is(err, service.ErrShareSaveFileFailed):
+			status = http.StatusInternalServerError
+		case errors.Is(err, service.ErrShareCardNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareCardForbidden),
+			errors.Is(err, service.ErrShareForbiddenRole):
+			status = http.StatusForbidden
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"card": detail.Card, "assets": detail.Assets})
+}
+
+func (h *Handler) shareReplaceCardAssetPresign(c *gin.Context) {
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		jsonError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	var req struct {
+		ContentType string `json:"content_type"`
+		Size        int64  `json:"size"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	result, err := h.shareService.PrepareCardAssetReplaceUpload(c.Request.Context(), service.ShareUpdateCardMediaPresignInput{
+		OwnerID:     user.ID,
+		CardID:      c.Param("cardId"),
+		Slot:        c.Param("slot"),
+		ContentType: req.ContentType,
+		Size:        req.Size,
+	})
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareCardNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareCardForbidden),
+			errors.Is(err, service.ErrShareForbiddenRole):
+			status = http.StatusForbidden
+		case errors.Is(err, service.ErrShareInvalidCardSlot):
+			status = http.StatusBadRequest
+		case errors.Is(err, service.ErrShareSaveFileFailed):
+			status = http.StatusInternalServerError
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+func (h *Handler) shareReplaceCardAssetComplete(c *gin.Context) {
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		jsonError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	maxUploadSize := h.cfg.Storage.MaxFileSize
+	if maxUploadSize <= 0 {
+		maxUploadSize = shareFallbackMaxUploadSize
+	}
+
+	var req struct {
+		ObjectKey   string `json:"object_key" binding:"required"`
+		VersionID   string `json:"version_id" binding:"required"`
+		ETag        string `json:"etag"`
+		Size        int64  `json:"size" binding:"required"`
+		FileName    string `json:"file_name" binding:"required"`
+		MimeType    string `json:"mime_type"`
+		NamespaceID string `json:"namespace_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	detail, err := h.shareService.ReplaceCardAssetFromPresignedUpload(c.Request.Context(), service.ShareUpdateCardAssetFromPresignedInput{
+		OwnerID:     user.ID,
+		CardID:      c.Param("cardId"),
+		Slot:        c.Param("slot"),
+		MaxFileSize: maxUploadSize,
+		Asset: &service.ShareUploadedMediaInfo{
+			ObjectKey:   req.ObjectKey,
+			VersionID:   req.VersionID,
+			ETag:        req.ETag,
+			Size:        req.Size,
+			FileName:    req.FileName,
+			MimeType:    req.MimeType,
+			NamespaceID: req.NamespaceID,
+		},
+	})
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareFileTooLarge):
+			status = http.StatusRequestEntityTooLarge
+		case errors.Is(err, service.ErrShareSaveFileFailed):
+			status = http.StatusInternalServerError
+		case errors.Is(err, service.ErrShareCardNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareCardForbidden),
+			errors.Is(err, service.ErrShareForbiddenRole):
+			status = http.StatusForbidden
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"card": detail.Card, "assets": detail.Assets})
 }
 
 func (h *Handler) shareSubmitCardReview(c *gin.Context) {
