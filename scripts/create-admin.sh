@@ -72,7 +72,8 @@ echo
 echo "Creating super admin..."
 docker compose exec -T backend /app/server create-admin \
   --email "$ADMIN_EMAIL" \
-  --password "$ADMIN_PASSWORD"
+  --password "$ADMIN_PASSWORD" \
+  --force-password-change
 
 echo
 echo "=== Admin user created ==="

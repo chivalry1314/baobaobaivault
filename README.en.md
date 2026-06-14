@@ -603,6 +603,10 @@ bash scripts/create-admin.sh
 The script will generate a random password, create the admin, and print it.
 Save the password immediately.
 
+The new admin will be forced to change the password on the first login, so the
+random password only needs to be used once. After logging in, the admin can also
+change the password at any time from **Creator Center → Profile Settings**.
+
 If you prepared the files manually instead:
 
 ```bash
@@ -610,7 +614,8 @@ cd /opt/baobaobaivault
 docker compose up -d
 docker compose exec backend /app/server create-admin \
   --email admin@example.com \
-  --password "$(openssl rand -base64 24)"
+  --password "$(openssl rand -base64 24)" \
+  --force-password-change
 ```
 
 ## 11. Post-Deployment Verification

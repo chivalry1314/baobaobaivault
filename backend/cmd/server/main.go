@@ -131,6 +131,7 @@ func runCreateAdmin(args []string) error {
 	fs := flag.NewFlagSet("create-admin", flag.ExitOnError)
 	email := fs.String("email", "", "admin email address")
 	password := fs.String("password", "", "admin password")
+	forcePasswordChange := fs.Bool("force-password-change", false, "require the user to change password on next login")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -149,7 +150,7 @@ func runCreateAdmin(args []string) error {
 		return fmt.Errorf("admin password must be at least 6 characters")
 	}
 
-	if err := createOrUpdateAdmin(db, adminEmail, *password, logger); err != nil {
+	if err := createOrUpdateAdmin(db, adminEmail, *password, *forcePasswordChange, logger); err != nil {
 		return err
 	}
 

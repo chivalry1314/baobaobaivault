@@ -180,7 +180,7 @@ func runBootstrap(args []string) error {
 		return fmt.Errorf("generate admin password: %w", err)
 	}
 
-	if err := createOrUpdateAdmin(db, *adminEmail, adminPassword, logger); err != nil {
+	if err := createOrUpdateAdmin(db, *adminEmail, adminPassword, true, logger); err != nil {
 		return fmt.Errorf("create admin user: %w", err)
 	}
 
@@ -334,7 +334,7 @@ log:
 
 // createOrUpdateAdmin ensures a manager account exists for the given email.
 // It is shared by the create-admin and bootstrap subcommands.
-func createOrUpdateAdmin(db *gorm.DB, email, password string, logger *zap.Logger) error {
+func createOrUpdateAdmin(db *gorm.DB, email, password string, forcePasswordChange bool, logger *zap.Logger) error {
 	ctx := context.Background()
 	email = strings.TrimSpace(strings.ToLower(email))
 	if email == "" {
@@ -374,7 +374,7 @@ func createOrUpdateAdmin(db *gorm.DB, email, password string, logger *zap.Logger
 	user.EmailVerified = true
 	verifiedAt := now
 	user.EmailVerifiedAt = &verifiedAt
-	user.ForcePasswordChange = false
+	user.ForcePasswordChange = forcePasswordChange
 
 	if err := user.SetPassword(password); err != nil {
 		return fmt.Errorf("hash password: %w", err)

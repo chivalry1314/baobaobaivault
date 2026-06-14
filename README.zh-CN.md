@@ -602,6 +602,9 @@ bash scripts/create-admin.sh
 
 脚本会自动生成随机密码、创建管理员并打印出来。请立即保存密码。
 
+首次登录时系统会强制要求修改密码，因此自动生成的复杂密码只需用一次。
+登录后也可以在**创作中心 → 个人资料设置**中随时自行修改密码。
+
 如果你是手动准备的配置文件：
 
 ```bash
@@ -609,7 +612,8 @@ cd /opt/baobaobaivault
 docker compose up -d
 docker compose exec backend /app/server create-admin \
   --email admin@example.com \
-  --password "$(openssl rand -base64 24)"
+  --password "$(openssl rand -base64 24)" \
+  --force-password-change
 ```
 
 ## 11. 部署后验证
