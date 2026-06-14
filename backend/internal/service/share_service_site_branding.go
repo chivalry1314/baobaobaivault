@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/baobaobai/baobaobaivault/internal/model"
 	"gorm.io/gorm"
@@ -16,6 +17,7 @@ const (
 	shareSiteBrandingLogoMaxBytes      = 5 * 1024 * 1024
 	shareSiteBrandingLogoNamespaceName = "share-site-branding"
 	shareSiteBrandingLogoObjectKey     = "site-branding/logo"
+	shareSiteBrandingCacheTTL          = 5 * time.Second
 )
 
 func defaultShareSiteBrandingSettingsView() ShareSiteBrandingSettingsView {
@@ -127,6 +129,7 @@ func (s *ShareService) currentShareSiteBrandingSettings() ShareSiteBrandingSetti
 func (s *ShareService) setShareSiteBrandingSettings(cfg ShareSiteBrandingSettingsView) {
 	s.shareSiteBrandMu.Lock()
 	s.shareSiteBrandCfg = cfg
+	s.shareSiteBrandLoadedAt = time.Now().UTC()
 	s.shareSiteBrandMu.Unlock()
 }
 
@@ -134,6 +137,13 @@ func (s *ShareService) loadShareSiteBrandingSettingsFromDB() {
 	if s == nil || s.db == nil {
 		return
 	}
+
+	s.shareSiteBrandMu.RLock()
+	if !s.shareSiteBrandLoadedAt.IsZero() && time.Since(s.shareSiteBrandLoadedAt) < shareSiteBrandingCacheTTL {
+		s.shareSiteBrandMu.RUnlock()
+		return
+	}
+	s.shareSiteBrandMu.RUnlock()
 
 	var settings model.ShareSiteBrandingSettings
 	if err := s.db.Where("singleton = ?", shareSiteBrandingSettingsSingleton).First(&settings).Error; err != nil {

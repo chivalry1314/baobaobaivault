@@ -7,6 +7,7 @@ import type {
   SessionResponse,
   ShareSiteBrandingSettingsResponse,
 } from "@/lib/shared";
+import { SHARE_SITE_BRANDING_CACHE_TAG } from "@/lib/site-branding-cache";
 
 const backendOrigin =
   process.env.SHARE_BACKEND_ORIGIN ?? "http://127.0.0.1:8080";
@@ -35,6 +36,27 @@ async function requestServer<T>(
     headers: {
       Accept: "application/json",
       ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+      ...init?.headers,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Request failed (${response.status})`);
+  }
+
+  return (await response.json()) as T;
+}
+
+async function requestPublicServer<T>(
+  path: string,
+  init?: Omit<RequestInit, "headers"> & {
+    headers?: Record<string, string>;
+  },
+): Promise<T> {
+  const response = await fetch(buildServerUrl(path), {
+    ...init,
+    headers: {
+      Accept: "application/json",
       ...init?.headers,
     },
   });
@@ -77,7 +99,7 @@ export async function getServerDiscoverCards(input?: {
     : "/api/share/discover/cards";
 
   try {
-    return await requestServer<{
+    return await requestPublicServer<{
       cards: DiscoverCardItem[];
       pagination: DiscoverCardsPagination;
     }>(path, {
@@ -92,10 +114,12 @@ export async function getServerDiscoverCards(input?: {
 
 export async function getServerCardDetail(cardId: string) {
   try {
-    return await requestServer<CardDetailResponse>(
+    return await requestPublicServer<CardDetailResponse>(
       `/api/share/cards/${encodeURIComponent(cardId)}`,
       {
-        cache: "no-store",
+        next: {
+          revalidate: 60,
+        },
       },
     );
   } catch {
@@ -105,10 +129,13 @@ export async function getServerCardDetail(cardId: string) {
 
 export async function getServerSiteBrandingSettings() {
   try {
-    const response = await requestServer<ShareSiteBrandingSettingsResponse>(
+    const response = await requestPublicServer<ShareSiteBrandingSettingsResponse>(
       "/api/share/discover/site-branding",
       {
-        cache: "no-store",
+        next: {
+          revalidate: 5,
+          tags: [SHARE_SITE_BRANDING_CACHE_TAG],
+        },
       },
     );
     return response.settings;

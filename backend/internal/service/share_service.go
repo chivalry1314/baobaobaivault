@@ -104,8 +104,9 @@ type ShareService struct {
 	shareAuthCfg      config.ShareAuthConfig
 	shareMediaCfgMu   sync.RWMutex
 	shareMediaCfg     ShareMediaStorageSettingsView
-	shareSiteBrandMu  sync.RWMutex
-	shareSiteBrandCfg ShareSiteBrandingSettingsView
+	shareSiteBrandMu      sync.RWMutex
+	shareSiteBrandCfg     ShareSiteBrandingSettingsView
+	shareSiteBrandLoadedAt time.Time
 	emailService      *EmailService
 }
 
