@@ -53,6 +53,10 @@ This repo can expose a standalone `mimiwebpushserver`-compatible Web Push API un
 - This switch only affects newly uploaded share card media
 - Historical local files are not migrated automatically in the first stage
 - Keep backend local storage mounted during rollout if you enable local fallback
+- In `object_storage` mode the browser uploads directly to OSS, so you must also configure:
+  - Bucket CORS (production domain and `http://localhost:3002` for local testing)
+  - RAM permissions for the backend user: `oss:PutObject`, `oss:GetObject`, `oss:DeleteObject`, `oss:ListObjects`
+  - If using `acs:SourceIp` restrictions, whitelist both the backend server IP and your local development IP
 - Detailed guides:
   - English: `backend/config/SHARE_MEDIA_STORAGE_OSS_DEPLOY.md`
   - Chinese: `backend/config/SHARE_MEDIA_STORAGE_OSS_DEPLOY_ZH.md`

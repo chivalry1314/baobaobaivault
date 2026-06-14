@@ -109,6 +109,21 @@ If you want card covers and attachments to use object storage:
 
 - [ ] An object storage config exists in `System Management -> Storage Config`
 - [ ] Namespaces exist in `System Management -> Namespaces`
+- [ ] The object storage bucket has CORS configured:
+  - [ ] Production origin: `https://your-domain`
+  - [ ] Local testing origin: `http://localhost:3002`
+  - [ ] Allowed Methods includes `GET`, `PUT`, `POST`, `HEAD`
+  - [ ] Allowed Headers includes `Content-Type`, `*`
+  - [ ] Exposed Headers includes `ETag`
+  - [ ] Cache time is set to `300`
+- [ ] The backend RAM sub-account is granted:
+  - [ ] `oss:PutObject`
+  - [ ] `oss:GetObject`
+  - [ ] `oss:DeleteObject`
+  - [ ] `oss:ListObjects`
+- [ ] If using an `acs:SourceIp` access restriction:
+  - [ ] The backend server egress IP is whitelisted
+  - [ ] The local development machine IP is whitelisted (required for local testing)
 - [ ] In `System Management -> Media Storage`, you selected:
   - one cover namespace
   - one asset namespace

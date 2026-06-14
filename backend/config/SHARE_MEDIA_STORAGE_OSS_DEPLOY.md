@@ -26,8 +26,71 @@ Before switching media writes to OSS, prepare these pieces:
 2. At least one namespace for covers
 3. At least one namespace for attachments
 4. Backend file read/write still available for old local files during transition
+5. The object storage bucket has CORS configured (required for browser direct upload)
+6. The RAM sub-account used by the backend has sufficient permissions
 
 In the current implementation, media storage mode is configured in the system management UI, not in `config.yaml`.
+
+### 2.1 OSS CORS Configuration
+
+Because `object_storage` mode lets the browser PUT files directly to OSS, the bucket must have CORS configured.
+
+Aliyun console URL template:
+
+```
+https://oss.console.aliyun.com/bucket/oss-<region>/<bucket-name>/data-security/cors
+```
+
+Recommended rule:
+
+- Origin:
+  - Production: `https://your-domain`
+  - Local testing: `http://localhost:3002`
+- Allowed Methods: `GET`, `PUT`, `POST`, `HEAD`
+- Allowed Headers: `Content-Type`, `*`
+- Exposed Headers: `ETag`
+- Cache Time: `300`
+
+Note: For local testing the origin must include the protocol and port, e.g. `http://localhost:3002`.
+
+### 2.2 RAM Permissions
+
+The RAM sub-account used by the backend needs at least these actions:
+
+- `oss:PutObject`: generate presigned upload URLs
+- `oss:GetObject`: read / stat objects
+- `oss:DeleteObject`: delete objects (used during rollback, replacement, and card deletion)
+- `oss:ListObjects`: some management operations
+
+Minimal policy example:
+
+```json
+{
+  "Version": "1",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "oss:PutObject",
+        "oss:GetObject",
+        "oss:DeleteObject",
+        "oss:ListObjects"
+      ],
+      "Resource": [
+        "acs:oss:*:*:baobaobaibucket",
+        "acs:oss:*:*:baobaobaibucket/*"
+      ]
+    }
+  ]
+}
+```
+
+If you restrict access with an `acs:SourceIp` condition, note that:
+
+- Backend requests to OSS come from the backend server egress IP
+- Browser direct uploads during local development come from your local machine IP
+- During local testing either remove the `acs:SourceIp` condition or whitelist both the backend server IP and your local development IP
+- Otherwise you will see `403 AccessDenied: You have no right to access this object because of bucket acl`
 
 ## 3. What Still Uses Local Config
 
@@ -86,11 +149,15 @@ You can use:
 Current implementation behavior:
 
 - new uploads write according to `System Management -> Media Storage`
+- in `object_storage` mode, covers and attachments use **browser direct upload to OSS**:
+  - the backend generates a signed PUT URL (presign) and returns it to the frontend
+  - the browser PUTs the file directly to OSS
+  - after upload, the frontend calls the complete endpoint and the backend writes object metadata into `objects` / `object_versions`
+- in `local` mode, files are still uploaded through the backend to local disk
 - old records are read according to each row's recorded storage backend
 - local files can still be used as fallback when enabled
 - public media URLs remain unchanged
-- frontend direct-to-OSS upload is not enabled yet
-- downloads and previews are still streamed by the backend
+- downloads and previews are still streamed by the backend (bucket remains private)
 
 That means you do not need to change share card URLs after switching.
 
@@ -144,6 +211,12 @@ Do not remove local storage volume immediately after switching to OSS, because:
 - fallback reads may still be needed
 
 ## 10. Suggested Verification Checklist
+
+Before enabling object storage mode, confirm:
+
+- [ ] Bucket CORS is configured (production domain plus local `http://localhost:3002`)
+- [ ] RAM sub-account is granted `oss:PutObject`, `oss:GetObject`, `oss:DeleteObject`, `oss:ListObjects`
+- [ ] If using `acs:SourceIp` restriction, the local development IP is whitelisted
 
 After enabling object storage mode, verify all of the following:
 

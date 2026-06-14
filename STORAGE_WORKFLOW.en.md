@@ -162,6 +162,26 @@ Then click:
 
 - `Save Media Storage Settings`
 
+### 4.1 Browser Direct-to-OSS Prerequisites
+
+> Only relevant when `Storage mode` is `object_storage`.
+
+The current `object_storage` mode uses browser direct upload to OSS: the backend returns a presign URL, the browser PUTs the file directly to OSS, and then calls the complete endpoint to persist metadata. In addition to the system management configuration, confirm the object-storage side:
+
+- **Bucket CORS**
+  - Production origin: `https://your-domain`
+  - Local testing origin: `http://localhost:3002`
+  - Allowed Methods: `GET`, `PUT`, `POST`, `HEAD`
+  - Allowed Headers: `Content-Type`, `*`
+  - Exposed Headers: `ETag`
+  - Cache time: `300`
+- **RAM permissions**
+  - The backend RAM sub-account needs at least `oss:PutObject`, `oss:GetObject`, `oss:DeleteObject`, `oss:ListObjects`
+- **IP whitelist**
+  - If you restrict access with `acs:SourceIp`, whitelist both the backend server egress IP and your local development machine IP during local testing, otherwise direct uploads will return `403 AccessDenied`
+
+See [Share Media Storage to OSS Guide](./backend/config/SHARE_MEDIA_STORAGE_OSS_DEPLOY.md) for detailed examples.
+
 ## 5. Step 4: Validate the Object Pipeline
 
 Use this order for testing.
@@ -263,6 +283,22 @@ You need to:
 
 1. unbind or rebind the related namespaces
 2. delete the storage config afterwards
+
+### 7.6 Direct OSS upload returns 403 AccessDenied after switching
+
+Common causes:
+
+- The RAM Policy `acs:SourceIp` only allows the backend server IP, not the local development machine IP
+- The bucket CORS origin is wrong, e.g. local testing is missing `http://localhost:3002`
+- The RAM sub-account is missing the `oss:PutObject` permission
+
+### 7.7 Object uploads succeed but card preview returns 404
+
+In the browser direct upload flow, if the backend does not successfully call complete, object metadata is not written to `objects` / `object_versions`, so previews return 404. Confirm:
+
+- The frontend calls the complete endpoint after upload
+- The complete endpoint returns success
+- The backend version includes the object metadata finalize logic
 
 ## 8. Recommended Aliyun OSS Practice
 

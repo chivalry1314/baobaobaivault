@@ -26,8 +26,71 @@
 2. 至少一个用于封面的命名空间
 3. 至少一个用于附件的命名空间
 4. 切换期间，后端本地文件卷仍然保留，便于旧文件继续读取
+5. 对象存储 Bucket 已配置好 CORS（浏览器直传需要）
+6. 后端使用的 RAM 子账号已授予足够权限
 
 当前实现里，“媒体存储模式”不是写在 `config.yaml` 里，而是通过系统管理页面写入数据库配置。
+
+### 2.1 OSS CORS 配置
+
+因为 `object_storage` 模式下浏览器会直接把文件 PUT 到 OSS，所以 Bucket 必须配置 CORS。
+
+阿里云控制台地址模板：
+
+```
+https://oss.console.aliyun.com/bucket/oss-<地域>/<bucket-name>/data-security/cors
+```
+
+推荐规则：
+
+- 来源：
+  - 生产环境：`https://你的域名`
+  - 本地测试：`http://localhost:3002`
+- 允许 Methods：`GET`、`PUT`、`POST`、`HEAD`
+- 允许 Headers：`Content-Type`、`*`
+- 暴露 Headers：`ETag`
+- 缓存时间：`300`
+
+注意：本地测试时来源必须带协议和端口，例如 `http://localhost:3002`。
+
+### 2.2 RAM 权限配置
+
+后端使用的 RAM 子账号至少需要以下 Action：
+
+- `oss:PutObject`：生成预签名上传 URL
+- `oss:GetObject`：读取 / Stat 对象
+- `oss:DeleteObject`：删除对象（回滚、替换、删除卡片时需要）
+- `oss:ListObjects`：部分管理操作需要
+
+最小 Policy 示例：
+
+```json
+{
+  "Version": "1",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "oss:PutObject",
+        "oss:GetObject",
+        "oss:DeleteObject",
+        "oss:ListObjects"
+      ],
+      "Resource": [
+        "acs:oss:*:*:baobaobaibucket",
+        "acs:oss:*:*:baobaobaibucket/*"
+      ]
+    }
+  ]
+}
+```
+
+如果你使用 `acs:SourceIp` 条件限制访问来源，请注意：
+
+- 后端请求 OSS 时会带着后端服务器出口 IP
+- 本地开发时浏览器直接请求 OSS，会带着本地开发机 IP
+- 因此本地测试阶段要么去掉 `acs:SourceIp` 限制，要么把后端服务器 IP 和本地开发机 IP 都加入白名单
+- 否则会出现 `403 AccessDenied: You have no right to access this object because of bucket acl` 错误
 
 ## 3. 仍然和本地配置有关的项
 
@@ -88,11 +151,15 @@ storage:
 当前这版实现的行为是：
 
 - 新上传文件根据“系统管理 -> 媒体存储”里的开关决定写本地还是写 OSS
+- `object_storage` 模式下，封面和附件采用**浏览器直传 OSS**：
+  - 后端生成带签名的 PUT URL（presign）返回给前端
+  - 浏览器直接把文件 PUT 到 OSS
+  - 上传完成后前端调用 complete 接口，后端把对象元数据写入 `objects` / `object_versions`
+- `local` 模式下，文件仍然通过后端中转写入服务器本地磁盘
 - 历史文件按每条记录自己的存储字段来读取
 - 如果开启了本地回退，旧本地文件仍然可以继续服务
 - 对外的卡片媒体访问 URL 不变
-- 目前还没有做前端直传 OSS
-- 下载和预览仍然由后端负责流式输出
+- 下载和预览仍然由后端负责流式输出（bucket 保持私有）
 
 这意味着你切换到 OSS 后，不需要修改现有分享卡片的访问链接。
 
@@ -146,6 +213,12 @@ storage:
 - 本地回退读取可能还在生效
 
 ## 10. 推荐验证清单
+
+开启对象存储模式前，先确认：
+
+- [ ] Bucket CORS 已配置（生产域名 + 本地 `http://localhost:3002`）
+- [ ] RAM 子账号已授予 `oss:PutObject`、`oss:GetObject`、`oss:DeleteObject`、`oss:ListObjects`
+- [ ] 如果使用 `acs:SourceIp` 限制，本地开发机 IP 已加入白名单
 
 开启对象存储模式后，建议至少验证下面这些动作：
 

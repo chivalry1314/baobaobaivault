@@ -148,6 +148,19 @@ cors:
   allow_credentials: true
   max_age: 86400
 
+share_public_read_cors:
+  enabled: true
+  # Public read-only share endpoints are intentionally exposed like query APIs:
+  #   - /api/share/discover/cards
+  #   - /api/share/discover/system-themes
+  #   - /api/share/cards/:cardId and public preview/download resources beneath it
+  allow_origins: ["*"]
+  allow_methods: ["GET", "HEAD", "OPTIONS"]
+  allow_headers: ["*"]
+  expose_headers: ["Content-Disposition", "Content-Length", "ETag"]
+  allow_credentials: false
+  max_age: 86400
+
 database:
   host: "postgres"
   port: 5432

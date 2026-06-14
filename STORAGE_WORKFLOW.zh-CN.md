@@ -163,6 +163,26 @@
 
 - `保存媒体存储设置`
 
+### 4.1 浏览器直传 OSS 的前置检查
+
+> 仅当“存储模式”为 `object_storage` 时需要关注。
+
+当前 `object_storage` 模式采用浏览器直传 OSS：后端返回 presign URL，浏览器直接把文件 PUT 到 OSS，上传完成后再调用 complete 接口落库。因此除了系统管理里的配置，还要确认对象存储侧：
+
+- **Bucket CORS**
+  - 生产来源：`https://你的域名`
+  - 本地测试来源：`http://localhost:3002`
+  - Allowed Methods：`GET`、`PUT`、`POST`、`HEAD`
+  - Allowed Headers：`Content-Type`、`*`
+  - Exposed Headers：`ETag`
+  - 缓存时间：`300`
+- **RAM 权限**
+  - 后端 RAM 子账号至少拥有 `oss:PutObject`、`oss:GetObject`、`oss:DeleteObject`、`oss:ListObjects`
+- **IP 白名单**
+  - 如果使用 `acs:SourceIp` 限制访问来源，本地测试阶段需要把后端服务器 IP 和本地开发机 IP 都加入白名单，否则浏览器直传会报 `403 AccessDenied`
+
+详细示例参见 [Share 媒体文件切换到 OSS 指南](./backend/config/SHARE_MEDIA_STORAGE_OSS_DEPLOY_ZH.md)。
+
 ## 5. 第四步：验证对象链路
 
 建议按下面顺序验证。
@@ -264,6 +284,22 @@
 
 1. 去命名空间页面解绑或改绑其他存储配置
 2. 再删除该存储配置
+
+### 7.6 切到 OSS 后浏览器直传报 403 AccessDenied
+
+常见原因：
+
+- RAM Policy 里 `acs:SourceIp` 只放行后端服务器 IP，没放行本地开发机 IP
+- Bucket CORS 来源写错，例如本地测试时没写 `http://localhost:3002`
+- RAM 子账号缺少 `oss:PutObject` 权限
+
+### 7.7 切到 OSS 后对象能上传但卡片预览 404
+
+在浏览器直传流程里，如果后端没有成功调用 complete，对象的元数据就不会写入 `objects` / `object_versions` 表，预览时就会 404。请确认：
+
+- 前端上传成功后确实调用了 complete 接口
+- complete 接口没有报错
+- 后端版本已包含对象元数据 finalize 逻辑
 
 ## 8. 阿里云 OSS 推荐做法
 

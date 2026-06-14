@@ -109,6 +109,21 @@
 
 - [ ] 已在“系统管理 -> 存储配置”中创建对象存储配置
 - [ ] 已在“系统管理 -> 命名空间”中创建命名空间
+- [ ] 对象存储 Bucket 已配置 CORS：
+  - [ ] 生产来源：`https://你的域名`
+  - [ ] 本地测试来源：`http://localhost:3002`
+  - [ ] Allowed Methods 包含 `GET`、`PUT`、`POST`、`HEAD`
+  - [ ] Allowed Headers 包含 `Content-Type`、`*`
+  - [ ] Exposed Headers 包含 `ETag`
+  - [ ] 缓存时间建议 `300`
+- [ ] 后端 RAM 子账号已授权：
+  - [ ] `oss:PutObject`
+  - [ ] `oss:GetObject`
+  - [ ] `oss:DeleteObject`
+  - [ ] `oss:ListObjects`
+- [ ] 如果使用 `acs:SourceIp` 限制访问来源：
+  - [ ] 后端服务器出口 IP 已加入白名单
+  - [ ] 本地开发机 IP 已加入白名单（本地测试时需要）
 - [ ] 已在“系统管理 -> 媒体存储”中选择：
   - 封面命名空间
   - 附件命名空间
