@@ -65,7 +65,7 @@ export function ReviewErrorNotice(props: { message: string }) {
 
 export function ReviewLoadingGrid() {
   return (
-    <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {Array.from({ length: 6 }).map((_, index) => (
         <div
           key={index}
@@ -105,7 +105,7 @@ export function ReviewGrid(props: {
 
   return (
     <div className="mt-5 space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {pagedItems.map((item) => {
           const status = item.card.reviewStatus;
           const disabled = Boolean(pendingCardId) && pendingCardId === item.card.id;

@@ -1,16 +1,31 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useRef, type FormEvent } from "react";
+import { useMemo, useRef, type FormEvent } from "react";
+
+import { isCategoryEnabled, useShareCategorySettings } from "@/components/share/category-provider";
 
 import { AppShell } from "@/components/share/app-shell";
 import { AuthRedirect } from "@/components/share/auth-redirect/index";
 import { useShareCardEditor } from "@/components/share/card-editor/hooks";
 import { CardAssetsPanel, CardInfoPanel, PublishActionsPanel, RealtimePreviewPanel } from "@/components/share/card-editor/sections";
 import type { ShareCardEditorProps } from "@/components/share/card-editor/types";
+import type { CardContentSlot } from "@/lib/shared";
 
 export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
   const createCoverInputRef = useRef<HTMLInputElement>(null);
+  const categorySettings = useShareCategorySettings();
+  const enabledSlots = useMemo(() => {
+    const allSlots: CardContentSlot[] = [
+      "system_theme",
+      "wechat_theme",
+      "app",
+      "character_persona",
+      "world_book",
+      "desktop_component",
+    ];
+    return new Set(allSlots.filter((slot) => isCategoryEnabled(categorySettings, slot)));
+  }, [categorySettings]);
 
   const {
     sessionChecking,
@@ -183,6 +198,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                   void handleDeleteAsset(slot);
                 }}
                 authorName={authorName}
+                enabledSlots={enabledSlots}
               />
 
               <CardInfoPanel

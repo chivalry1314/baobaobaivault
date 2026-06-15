@@ -8,7 +8,6 @@ import { ShareImage } from "@/components/share/share-image";
 import {
   CHIP_LABELS,
   CHIP_VISUALS,
-  FILTER_CHIPS,
   type FilterChip,
 } from "@/components/share/discover-home/constants";
 import type { HomeFeedCard } from "@/components/share/discover-home/types";
@@ -42,13 +41,14 @@ export function DiscoverSearchBar(props: {
 export function DiscoverChips(props: {
   activeChip: FilterChip;
   setActiveChip: (chip: FilterChip) => void;
+  visibleChips: FilterChip[];
 }) {
-  const { activeChip, setActiveChip } = props;
+  const { activeChip, setActiveChip, visibleChips } = props;
 
   return (
     <div className="relative">
       <div className="no-scrollbar flex items-center gap-2 overflow-x-auto px-1 py-1">
-        {FILTER_CHIPS.map((chip) => {
+        {visibleChips.map((chip) => {
           const active = chip === activeChip;
           return (
             <button

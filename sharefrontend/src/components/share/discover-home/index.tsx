@@ -39,6 +39,7 @@ export function DiscoverHome({ initialDiscover }: DiscoverHomeProps) {
     showInitialSkeleton,
     showNoResult,
     skeletonCount,
+    visibleChips,
     resetFilters,
   } = useDiscoverHome({ initialDiscover });
 
@@ -52,6 +53,7 @@ export function DiscoverHome({ initialDiscover }: DiscoverHomeProps) {
               <DiscoverChips
                 activeChip={activeChip}
                 setActiveChip={setActiveChip}
+                visibleChips={visibleChips}
               />
               <DiscoverAccessModeFilters
                 value={accessModeFilter}

@@ -1,7 +1,7 @@
 import {
-  slotLabelMap,
+  getSlotLabel as getSlotLabelFromRegistry,
   slotOptions,
-} from "@/components/share/card-editor/constants";
+} from "@/components/share/card-editor/slot-registry";
 import type {
   CardAsset,
   CardContentSlot,
@@ -59,9 +59,13 @@ export function getReviewStatusLabel(status: ShareReviewStatus) {
   }
 }
 
-export function createEmptySlotItem(index: number): SlotFileItem {
+export function createEmptySlotItem(
+  index: number,
+  enabledSlots?: CardContentSlot[],
+): SlotFileItem {
+  const source = enabledSlots?.length ? enabledSlots : slotOptions.map((option) => option.value);
   return {
-    slot: slotOptions[index % slotOptions.length].value,
+    slot: source[index % source.length],
     file: null,
   };
 }
@@ -81,7 +85,7 @@ export function findDuplicateSlots(items: SlotFileItem[]) {
 }
 
 export function getSlotLabel(slot: CardContentSlot) {
-  return slotLabelMap[slot] ?? slot;
+  return getSlotLabelFromRegistry(slot);
 }
 
 export function findAssetBySlot(assets: CardAsset[], slot: CardContentSlot) {

@@ -51,6 +51,8 @@
   ShareUserRole,
   ShareUsersManageResponse,
   ShareAdminResetPasswordResponse,
+  ShareCategorySettings,
+  ShareCategorySettingsResponse,
 } from "@/lib/shared";
 
 const API_ROOT = "/api/share";
@@ -1375,6 +1377,28 @@ export const shareApi = {
   }) {
     return request<ShareMediaStorageMigrationRunResponse>(`${API_ROOT}/me/system/media-storage/migrate`, {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+  },
+
+  systemCategorySettings() {
+    return request<ShareCategorySettingsResponse>(`${API_ROOT}/me/system/category-settings`, {
+      cache: "no-store",
+    });
+  },
+
+  publicCategorySettings() {
+    return request<ShareCategorySettingsResponse>(`${API_ROOT}/discover/category-settings`, {
+      cache: "no-store",
+    });
+  },
+
+  updateSystemCategorySettings(input: ShareCategorySettings) {
+    return request<ShareCategorySettingsResponse>(`${API_ROOT}/me/system/category-settings`, {
+      method: "PATCH",
       headers: {
         "Content-Type": "application/json",
       },

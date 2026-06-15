@@ -109,6 +109,7 @@ type ShareService struct {
 	storageService         *StorageService
 	fileRoot               string
 	managerEmailAllow      map[string]struct{}
+	slotRegistry           *ShareSlotRegistry
 	shareAuthCfgMu         sync.RWMutex
 	shareAuthCfg           config.ShareAuthConfig
 	shareMediaCfgMu        sync.RWMutex
@@ -116,6 +117,8 @@ type ShareService struct {
 	shareSiteBrandMu       sync.RWMutex
 	shareSiteBrandCfg      ShareSiteBrandingSettingsView
 	shareSiteBrandLoadedAt time.Time
+	shareCategoryCfgMu     sync.RWMutex
+	shareCategoryCfg       ShareCategorySettingsView
 	emailService           *EmailService
 }
 
@@ -150,11 +153,14 @@ func NewShareService(
 		shareAuthCfg:      shareAuthCfg,
 		shareMediaCfg:     defaultShareMediaStorageSettingsView(),
 		shareSiteBrandCfg: defaultShareSiteBrandingSettingsView(),
+		shareCategoryCfg:  defaultShareCategorySettingsView(),
 		emailService:      emailService,
+		slotRegistry:      defaultSlotRegistry,
 	}
 	service.loadShareAuthConfigFromDB()
 	service.loadShareMediaStorageSettingsFromDB()
 	service.loadShareSiteBrandingSettingsFromDB()
+	service.loadShareCategorySettingsFromDB()
 	return service
 }
 
@@ -1085,12 +1091,8 @@ func normalizeShareCardSlot(value string) string {
 
 func isValidShareCardSlot(value string) bool {
 	value = normalizeShareCardSlot(value)
-	for _, slot := range shareCardContentSlots {
-		if value == slot {
-			return true
-		}
-	}
-	return false
+	handler, ok := defaultSlotRegistry.Get(value)
+	return ok && handler.Enabled()
 }
 
 func shareCardSlotSortOrder(slot string) int {

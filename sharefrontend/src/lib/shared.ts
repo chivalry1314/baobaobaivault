@@ -2,6 +2,21 @@ export type ShareUserRole = "viewer" | "creator" | "manager";
 export type ShareReviewStatus = "unsubmitted" | "pending" | "approved" | "rejected";
 export type ShareCardAccessMode = "free" | "paid";
 
+export type ShareCategorySettings = {
+  systemThemeEnabled: boolean;
+  wechatThemeEnabled: boolean;
+  appEnabled: boolean;
+  characterPersonaEnabled: boolean;
+  worldBookEnabled: boolean;
+  desktopComponentEnabled: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type ShareCategorySettingsResponse = {
+  settings: ShareCategorySettings;
+};
+
 export type ExternalSessionUser = {
   id: string;
   email: string;

@@ -253,3 +253,19 @@ type ShareSiteBrandingSettings struct {
 func (ShareSiteBrandingSettings) TableName() string {
 	return "share_site_branding_settings"
 }
+
+type ShareCategorySettings struct {
+	Singleton               string    `gorm:"type:varchar(32);primaryKey" json:"singleton"`
+	SystemThemeEnabled      bool      `gorm:"not null;default:true" json:"system_theme_enabled"`
+	WechatThemeEnabled      bool      `gorm:"not null;default:true" json:"wechat_theme_enabled"`
+	AppEnabled              bool      `gorm:"not null;default:false" json:"app_enabled"`
+	CharacterPersonaEnabled bool      `gorm:"not null;default:true" json:"character_persona_enabled"`
+	WorldBookEnabled        bool      `gorm:"not null;default:true" json:"world_book_enabled"`
+	DesktopComponentEnabled bool      `gorm:"not null;default:true" json:"desktop_component_enabled"`
+	CreatedAt               time.Time `json:"created_at"`
+	UpdatedAt               time.Time `json:"updated_at"`
+}
+
+func (ShareCategorySettings) TableName() string {
+	return "share_category_settings"
+}

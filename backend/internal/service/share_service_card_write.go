@@ -432,7 +432,7 @@ func (s *ShareService) PrepareCardBundleUpload(ctx context.Context, input ShareP
 	seen := make(map[string]struct{}, len(input.Assets))
 	for _, asset := range input.Assets {
 		slot := normalizeShareCardSlot(asset.Slot)
-		if !isValidShareCardSlot(slot) {
+		if !isValidShareCardSlot(slot) || !s.IsCategoryEnabled(slot) {
 			return nil, ErrShareInvalidCardSlot
 		}
 		if _, exists := seen[slot]; exists {
@@ -525,7 +525,7 @@ func (s *ShareService) CreateCardBundleFromPresignedUpload(ctx context.Context, 
 	seen := make(map[string]struct{}, len(input.Assets))
 	for _, asset := range input.Assets {
 		slot := normalizeShareCardSlot(asset.Slot)
-		if !isValidShareCardSlot(slot) {
+		if !isValidShareCardSlot(slot) || !s.IsCategoryEnabled(slot) {
 			return nil, ErrShareInvalidCardSlot
 		}
 		if _, exists := seen[slot]; exists {
@@ -764,7 +764,7 @@ func (s *ShareService) PrepareCardAssetReplaceUpload(ctx context.Context, input 
 	if ownerID == "" || cardID == "" {
 		return nil, ErrShareCardNotFound
 	}
-	if !isValidShareCardSlot(slot) {
+	if !isValidShareCardSlot(slot) || !s.IsCategoryEnabled(slot) {
 		return nil, ErrShareInvalidCardSlot
 	}
 
@@ -927,7 +927,7 @@ func (s *ShareService) ReplaceCardAssetFromPresignedUpload(ctx context.Context, 
 	if ownerID == "" || cardID == "" {
 		return nil, ErrShareCardNotFound
 	}
-	if !isValidShareCardSlot(slot) {
+	if !isValidShareCardSlot(slot) || !s.IsCategoryEnabled(slot) {
 		return nil, ErrShareInvalidCardSlot
 	}
 	if input.Asset == nil {
@@ -1165,7 +1165,7 @@ func (s *ShareService) ReplaceCardAssetByOwner(ctx context.Context, input ShareU
 	if ownerID == "" || cardID == "" {
 		return nil, ErrShareCardNotFound
 	}
-	if !isValidShareCardSlot(slot) {
+	if !isValidShareCardSlot(slot) || !s.IsCategoryEnabled(slot) {
 		return nil, ErrShareInvalidCardSlot
 	}
 	if strings.TrimSpace(input.FileName) == "" || input.FileReader == nil {
@@ -1519,7 +1519,7 @@ func (s *ShareService) DeleteCardAssetByOwner(ctx context.Context, ownerID, card
 	if ownerID == "" || cardID == "" {
 		return nil, ErrShareCardNotFound
 	}
-	if !isValidShareCardSlot(slot) {
+	if !isValidShareCardSlot(slot) || !s.IsCategoryEnabled(slot) {
 		return nil, ErrShareInvalidCardSlot
 	}
 

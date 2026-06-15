@@ -1,7 +1,11 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 
-import { slotOptions } from "@/components/share/card-editor/constants";
+import {
+  isCategoryEnabled,
+  useShareCategorySettings,
+} from "@/components/share/category-provider";
+import { slotOptions } from "@/components/share/card-editor/slot-registry";
 import { useConfirm } from "@/components/share/confirm-dialog";
 import {
   composeSearchableSummary,
@@ -136,6 +140,11 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
   const router = useRouter();
   const confirm = useConfirm();
   const { user: currentUser, sessionChecking } = useShareSession();
+  const categorySettings = useShareCategorySettings();
+  const enabledSlotList = useMemo<CardContentSlot[]>(
+    () => slotOptions.filter((option) => isCategoryEnabled(categorySettings, option.value)).map((option) => option.value),
+    [categorySettings],
+  );
 
   const [cardLoading, setCardLoading] = useState(mode === "edit");
   const [loadedCard, setLoadedCard] = useState<CardDetailResponse | null>(null);
@@ -149,8 +158,24 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
   const [createMode, setCreateMode] = useState<CreateMode>("single");
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [slotItems, setSlotItems] = useState<SlotFileItem[]>([
-    createEmptySlotItem(0),
+    createEmptySlotItem(0, enabledSlotList),
   ]);
+
+  useEffect(() => {
+    setSlotItems((current) => {
+      if (current.length === 0) {
+        return [createEmptySlotItem(0, enabledSlotList)];
+      }
+      const defaultSlot = enabledSlotList[0];
+      if (!defaultSlot) {
+        return current;
+      }
+      const next = current.map((item) =>
+        isCategoryEnabled(categorySettings, item.slot) ? item : { ...item, slot: defaultSlot },
+      );
+      return next;
+    });
+  }, [categorySettings, enabledSlotList]);
 
   const [loadError, setLoadError] = useState("");
   const [formError, setFormError] = useState("");
@@ -350,10 +375,10 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
 
   function addSlotRow() {
     setSlotItems((current) => {
-      if (current.length >= slotOptions.length) {
+      if (current.length >= enabledSlotList.length) {
         return current;
       }
-      return [...current, createEmptySlotItem(current.length)];
+      return [...current, createEmptySlotItem(current.length, enabledSlotList)];
     });
   }
 
@@ -389,11 +414,11 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
   function handleCreateModeChange(nextMode: CreateMode) {
     setCreateMode(nextMode);
     if (nextMode === "single") {
-      setSlotItems((current) => [current[0] ?? createEmptySlotItem(0)]);
+      setSlotItems((current) => [current[0] ?? createEmptySlotItem(0, enabledSlotList)]);
       return;
     }
     setSlotItems((current) =>
-      current.length > 0 ? current : [createEmptySlotItem(0)],
+      current.length > 0 ? current : [createEmptySlotItem(0, enabledSlotList)],
     );
   }
 

@@ -5,6 +5,7 @@ import type {
   DiscoverCardItem,
   DiscoverCardsPagination,
   SessionResponse,
+  ShareCategorySettings,
   ShareSiteBrandingSettingsResponse,
 } from "@/lib/shared";
 import { SHARE_SITE_BRANDING_CACHE_TAG } from "@/lib/site-branding-cache";
@@ -120,6 +121,19 @@ export async function getServerCardDetail(cardId: string) {
         next: {
           revalidate: 60,
         },
+      },
+    );
+  } catch {
+    return null;
+  }
+}
+
+export async function getServerCategorySettings(): Promise<ShareCategorySettings | null> {
+  try {
+    return await requestPublicServer<ShareCategorySettings>(
+      "/api/share/discover/category-settings",
+      {
+        cache: "no-store",
       },
     );
   } catch {

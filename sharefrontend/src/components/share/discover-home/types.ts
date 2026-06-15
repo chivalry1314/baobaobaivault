@@ -73,5 +73,6 @@ export type DiscoverHomeHookResult = {
   showInitialSkeleton: boolean;
   showNoResult: boolean;
   skeletonCount: number;
+  visibleChips: FilterChip[];
   resetFilters: () => void;
 };

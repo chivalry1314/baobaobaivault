@@ -47,25 +47,53 @@ func (s *ShareService) GetCardDetail(ctx context.Context, cardID, viewerUserID s
 		return nil, err
 	}
 	assetsView := buildShareCardAssetViews(card.ID, assets)
-	systemTheme, err := s.loadCardSystemThemeView(ctx, &card, assets)
-	if err != nil {
-		return nil, err
+
+	assetBySlot := make(map[string]*model.SharePlatformCardAsset, len(assets))
+	for i := range assets {
+		assetBySlot[assets[i].Slot] = &assets[i]
 	}
-	wechatTheme, err := s.loadCardWechatThemeView(ctx, &card, assets)
-	if err != nil {
-		return nil, err
-	}
-	desktopComponent, err := s.loadCardDesktopComponentView(ctx, &card, assets)
-	if err != nil {
-		return nil, err
-	}
-	worldBook, err := s.loadCardWorldBookView(ctx, &card, assets)
-	if err != nil {
-		return nil, err
-	}
-	characterPersona, err := s.loadCardCharacterPersonaView(ctx, &card, assets)
-	if err != nil {
-		return nil, err
+
+	var systemTheme *ShareSystemThemeView
+	var wechatTheme *ShareWechatThemeView
+	var desktopComponent *ShareDesktopComponentView
+	var worldBook *ShareWorldBookView
+	var characterPersona *ShareCharacterPersonaView
+
+	for _, slot := range s.slotRegistry.Slots() {
+		handler, ok := s.slotRegistry.Get(slot)
+		if !ok || !handler.Enabled() || !s.IsCategoryEnabled(slot) {
+			continue
+		}
+		asset := assetBySlot[slot]
+		if asset == nil {
+			continue
+		}
+		view, err := handler.BuildView(ctx, s, &card, asset)
+		if err != nil {
+			return nil, err
+		}
+		switch v := view.(type) {
+		case ShareSystemThemeView:
+			systemTheme = &v
+		case *ShareSystemThemeView:
+			systemTheme = v
+		case ShareWechatThemeView:
+			wechatTheme = &v
+		case *ShareWechatThemeView:
+			wechatTheme = v
+		case ShareDesktopComponentView:
+			desktopComponent = &v
+		case *ShareDesktopComponentView:
+			desktopComponent = v
+		case ShareWorldBookView:
+			worldBook = &v
+		case *ShareWorldBookView:
+			worldBook = v
+		case ShareCharacterPersonaView:
+			characterPersona = &v
+		case *ShareCharacterPersonaView:
+			characterPersona = v
+		}
 	}
 
 	var creator model.ShareExternalUser

@@ -34,9 +34,15 @@ func (s *ShareService) ListDiscoverCards(ctx context.Context, page, size int, vi
 
 	slot = strings.TrimSpace(slot)
 	if slot != "" {
-		if _, ok := discoverCardSlots[slot]; !ok {
+		handler, ok := s.slotRegistry.Get(slot)
+		if !ok || !handler.Enabled() || !s.IsCategoryEnabled(slot) {
 			return []ShareDiscoverCardItem{}, 0, nil
 		}
+	}
+
+	enabledSlots := s.EnabledCategorySlots()
+	if len(enabledSlots) == 0 {
+		return []ShareDiscoverCardItem{}, 0, nil
 	}
 
 	cacheKey := cache.Key("discover", "cards", fmt.Sprintf("%d", page), fmt.Sprintf("%d", size), slot, viewerUserID)
@@ -58,6 +64,8 @@ func (s *ShareService) ListDiscoverCards(ctx context.Context, page, size int, vi
 
 	if slot != "" {
 		query = query.Joins("JOIN share_platform_card_assets ON share_platform_card_assets.card_id = share_platform_cards.id AND share_platform_card_assets.slot = ?", slot)
+	} else {
+		query = query.Where("EXISTS (SELECT 1 FROM share_platform_card_assets WHERE share_platform_card_assets.card_id = share_platform_cards.id AND share_platform_card_assets.slot IN ?)", enabledSlots)
 	}
 
 	var total int64

@@ -15,8 +15,13 @@ import {
 } from "@/components/share/access-mode-filter";
 import {
   DISCOVER_PAGE_SIZE,
+  FILTER_CHIPS,
   type FilterChip,
 } from "@/components/share/discover-home/constants";
+import {
+  isCategoryEnabled,
+  useShareCategorySettings,
+} from "@/components/share/category-provider";
 import {
   matchesChip,
   resolveColumnCount,
@@ -35,6 +40,14 @@ export function useDiscoverHome({
 }: {
   initialDiscover?: DiscoverInitialPayload;
 } = {}): DiscoverHomeHookResult {
+  const categorySettings = useShareCategorySettings();
+  const visibleChips = useMemo(
+    () =>
+      FILTER_CHIPS.filter(
+        (chip) => chip === "all" || isCategoryEnabled(categorySettings, chip),
+      ),
+    [categorySettings],
+  );
   const [activeChip, setActiveChip] = useState<FilterChip>("all");
   const activeSlot = useMemo(
     () => (activeChip === "all" ? "" : activeChip),
@@ -69,6 +82,12 @@ export function useDiscoverHome({
       ),
     ),
   );
+
+  useEffect(() => {
+    if (activeChip !== "all" && !isCategoryEnabled(categorySettings, activeChip)) {
+      setActiveChip("all");
+    }
+  }, [activeChip, categorySettings]);
 
   useEffect(() => {
     if (activeChip === "all" && initialDiscover) {
@@ -289,6 +308,7 @@ export function useDiscoverHome({
     showInitialSkeleton,
     showNoResult,
     skeletonCount,
+    visibleChips,
     resetFilters: () => {
       setQuery("");
       setActiveChip("all");

@@ -75,6 +75,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&model.ShareAuthSettings{},
 		&model.ShareMediaStorageSettings{},
 		&model.ShareSiteBrandingSettings{},
+		&model.ShareCategorySettings{},
 		&model.SharePlatformCard{},
 		&model.SharePlatformCardAsset{},
 		&model.SharePlatformCardFavorite{},

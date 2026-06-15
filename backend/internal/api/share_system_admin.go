@@ -581,3 +581,69 @@ func (h *Handler) shareSystemSendSMTPTest(c *gin.Context) {
 		"targetEmail": targetEmail,
 	})
 }
+
+func (h *Handler) shareSystemCategorySettings(c *gin.Context) {
+	user, ok := h.requireConfiguredShareSuperAdmin(c)
+	if !ok {
+		return
+	}
+
+	settings, err := h.shareService.GetShareCategorySettings(c.Request.Context(), user.ID)
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareForbiddenRole),
+			errors.Is(err, service.ErrShareSuperAdminRequired):
+			status = http.StatusForbidden
+		case errors.Is(err, service.ErrShareUserNotFound):
+			status = http.StatusNotFound
+		default:
+			status = http.StatusInternalServerError
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"settings": settings})
+}
+
+func (h *Handler) shareSystemUpdateCategorySettings(c *gin.Context) {
+	user, ok := h.requireConfiguredShareSuperAdmin(c)
+	if !ok {
+		return
+	}
+
+	var req service.ShareCategorySettingsView
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	settings, err := h.shareService.UpdateShareCategorySettings(c.Request.Context(), user.ID, req)
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareForbiddenRole),
+			errors.Is(err, service.ErrShareSuperAdminRequired):
+			status = http.StatusForbidden
+		case errors.Is(err, service.ErrShareUserNotFound):
+			status = http.StatusNotFound
+		default:
+			status = http.StatusInternalServerError
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	h.writeAuditLog(c, "update_category_settings", "system", "", "", "success")
+	c.JSON(http.StatusOK, gin.H{"settings": settings})
+}
+
+func (h *Handler) sharePublicCategorySettings(c *gin.Context) {
+	settings, err := h.shareService.GetShareCategorySettings(c.Request.Context(), "")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"settings": settings})
+}

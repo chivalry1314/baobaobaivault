@@ -1,12 +1,8 @@
 ﻿import Link from "next/link";
 import { type ChangeEvent, type KeyboardEvent, type RefObject } from "react";
 
-import { slotOptions } from "@/components/share/card-editor/constants";
-import { DesktopComponentSpecPanel } from "@/components/share/card-editor/DesktopComponentSpecPanel";
-import { WechatThemeSpecPanel } from "@/components/share/card-editor/WechatThemeSpecPanel";
-import { WorldBookSpecPanel } from "@/components/share/card-editor/WorldBookSpecPanel";
-import { CharacterPersonaSpecPanel } from "@/components/share/card-editor/CharacterPersonaSpecPanel";
 import { findAssetBySlot, getReviewStatusLabel, getSlotLabel, getStatusLabel, type SlotFileItem } from "@/components/share/card-editor/helpers";
+import { getSlotDefinitions, getEnabledSlotDefinitions, getSlotDefinition, type SlotPanelContext } from "@/components/share/card-editor/slot-registry";
 import { ShareImage } from "@/components/share/share-image";
 import type { AssetOpMode, CreateMode, EditorMode, SubmitMode } from "@/components/share/card-editor/types";
 import type { CardContentSlot, CardDetailResponse, ShareCardAccessMode } from "@/lib/shared";
@@ -37,6 +33,7 @@ export function CardAssetsPanel(props: {
   handleReplaceAsset: (slot: CardContentSlot, file: File | null) => void;
   handleDeleteAsset: (slot: CardContentSlot) => void;
   authorName?: string;
+  enabledSlots?: Set<CardContentSlot>;
 }) {
   const {
     mode,
@@ -63,7 +60,11 @@ export function CardAssetsPanel(props: {
     handleReplaceAsset,
     handleDeleteAsset,
     authorName,
+    enabledSlots,
   } = props;
+
+  const createSlotDefs = enabledSlots ? getEnabledSlotDefinitions(enabledSlots) : getSlotDefinitions();
+  const allSlotDefs = getSlotDefinitions();
 
   return (
     <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
@@ -116,85 +117,52 @@ export function CardAssetsPanel(props: {
             </button>
           </div>
 
-          {slotItems.map((item, index) => (
-            <div key={`${item.slot}-${index}`} className="rounded-[1.1rem] border border-[var(--outline)]/20 bg-white p-3">
-              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-center">
-                <select className="h-8 rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-1 text-xs font-bold text-[var(--foreground)] focus:border-[var(--outline)] focus:bg-white focus:outline-none" value={item.slot} onChange={(event) => setSlotValue(index, event.target.value as CardContentSlot)}>
-                  {slotOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+          {slotItems.map((item, index) => {
+            const definition = getSlotDefinition(item.slot) ?? createSlotDefs[0];
+            if (!definition) {
+              return null;
+            }
+            const panelContext: SlotPanelContext = {
+              file: item.file,
+              onFileChange: (file) => setSlotFile(index, file),
+              previewTitle,
+            };
+            return (
+              <div key={`${item.slot}-${index}`} className="rounded-[1.1rem] border border-[var(--outline)]/20 bg-white p-3">
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-center">
+                  <select className="h-8 rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-1 text-xs font-bold text-[var(--foreground)] focus:border-[var(--outline)] focus:bg-white focus:outline-none" value={item.slot} onChange={(event) => setSlotValue(index, event.target.value as CardContentSlot)}>
+                    {createSlotDefs.map((option) => (
+                      <option key={option.slot} value={option.slot}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
 
-                {item.slot === "wechat_theme" ? null : (
-                  <input
-                    key={item.file ? `file-${item.file.name}` : `empty-${index}`}
-                    type="file"
-                    accept={item.slot === "desktop_component" ? ".html,.htm,text/html" : undefined}
-                    className="h-8 w-full rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-1 text-xs font-bold text-[var(--foreground)] file:mr-2 file:rounded-full file:border-0 file:bg-white file:px-2 file:py-0.5 file:text-[10px] file:font-black"
-                    onChange={(event) => setSlotFile(index, event.target.files?.[0] ?? null)}
-                  />
-                )}
+                  {definition.showFileInput ? (
+                    <input
+                      key={item.file ? `file-${item.file.name}` : `empty-${index}`}
+                      type="file"
+                      accept={definition.accept}
+                      className="h-8 w-full rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-1 text-xs font-bold text-[var(--foreground)] file:mr-2 file:rounded-full file:border-0 file:bg-white file:px-2 file:py-0.5 file:text-[10px] file:font-black"
+                      onChange={(event) => setSlotFile(index, event.target.files?.[0] ?? null)}
+                    />
+                  ) : null}
 
-                {createMode === "bundle" ? (
-                  <button type="button" className="rounded-full border border-[#ff9c9c] bg-[#fff2f1] px-2.5 py-1.5 text-[10px] font-black text-[#b64031] transition hover:bg-[#ffe5e3]" onClick={() => removeSlotRow(index)} disabled={slotItems.length <= 1}>
-                    删除
-                  </button>
-                ) : null}
+                  {createMode === "bundle" ? (
+                    <button type="button" className="rounded-full border border-[#ff9c9c] bg-[#fff2f1] px-2.5 py-1.5 text-[10px] font-black text-[#b64031] transition hover:bg-[#ffe5e3]" onClick={() => removeSlotRow(index)} disabled={slotItems.length <= 1}>
+                      删除
+                    </button>
+                  ) : null}
+                </div>
+                <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/50">{item.file ? item.file.name : "未选择文件"}</p>
+                <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/55">{definition.description}</p>
+                {definition.renderCreatePanel(panelContext)}
               </div>
-              <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/50">{item.file ? item.file.name : "未选择文件"}</p>
-              {item.slot === "system_theme" ? (
-                <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/55">
-                  系统主题会按 `baobaobaiphone` 当前导入规则校验，仅支持可解析的 `.zip` / `.json` 主题包。
-                </p>
-              ) : item.slot === "wechat_theme" ? (
-                <>
-                  <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/55">
-                    微信主题包支持直接上传 `.zip` / `.json`，也可以通过下方表单一键生成。
-                  </p>
-                  <WechatThemeSpecPanel
-                    file={item.file}
-                    onFileChange={(file) => setSlotFile(index, file)}
-                    cardTitle={previewTitle}
-                  />
-                </>
-              ) : item.slot === "desktop_component" ? (
-                <>
-                  <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/55">
-                    桌面组件会校验 HTML 文件格式，并读取 &lt;meta name="widget-*"&gt; 标签作为组件配置。
-                  </p>
-                  <DesktopComponentSpecPanel
-                    file={item.file}
-                    onFileChange={(file) => setSlotFile(index, file)}
-                  />
-                </>
-              ) : item.slot === "world_book" ? (
-                <>
-                  <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/55">
-                    世界书支持直接上传 `.json`，也可以通过下方表单一键生成。
-                  </p>
-                  <WorldBookSpecPanel
-                    file={item.file}
-                    onFileChange={(file) => setSlotFile(index, file)}
-                  />
-                </>
-              ) : item.slot === "character_persona" ? (
-                <>
-                  <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/55">
-                    角色人设支持直接上传 `.json`，也可以通过下方表单一键生成。角色世界书无需在此填写。
-                  </p>
-                  <CharacterPersonaSpecPanel
-                    file={item.file}
-                    onFileChange={(file) => setSlotFile(index, file)}
-                  />
-                </>
-              ) : null}
-            </div>
-          ))}
+            );
+          })}
 
           {createMode === "bundle" ? (
-            <button type="button" className="rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1.5 text-xs font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)]" onClick={addSlotRow} disabled={slotItems.length >= slotOptions.length}>
+            <button type="button" className="rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1.5 text-xs font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)]" onClick={addSlotRow} disabled={slotItems.length >= createSlotDefs.length}>
               + 添加分类文件
             </button>
           ) : null}
@@ -240,12 +208,27 @@ export function CardAssetsPanel(props: {
 
           {loadedCard ? (
             <div className="space-y-2">
-              {slotOptions.map((option) => {
-                const slot = option.value;
+              {allSlotDefs.map((definition) => {
+                const slot = definition.slot;
                 const asset = findAssetBySlot(loadedCard.assets, slot);
+                const enabled = !enabledSlots || enabledSlots.has(slot);
+                if (!enabled) {
+                  return null;
+                }
                 const pendingMode = assetPending[slot];
                 const slotBusy = Boolean(pendingMode);
                 const canDelete = Boolean(asset) && loadedCard.assets.length > 1;
+                const panelContext: SlotPanelContext = {
+                  file: null,
+                  onFileChange: (file) => {
+                    if (file) {
+                      void handleReplaceAsset(slot, file);
+                    }
+                  },
+                  loadedCard,
+                  asset,
+                  disabled: slotBusy || publishPending,
+                };
 
                 return (
                   <div key={slot} className="rounded-[1.1rem] border border-[var(--outline)]/20 bg-white p-3">
@@ -262,11 +245,12 @@ export function CardAssetsPanel(props: {
                     </div>
 
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                      {slot === "wechat_theme" || slot === "world_book" || slot === "character_persona" ? null : (
+                      {definition.showFileInput && enabled ? (
                         <label className="cursor-pointer rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1.5 text-[10px] font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)]">
                           {pendingMode === "replace" ? "替换中..." : "替换文件"}
                           <input
                             type="file"
+                            accept={definition.accept}
                             className="hidden"
                             disabled={slotBusy || publishPending}
                             onChange={(event) => {
@@ -276,7 +260,7 @@ export function CardAssetsPanel(props: {
                             }}
                           />
                         </label>
-                      )}
+                      ) : null}
                       <button
                         type="button"
                         className="rounded-full border border-[#ff9c9c] bg-[#fff2f1] px-3 py-1.5 text-[10px] font-black text-[#b64031] transition hover:bg-[#ffe5e3] disabled:cursor-not-allowed disabled:opacity-60"
@@ -286,48 +270,14 @@ export function CardAssetsPanel(props: {
                         {pendingMode === "remove" ? "删除中..." : "删除该分类文件"}
                       </button>
                     </div>
-                    {slot === "system_theme" ? (
-                      <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/55">
-                        替换系统主题时会校验主题包能否被 `baobaobaiphone` 正常解析和导入。
+                    {!enabled ? (
+                      <p className="mt-1.5 text-[10px] font-bold text-amber-600">
+                        该分类已被管理员关闭，仅可删除已有文件，不能新增或替换。
                       </p>
-                    ) : slot === "wechat_theme" ? (
-                      <WechatThemeSpecPanel
-                        file={null}
-                        onFileChange={(file) => {
-                          if (file) {
-                            void handleReplaceAsset(slot, file);
-                          }
-                        }}
-                        existingTheme={loadedCard?.wechatTheme}
-                        cardTitle={loadedCard?.card.title}
-                        disabled={slotBusy || publishPending}
-                      />
-                    ) : slot === "desktop_component" ? (
-                      <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/55">
-                        替换桌面组件时会校验 HTML 文件格式并重新读取组件配置。
-                      </p>
-                    ) : slot === "world_book" ? (
-                      <WorldBookSpecPanel
-                        file={null}
-                        onFileChange={(file) => {
-                          if (file) {
-                            void handleReplaceAsset(slot, file);
-                          }
-                        }}
-                        existingDownloadUrl={asset?.downloadUrl}
-                        disabled={slotBusy || publishPending}
-                      />
-                    ) : slot === "character_persona" ? (
-                      <CharacterPersonaSpecPanel
-                        file={null}
-                        onFileChange={(file) => {
-                          if (file) {
-                            void handleReplaceAsset(slot, file);
-                          }
-                        }}
-                        existingDownloadUrl={asset?.downloadUrl}
-                        disabled={slotBusy || publishPending}
-                      />
+                    ) : definition.renderEditPanel ? (
+                      definition.renderEditPanel(panelContext)
+                    ) : definition.editDescription ? (
+                      <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/55">{definition.editDescription}</p>
                     ) : null}
                   </div>
                 );
