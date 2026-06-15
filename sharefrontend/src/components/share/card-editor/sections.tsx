@@ -4,6 +4,7 @@ import { type ChangeEvent, type KeyboardEvent, type RefObject } from "react";
 import { slotOptions } from "@/components/share/card-editor/constants";
 import { DesktopComponentSpecPanel } from "@/components/share/card-editor/DesktopComponentSpecPanel";
 import { WechatThemeSpecPanel } from "@/components/share/card-editor/WechatThemeSpecPanel";
+import { WorldBookSpecPanel } from "@/components/share/card-editor/WorldBookSpecPanel";
 import { findAssetBySlot, getReviewStatusLabel, getSlotLabel, getStatusLabel, type SlotFileItem } from "@/components/share/card-editor/helpers";
 import { ShareImage } from "@/components/share/share-image";
 import type { AssetOpMode, CreateMode, EditorMode, SubmitMode } from "@/components/share/card-editor/types";
@@ -167,6 +168,17 @@ export function CardAssetsPanel(props: {
                     onFileChange={(file) => setSlotFile(index, file)}
                   />
                 </>
+              ) : item.slot === "world_book" ? (
+                <>
+                  <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/55">
+                    世界书支持直接上传 `.json`，也可以通过下方表单一键生成。
+                  </p>
+                  <WorldBookSpecPanel
+                    file={item.file}
+                    onFileChange={(file) => setSlotFile(index, file)}
+                    defaultAuthor={authorName}
+                  />
+                </>
               ) : null}
             </div>
           ))}
@@ -240,7 +252,7 @@ export function CardAssetsPanel(props: {
                     </div>
 
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                      {slot === "wechat_theme" ? null : (
+                      {slot === "wechat_theme" || slot === "world_book" ? null : (
                         <label className="cursor-pointer rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1.5 text-[10px] font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)]">
                           {pendingMode === "replace" ? "替换中..." : "替换文件"}
                           <input
@@ -284,6 +296,19 @@ export function CardAssetsPanel(props: {
                       <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/55">
                         替换桌面组件时会校验 HTML 文件格式并重新读取组件配置。
                       </p>
+                    ) : slot === "world_book" ? (
+                      <WorldBookSpecPanel
+                        file={null}
+                        onFileChange={(file) => {
+                          if (file) {
+                            void handleReplaceAsset(slot, file);
+                          }
+                        }}
+                        existingWorldBook={loadedCard?.worldBook}
+                        existingDownloadUrl={asset?.downloadUrl}
+                        defaultAuthor={authorName}
+                        disabled={slotBusy || publishPending}
+                      />
                     ) : null}
                   </div>
                 );

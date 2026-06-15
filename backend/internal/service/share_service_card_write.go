@@ -235,6 +235,14 @@ func (s *ShareService) CreateCardBundle(ctx context.Context, input ShareCreateCa
 				return nil, err
 			}
 			input.Assets[index].FileReader = validatedReader
+			continue
+		}
+		if slot == "world_book" {
+			validatedReader, err := validateAndCloneShareWorldBookReader(input.Assets[index].FileName, input.Assets[index].FileReader)
+			if err != nil {
+				return nil, err
+			}
+			input.Assets[index].FileReader = validatedReader
 		}
 	}
 
@@ -1171,6 +1179,13 @@ func (s *ShareService) ReplaceCardAssetByOwner(ctx context.Context, input ShareU
 	}
 	if slot == "desktop_component" {
 		validatedReader, err := validateAndCloneShareDesktopComponentReader(input.FileName, input.FileReader)
+		if err != nil {
+			return nil, err
+		}
+		input.FileReader = validatedReader
+	}
+	if slot == "world_book" {
+		validatedReader, err := validateAndCloneShareWorldBookReader(input.FileName, input.FileReader)
 		if err != nil {
 			return nil, err
 		}

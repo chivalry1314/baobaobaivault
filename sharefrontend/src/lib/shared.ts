@@ -181,6 +181,30 @@ export type DiscoverDesktopComponentItem = {
   accessCodeStatus: "none" | "required" | "expired" | "exhausted";
 };
 
+export type ShareWorldBook = {
+  protocol: string;
+  format: string;
+  supported: boolean;
+  name: string;
+  author: string;
+  version: string;
+  description: string;
+  tags: string[];
+  entryCount: number;
+  fileName: string;
+  mimeType: string;
+  size: number;
+};
+
+export type DiscoverWorldBookItem = {
+  card: PlatformCard;
+  creator: PublicCreator;
+  stats: CardStats;
+  asset: CardAsset;
+  worldBook: ShareWorldBook;
+  accessCodeStatus: "none" | "required" | "expired" | "exhausted";
+};
+
 export type DiscoverCardsPagination = {
   page: number;
   size: number;
@@ -566,6 +590,7 @@ export type CardDetailResponse = {
   systemTheme?: ShareSystemTheme;
   wechatTheme?: ShareWechatTheme;
   desktopComponent?: ShareDesktopComponent;
+  worldBook?: ShareWorldBook;
   canEdit: boolean;
   canDownload: boolean;
   accessCodeStatus?: "none" | "required" | "expired" | "exhausted";

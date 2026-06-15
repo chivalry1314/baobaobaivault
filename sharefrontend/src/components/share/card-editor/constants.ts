@@ -51,6 +51,48 @@ export const desktopComponentProtocol = "baobaobaiphone.desktop-component.v1";
 
 export const wechatThemeProtocol = "baobaobaiphone.wechat-theme-package.v1";
 
+export const worldBookProtocol = "baobaobaiphone.world-book-package.v1";
+
+export type WorldBookTriggerMode = "keyword" | "constant" | "disabled";
+export type WorldBookScope = "global" | "character";
+
+export type WorldBookEntry = {
+  id: string;
+  name: string;
+  keywords: string[];
+  content: string;
+  triggerMode: WorldBookTriggerMode;
+  insertionOrder: number;
+  scope: WorldBookScope;
+};
+
+export type WorldBookMetadata = {
+  version: number;
+  name: string;
+  author: string;
+  tags: string[];
+  worldBook: WorldBookEntry[];
+};
+
+export const worldBookMetaDefaults: WorldBookMetadata = {
+  version: 1,
+  name: "",
+  author: "",
+  tags: [],
+  worldBook: [],
+};
+
+export const worldBookTriggerModeOptions: Array<{ value: WorldBookTriggerMode; label: string }> = [
+  { value: "keyword", label: "关键词触发" },
+  { value: "constant", label: "始终触发" },
+  { value: "disabled", label: "已禁用" },
+];
+
+export const worldBookScopeOptions: Array<{ value: WorldBookScope; label: string }> = [
+  { value: "global", label: "全局" },
+  { value: "character", label: "角色" },
+];
+
 export type WechatThemeBubblePreset = "wechat" | "rounded" | "glass" | "outline";
 
 export type WechatThemeMetadata = {

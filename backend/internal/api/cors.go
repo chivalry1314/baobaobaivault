@@ -280,11 +280,9 @@ func isSharePublicReadPath(u *url.URL) bool {
 
 func isSharePublicReadPathString(path string) bool {
 	path = strings.TrimSpace(path)
-	switch path {
-	case "/api/share/discover/cards", "/api/share/discover/system-themes", "/api/share/discover/wechat-themes", "/api/share/discover/desktop-components", "/api/share/discover/site-branding", "/api/share/discover/site-branding/logo":
+	if strings.HasPrefix(path, "/api/share/discover/") {
 		return true
 	}
-
 	if strings.HasPrefix(path, "/api/share/cards/") {
 		return true
 	}

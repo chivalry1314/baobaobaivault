@@ -91,6 +91,8 @@ var (
 	ErrShareWechatThemePackageTooLarge     = errors.New("wechat theme package exceeds 20MB")
 	ErrShareInvalidDesktopComponent        = errors.New("invalid desktop component file")
 	ErrShareDesktopComponentTooLarge       = errors.New("desktop component file exceeds 2MB")
+	ErrShareInvalidWorldBookPackage        = errors.New("invalid world book package")
+	ErrShareWorldBookPackageTooLarge       = errors.New("world book package exceeds 2MB")
 	ErrShareInvalidVerificationCodeTTL     = errors.New("invalid verification code ttl")
 	ErrShareInvalidResendInterval          = errors.New("invalid resend interval")
 	ErrShareInvalidMaxVerifyAttempts       = errors.New("invalid max verify attempts")
@@ -99,20 +101,20 @@ var (
 )
 
 type ShareService struct {
-	db                *gorm.DB
-	logger            *zap.Logger
-	cache             *cache.Client
-	storageService    *StorageService
-	fileRoot          string
-	managerEmailAllow map[string]struct{}
-	shareAuthCfgMu    sync.RWMutex
-	shareAuthCfg      config.ShareAuthConfig
-	shareMediaCfgMu   sync.RWMutex
-	shareMediaCfg     ShareMediaStorageSettingsView
-	shareSiteBrandMu      sync.RWMutex
-	shareSiteBrandCfg     ShareSiteBrandingSettingsView
+	db                     *gorm.DB
+	logger                 *zap.Logger
+	cache                  *cache.Client
+	storageService         *StorageService
+	fileRoot               string
+	managerEmailAllow      map[string]struct{}
+	shareAuthCfgMu         sync.RWMutex
+	shareAuthCfg           config.ShareAuthConfig
+	shareMediaCfgMu        sync.RWMutex
+	shareMediaCfg          ShareMediaStorageSettingsView
+	shareSiteBrandMu       sync.RWMutex
+	shareSiteBrandCfg      ShareSiteBrandingSettingsView
 	shareSiteBrandLoadedAt time.Time
-	emailService      *EmailService
+	emailService           *EmailService
 }
 
 func NewShareService(
@@ -384,17 +386,18 @@ type ShareDiscoverCardItem struct {
 }
 
 type ShareCardDetail struct {
-	Card              ShareCardView                 `json:"card"`
-	Creator           SharePublicUser               `json:"creator"`
-	Stats             ShareCardStats                `json:"stats"`
-	Assets            []ShareCardAssetView          `json:"assets"`
-	SystemTheme       *ShareSystemThemeView         `json:"systemTheme,omitempty"`
-	WechatTheme       *ShareWechatThemeView         `json:"wechatTheme,omitempty"`
-	DesktopComponent  *ShareDesktopComponentView    `json:"desktopComponent,omitempty"`
-	CanEdit           bool                          `json:"canEdit"`
-	CanDownload       bool                          `json:"canDownload"`
-	AccessCodeStatus  ShareCardAccessStatus         `json:"accessCodeStatus"`
-	IsFavorited       bool                          `json:"isFavorited"`
+	Card             ShareCardView              `json:"card"`
+	Creator          SharePublicUser            `json:"creator"`
+	Stats            ShareCardStats             `json:"stats"`
+	Assets           []ShareCardAssetView       `json:"assets"`
+	SystemTheme      *ShareSystemThemeView      `json:"systemTheme,omitempty"`
+	WechatTheme      *ShareWechatThemeView      `json:"wechatTheme,omitempty"`
+	DesktopComponent *ShareDesktopComponentView `json:"desktopComponent,omitempty"`
+	WorldBook        *ShareWorldBookView        `json:"worldBook,omitempty"`
+	CanEdit          bool                       `json:"canEdit"`
+	CanDownload      bool                       `json:"canDownload"`
+	AccessCodeStatus ShareCardAccessStatus      `json:"accessCodeStatus"`
+	IsFavorited      bool                       `json:"isFavorited"`
 }
 
 type ShareCardAccessStatus string
@@ -486,36 +489,36 @@ type SharePrepareCardBundleAssetInput struct {
 }
 
 type SharePrepareCardBundleUploadInput struct {
-	CreatorID      string
-	Title          string
-	Description    string
-	Tags           []string
-	Visibility     string
-	Status         string
-	AccessMode     string
-	Assets         []SharePrepareCardBundleAssetInput
+	CreatorID        string
+	Title            string
+	Description      string
+	Tags             []string
+	Visibility       string
+	Status           string
+	AccessMode       string
+	Assets           []SharePrepareCardBundleAssetInput
 	CoverContentType string
 	CoverSize        int64
 }
 
 type SharePresignedUploadEntry struct {
-	URL           string `json:"url"`
-	ObjectKey     string `json:"object_key"`
-	VersionID     string `json:"version_id"`
-	StorageKey    string `json:"storage_key"`
-	NamespaceID   string `json:"namespace_id"`
-	ContentType   string `json:"content_type"`
+	URL         string `json:"url"`
+	ObjectKey   string `json:"object_key"`
+	VersionID   string `json:"version_id"`
+	StorageKey  string `json:"storage_key"`
+	NamespaceID string `json:"namespace_id"`
+	ContentType string `json:"content_type"`
 }
 
 type SharePreparedCardBundleAsset struct {
-	Slot      string `json:"slot"`
+	Slot string `json:"slot"`
 	SharePresignedUploadEntry
 }
 
 type SharePreparedCardBundleUpload struct {
-	CardID  string                          `json:"card_id"`
-	Cover   *SharePresignedUploadEntry      `json:"cover,omitempty"`
-	Assets  []SharePreparedCardBundleAsset  `json:"assets"`
+	CardID string                         `json:"card_id"`
+	Cover  *SharePresignedUploadEntry     `json:"cover,omitempty"`
+	Assets []SharePreparedCardBundleAsset `json:"assets"`
 }
 
 type ShareUploadedMediaInfo struct {
@@ -534,17 +537,17 @@ type ShareUploadedAssetInfo struct {
 }
 
 type ShareCreateCardBundleFromPresignedInput struct {
-	CreatorID     string
-	CardID        string
-	Title         string
-	Description   string
-	Tags          []string
-	Visibility    string
-	Status        string
-	AccessMode    string
-	Assets        []ShareUploadedAssetInfo
-	Cover         *ShareUploadedMediaInfo
-	MaxFileSize   int64
+	CreatorID   string
+	CardID      string
+	Title       string
+	Description string
+	Tags        []string
+	Visibility  string
+	Status      string
+	AccessMode  string
+	Assets      []ShareUploadedAssetInfo
+	Cover       *ShareUploadedMediaInfo
+	MaxFileSize int64
 }
 
 type ShareUpdateCardCoverFromPresignedInput struct {
@@ -563,11 +566,11 @@ type ShareUpdateCardAssetFromPresignedInput struct {
 }
 
 type ShareUpdateCardMediaPresignInput struct {
-	OwnerID        string
-	CardID         string
-	Slot           string // empty for cover
-	ContentType    string
-	Size           int64
+	OwnerID     string
+	CardID      string
+	Slot        string // empty for cover
+	ContentType string
+	Size        int64
 }
 
 type ShareUpdateCardMediaPresignResult struct {
@@ -692,7 +695,6 @@ type ShareChangePasswordInput struct {
 	OldPassword string
 	NewPassword string
 }
-
 
 func (s *ShareService) getCardByOwner(ctx context.Context, ownerID, cardID string) (*model.SharePlatformCard, error) {
 	ownerID = strings.TrimSpace(ownerID)
