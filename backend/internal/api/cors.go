@@ -281,7 +281,7 @@ func isSharePublicReadPath(u *url.URL) bool {
 func isSharePublicReadPathString(path string) bool {
 	path = strings.TrimSpace(path)
 	switch path {
-	case "/api/share/discover/cards", "/api/share/discover/system-themes", "/api/share/discover/site-branding", "/api/share/discover/site-branding/logo":
+	case "/api/share/discover/cards", "/api/share/discover/system-themes", "/api/share/discover/desktop-components", "/api/share/discover/site-branding", "/api/share/discover/site-branding/logo":
 		return true
 	}
 

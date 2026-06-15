@@ -33,6 +33,7 @@ var (
 		"app",
 		"character_persona",
 		"world_book",
+		"desktop_component",
 	}
 
 	ErrShareInvalidEmail                   = errors.New("invalid email")
@@ -86,6 +87,8 @@ var (
 	ErrShareReviewReasonRequired           = errors.New("review reason is required")
 	ErrShareInvalidSystemThemePackage      = errors.New("invalid system theme package")
 	ErrShareSystemThemePackageTooLarge     = errors.New("system theme package exceeds 20MB")
+	ErrShareInvalidDesktopComponent        = errors.New("invalid desktop component file")
+	ErrShareDesktopComponentTooLarge       = errors.New("desktop component file exceeds 2MB")
 	ErrShareInvalidVerificationCodeTTL     = errors.New("invalid verification code ttl")
 	ErrShareInvalidResendInterval          = errors.New("invalid resend interval")
 	ErrShareInvalidMaxVerifyAttempts       = errors.New("invalid max verify attempts")
@@ -379,15 +382,16 @@ type ShareDiscoverCardItem struct {
 }
 
 type ShareCardDetail struct {
-	Card             ShareCardView         `json:"card"`
-	Creator          SharePublicUser       `json:"creator"`
-	Stats            ShareCardStats        `json:"stats"`
-	Assets           []ShareCardAssetView  `json:"assets"`
-	SystemTheme      *ShareSystemThemeView `json:"systemTheme,omitempty"`
-	CanEdit          bool                  `json:"canEdit"`
-	CanDownload      bool                  `json:"canDownload"`
-	AccessCodeStatus ShareCardAccessStatus `json:"accessCodeStatus"`
-	IsFavorited      bool                  `json:"isFavorited"`
+	Card              ShareCardView                 `json:"card"`
+	Creator           SharePublicUser               `json:"creator"`
+	Stats             ShareCardStats                `json:"stats"`
+	Assets            []ShareCardAssetView          `json:"assets"`
+	SystemTheme       *ShareSystemThemeView         `json:"systemTheme,omitempty"`
+	DesktopComponent  *ShareDesktopComponentView    `json:"desktopComponent,omitempty"`
+	CanEdit           bool                          `json:"canEdit"`
+	CanDownload       bool                          `json:"canDownload"`
+	AccessCodeStatus  ShareCardAccessStatus         `json:"accessCodeStatus"`
+	IsFavorited       bool                          `json:"isFavorited"`
 }
 
 type ShareCardAccessStatus string
@@ -1093,6 +1097,8 @@ func shareCardSlotSortOrder(slot string) int {
 		return 3
 	case "world_book":
 		return 4
+	case "desktop_component":
+		return 5
 	default:
 		return 999
 	}

@@ -10,6 +10,7 @@
   DashboardResponse,
   DiscoverCardItem,
   DiscoverCardsPagination,
+  DiscoverDesktopComponentItem,
   DiscoverSystemThemeItem,
   FavoritesResponse,
   ExternalSessionUser,
@@ -137,6 +138,8 @@ const shareApiErrorMessages: Record<string, string> = {
   "card must keep at least one category file": "卡片至少保留一个分类文件",
   "invalid system theme package": "系统主题包无法按 baobaobaiphone 当前解析规则导入，请检查 zip/json 结构、manifest 和资源路径",
   "system theme package exceeds 20mb": "系统主题包不能超过 20MB",
+  "invalid desktop component file": "桌面组件文件不是有效的 HTML，请检查文件内容",
+  "desktop component file exceeds 2mb": "桌面组件文件不能超过 2MB",
   "invalid review status": "审核状态不正确",
   "review reason is required": "驳回时必须填写原因",
   "card not found": "卡片不存在",
@@ -401,6 +404,19 @@ export const shareApi = {
     const query = params.toString();
     const path = query ? `${API_ROOT}/discover/system-themes?${query}` : `${API_ROOT}/discover/system-themes`;
     return request<{ items: DiscoverSystemThemeItem[]; pagination: DiscoverCardsPagination }>(path);
+  },
+
+  discoverDesktopComponents(input?: { page?: number; size?: number }) {
+    const params = new URLSearchParams();
+    if (input?.page && input.page > 0) {
+      params.set("page", String(input.page));
+    }
+    if (input?.size && input.size > 0) {
+      params.set("size", String(input.size));
+    }
+    const query = params.toString();
+    const path = query ? `${API_ROOT}/discover/desktop-components?${query}` : `${API_ROOT}/discover/desktop-components`;
+    return request<{ items: DiscoverDesktopComponentItem[]; pagination: DiscoverCardsPagination }>(path);
   },
 
   favoriteCard(cardId: string) {

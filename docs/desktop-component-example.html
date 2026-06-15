@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- 桌面组件元数据（可选）：分享给 baobaobaiphone 时会被自动解析 -->
+  <meta name="widget-name" content="示例时钟组件">
+  <meta name="widget-width" content="2">
+  <meta name="widget-height" content="2">
+  <meta name="widget-corner-radius" content="24">
+  <meta name="widget-frosted" content="10">
+  <meta name="widget-shadow" content="14">
+  <meta name="widget-background-opacity" content="18">
+
+  <title>示例桌面组件</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    .widget {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.65), rgba(168, 85, 247, 0.65));
+      padding: 16px;
+    }
+    .time {
+      font-size: 42px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    .date {
+      margin-top: 8px;
+      font-size: 13px;
+      opacity: 0.92;
+    }
+  </style>
+</head>
+<body>
+  <div class="widget">
+    <div class="time" id="time">--:--</div>
+    <div class="date" id="date">加载中...</div>
+  </div>
+
+  <script>
+    function updateClock() {
+      const now = new Date();
+      const timeEl = document.getElementById('time');
+      const dateEl = document.getElementById('date');
+      if (timeEl) {
+        timeEl.textContent = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+      }
+      if (dateEl) {
+        dateEl.textContent = now.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' });
+      }
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+  </script>
+</body>
+</html>

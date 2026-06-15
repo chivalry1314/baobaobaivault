@@ -45,6 +45,7 @@ const initialAssetPending: AssetPendingMap = {
   app: null,
   character_persona: null,
   world_book: null,
+  desktop_component: null,
 };
 
 function parseCardTagsInput(value: string): string[] {

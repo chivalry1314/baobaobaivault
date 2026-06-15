@@ -212,14 +212,22 @@ func (s *ShareService) CreateCardBundle(ctx context.Context, input ShareCreateCa
 		return nil, err
 	}
 	for index := range input.Assets {
-		if normalizeShareCardSlot(input.Assets[index].Slot) != "system_theme" {
+		slot := normalizeShareCardSlot(input.Assets[index].Slot)
+		if slot == "system_theme" {
+			validatedReader, err := validateAndCloneShareSystemThemeReader(input.Assets[index].FileName, input.Assets[index].FileReader)
+			if err != nil {
+				return nil, err
+			}
+			input.Assets[index].FileReader = validatedReader
 			continue
 		}
-		validatedReader, err := validateAndCloneShareSystemThemeReader(input.Assets[index].FileName, input.Assets[index].FileReader)
-		if err != nil {
-			return nil, err
+		if slot == "desktop_component" {
+			validatedReader, err := validateAndCloneShareDesktopComponentReader(input.Assets[index].FileName, input.Assets[index].FileReader)
+			if err != nil {
+				return nil, err
+			}
+			input.Assets[index].FileReader = validatedReader
 		}
-		input.Assets[index].FileReader = validatedReader
 	}
 
 	status := strings.TrimSpace(input.Status)
@@ -1141,6 +1149,13 @@ func (s *ShareService) ReplaceCardAssetByOwner(ctx context.Context, input ShareU
 	}
 	if slot == "system_theme" {
 		validatedReader, err := validateAndCloneShareSystemThemeReader(input.FileName, input.FileReader)
+		if err != nil {
+			return nil, err
+		}
+		input.FileReader = validatedReader
+	}
+	if slot == "desktop_component" {
+		validatedReader, err := validateAndCloneShareDesktopComponentReader(input.FileName, input.FileReader)
 		if err != nil {
 			return nil, err
 		}

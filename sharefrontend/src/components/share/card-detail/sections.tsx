@@ -360,6 +360,7 @@ const SLOT_EMOJI_MAP: Record<CardContentSlot, string> = {
   app: "📱",
   character_persona: "🧸",
   world_book: "📖",
+  desktop_component: "🧩",
 };
 
 function StatPill(props: { icon: React.ReactNode; label: string; value: string }) {

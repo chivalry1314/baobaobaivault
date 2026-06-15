@@ -43,7 +43,13 @@ export type ShareSystemRolesResponse = {
   pagination: SharePagination;
 };
 
-export type CardContentSlot = "system_theme" | "wechat_theme" | "app" | "character_persona" | "world_book";
+export type CardContentSlot =
+  | "system_theme"
+  | "wechat_theme"
+  | "app"
+  | "character_persona"
+  | "world_book"
+  | "desktop_component";
 
 export type CardAsset = {
   slot: CardContentSlot;
@@ -118,6 +124,31 @@ export type DiscoverSystemThemeItem = {
   stats: CardStats;
   asset: CardAsset;
   systemTheme: ShareSystemTheme;
+  accessCodeStatus: "none" | "required" | "expired" | "exhausted";
+};
+
+export type ShareDesktopComponent = {
+  protocol: string;
+  format: string;
+  supported: boolean;
+  name: string;
+  width: number;
+  height: number;
+  cornerRadius: number;
+  frosted: number;
+  shadow: number;
+  backgroundOpacity: number;
+  fileName: string;
+  mimeType: string;
+  size: number;
+};
+
+export type DiscoverDesktopComponentItem = {
+  card: PlatformCard;
+  creator: PublicCreator;
+  stats: CardStats;
+  asset: CardAsset;
+  desktopComponent: ShareDesktopComponent;
   accessCodeStatus: "none" | "required" | "expired" | "exhausted";
 };
 
@@ -504,6 +535,7 @@ export type CardDetailResponse = {
   stats: CardStats;
   assets: CardAsset[];
   systemTheme?: ShareSystemTheme;
+  desktopComponent?: ShareDesktopComponent;
   canEdit: boolean;
   canDownload: boolean;
   accessCodeStatus?: "none" | "required" | "expired" | "exhausted";

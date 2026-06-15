@@ -6,6 +6,7 @@ export const CATEGORY_SLOTS = [
   "app",
   "character_persona",
   "world_book",
+  "desktop_component",
 ] as const satisfies readonly CardContentSlot[];
 
 export const FILTER_CHIPS = ["all", ...CATEGORY_SLOTS] as const;
@@ -18,6 +19,7 @@ export const CHIP_LABELS: Record<FilterChip, string> = {
   app: "App",
   character_persona: "角色人设",
   world_book: "世界书",
+  desktop_component: "桌面组件",
 };
 
 export const CHIP_VISUALS: Record<FilterChip, { className: string }> = {
@@ -27,6 +29,7 @@ export const CHIP_VISUALS: Record<FilterChip, { className: string }> = {
   app: { className: "bg-[#fcf1a7]" },
   character_persona: { className: "bg-[#cdb4f3]" },
   world_book: { className: "bg-[#ffcda8]" },
+  desktop_component: { className: "bg-[#b8e0ff]" },
 };
 
 export const DISCOVER_PAGE_SIZE = 12;

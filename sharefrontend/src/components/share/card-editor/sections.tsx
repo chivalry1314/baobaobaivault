@@ -2,6 +2,7 @@
 import { type ChangeEvent, type KeyboardEvent, type RefObject } from "react";
 
 import { slotOptions } from "@/components/share/card-editor/constants";
+import { DesktopComponentSpecPanel } from "@/components/share/card-editor/DesktopComponentSpecPanel";
 import { findAssetBySlot, getReviewStatusLabel, getSlotLabel, getStatusLabel, type SlotFileItem } from "@/components/share/card-editor/helpers";
 import { ShareImage } from "@/components/share/share-image";
 import type { AssetOpMode, CreateMode, EditorMode, SubmitMode } from "@/components/share/card-editor/types";
@@ -121,7 +122,13 @@ export function CardAssetsPanel(props: {
                   ))}
                 </select>
 
-                <input type="file" className="h-8 w-full rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-1 text-xs font-bold text-[var(--foreground)] file:mr-2 file:rounded-full file:border-0 file:bg-white file:px-2 file:py-0.5 file:text-[10px] file:font-black" onChange={(event) => setSlotFile(index, event.target.files?.[0] ?? null)} />
+                <input
+                  key={item.file ? `file-${item.file.name}` : `empty-${index}`}
+                  type="file"
+                  accept={item.slot === "desktop_component" ? ".html,.htm,text/html" : undefined}
+                  className="h-8 w-full rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-1 text-xs font-bold text-[var(--foreground)] file:mr-2 file:rounded-full file:border-0 file:bg-white file:px-2 file:py-0.5 file:text-[10px] file:font-black"
+                  onChange={(event) => setSlotFile(index, event.target.files?.[0] ?? null)}
+                />
 
                 {createMode === "bundle" ? (
                   <button type="button" className="rounded-full border border-[#ff9c9c] bg-[#fff2f1] px-2.5 py-1.5 text-[10px] font-black text-[#b64031] transition hover:bg-[#ffe5e3]" onClick={() => removeSlotRow(index)} disabled={slotItems.length <= 1}>
@@ -134,6 +141,16 @@ export function CardAssetsPanel(props: {
                 <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/55">
                   系统主题会按 `baobaobaiphone` 当前导入规则校验，仅支持可解析的 `.zip` / `.json` 主题包。
                 </p>
+              ) : item.slot === "desktop_component" ? (
+                <>
+                  <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/55">
+                    桌面组件会校验 HTML 文件格式，并读取 &lt;meta name="widget-*"&gt; 标签作为组件配置。
+                  </p>
+                  <DesktopComponentSpecPanel
+                    file={item.file}
+                    onFileChange={(file) => setSlotFile(index, file)}
+                  />
+                </>
               ) : null}
             </div>
           ))}
@@ -232,6 +249,10 @@ export function CardAssetsPanel(props: {
                     {slot === "system_theme" ? (
                       <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/55">
                         替换系统主题时会校验主题包能否被 `baobaobaiphone` 正常解析和导入。
+                      </p>
+                    ) : slot === "desktop_component" ? (
+                      <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/55">
+                        替换桌面组件时会校验 HTML 文件格式并重新读取组件配置。
                       </p>
                     ) : null}
                   </div>

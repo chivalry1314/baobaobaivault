@@ -352,6 +352,8 @@ function ChipIcon({ chip }: { chip: FilterChip }) {
       return <PlayIcon />;
     case "world_book":
       return <MountainIcon />;
+    case "desktop_component":
+      return <PuzzleIcon />;
     default:
       return <GridIcon />;
   }
@@ -456,6 +458,20 @@ function MountainIcon() {
     >
       <path d="M3.5 18h17L15 10.5l-3.4 4.1-2.5-2.8L3.5 18Z" />
       <circle cx="18" cy="7" r="1.6" />
+    </svg>
+  );
+}
+
+function PuzzleIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-7 w-7 text-[var(--foreground)]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+    >
+      <path d="M10 4h4a2 2 0 0 1 2 2v2h2a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2H6a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h2V6a2 2 0 0 1 2-2Z" />
     </svg>
   );
 }
