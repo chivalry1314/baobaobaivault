@@ -148,18 +148,8 @@ async function validateDescriptor(descriptor: WechatThemePackageDescriptor): Pro
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  if (!descriptor.name) {
-    errors.push("微信主题缺少必填字段 name。");
-  } else if (descriptor.name.length > 120) {
+  if (descriptor.name && descriptor.name.length > 120) {
     warnings.push("主题名称过长，建议控制在 120 字以内。");
-  }
-
-  if (!descriptor.author) {
-    warnings.push("缺少 author 字段，将留空。");
-  }
-
-  if (!descriptor.version) {
-    warnings.push("缺少 version 字段，将按 1.0.0 处理。");
   }
 
   if ((descriptor.description || "").length > 500) {
@@ -372,8 +362,6 @@ export async function createCompliantWechatThemeZip(
 
   const descriptor: WechatThemePackageDescriptor = {
     id: safeId || undefined,
-    name,
-    version: "1.0.0",
     chatBackgroundOpacity: Math.max(0, Math.min(1, metadata.chatBackgroundOpacity)),
     selfBubblePreset: metadata.selfBubblePreset,
     peerBubblePreset: metadata.peerBubblePreset,

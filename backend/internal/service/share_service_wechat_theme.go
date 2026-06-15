@@ -213,7 +213,14 @@ func (s *ShareService) mapDiscoverWechatThemes(
 			creatorView = toSharePublicUser(&creator)
 		}
 
-		wechatTheme, err := s.buildWechatThemeView(ctx, &card, wechatAsset)
+		creatorName := ""
+		if creator, exists := creatorMap[card.CreatorExternalUserID]; exists {
+			creatorName = strings.TrimSpace(creator.Nickname)
+			if creatorName == "" {
+				creatorName = strings.TrimSpace(creator.Username)
+			}
+		}
+		wechatTheme, err := s.buildWechatThemeView(ctx, &card, wechatAsset, creatorName)
 		if err != nil {
 			return nil, err
 		}
@@ -231,14 +238,14 @@ func (s *ShareService) mapDiscoverWechatThemes(
 	return items, nil
 }
 
-func (s *ShareService) buildWechatThemeView(ctx context.Context, card *model.SharePlatformCard, asset *model.SharePlatformCardAsset) (ShareWechatThemeView, error) {
+func (s *ShareService) buildWechatThemeView(ctx context.Context, card *model.SharePlatformCard, asset *model.SharePlatformCardAsset, creatorName string) (ShareWechatThemeView, error) {
 	view := ShareWechatThemeView{
 		Protocol:              shareWechatThemeProtocol,
 		ID:                    strings.TrimSpace(card.ID),
 		Format:                detectShareWechatThemeFormat(asset.OriginalFileName, asset.MimeType),
 		Supported:             false,
 		Name:                  strings.TrimSpace(card.Title),
-		Author:                "",
+		Author:                strings.TrimSpace(creatorName),
 		Version:               "",
 		Description:           strings.TrimSpace(card.Description),
 		Tags:                  append([]string{}, decodeShareCardTags(card.TagsText)...),
@@ -281,7 +288,7 @@ func (s *ShareService) buildWechatThemeView(ctx context.Context, card *model.Sha
 }
 
 func mergeShareWechatThemeDescriptor(view ShareWechatThemeView, descriptor shareWechatThemePackageDescriptor) ShareWechatThemeView {
-	view.Supported = strings.TrimSpace(descriptor.Name) != ""
+	view.Supported = true
 	if id := strings.TrimSpace(descriptor.ID); id != "" {
 		view.ID = id
 	}
@@ -325,9 +332,6 @@ func inspectShareWechatThemePackage(fileName string, data []byte) (shareWechatTh
 		descriptor, err := decodeShareWechatThemePackageDescriptor(data)
 		if err != nil {
 			return shareWechatThemePackageDescriptor{}, err
-		}
-		if strings.TrimSpace(descriptor.Name) == "" {
-			return shareWechatThemePackageDescriptor{}, ErrShareInvalidWechatThemePackage
 		}
 		return descriptor, nil
 	case "zip":
@@ -417,10 +421,6 @@ func inspectShareWechatThemeZipPackage(data []byte) (shareWechatThemePackageDesc
 		return shareWechatThemePackageDescriptor{}, err
 	}
 	manifestDir := shareWechatThemeDir(normalizeShareWechatThemeZipPath(manifestFile.Name))
-
-	if strings.TrimSpace(descriptor.Name) == "" {
-		return shareWechatThemePackageDescriptor{}, ErrShareInvalidWechatThemePackage
-	}
 
 	if descriptor.ChatBackgroundImage != "" {
 		if !shareWechatThemeAssetExists(manifestDir, descriptor.ChatBackgroundImage, entryMap) {
@@ -569,7 +569,18 @@ func (s *ShareService) loadCardWechatThemeView(ctx context.Context, card *model.
 		return nil, nil
 	}
 
-	view, err := s.buildWechatThemeView(ctx, card, asset)
+	creatorName := ""
+	if card != nil {
+		var creator model.ShareExternalUser
+		if err := s.db.WithContext(ctx).Where("id = ?", card.CreatorExternalUserID).First(&creator).Error; err == nil {
+			creatorName = strings.TrimSpace(creator.Nickname)
+			if creatorName == "" {
+				creatorName = strings.TrimSpace(creator.Username)
+			}
+		}
+	}
+
+	view, err := s.buildWechatThemeView(ctx, card, asset, creatorName)
 	if err != nil {
 		return nil, err
 	}

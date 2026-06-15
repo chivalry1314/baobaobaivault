@@ -97,12 +97,18 @@ func TestInspectShareWechatThemeJson(t *testing.T) {
 	}
 }
 
-func TestInspectShareWechatThemeJsonMissingName(t *testing.T) {
+func TestInspectShareWechatThemeJsonWithoutName(t *testing.T) {
 	data := []byte(`{"author": "tester"}`)
 
-	_, err := inspectShareWechatThemePackage("theme.json", data)
-	if err == nil {
-		t.Fatal("inspectShareWechatThemePackage() expected error for missing name")
+	descriptor, err := inspectShareWechatThemePackage("theme.json", data)
+	if err != nil {
+		t.Fatalf("inspectShareWechatThemePackage() error = %v", err)
+	}
+	if descriptor.Name != "" {
+		t.Errorf("Name = %q, want empty", descriptor.Name)
+	}
+	if descriptor.Author != "tester" {
+		t.Errorf("Author = %q, want %q", descriptor.Author, "tester")
 	}
 }
 

@@ -245,18 +245,6 @@ export function WechatThemeSpecPanel({
           {validation && validation.errors.length === 0 ? (
             <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] text-[var(--foreground)]/70 sm:grid-cols-3">
               <div>
-                <span className="font-bold text-[var(--foreground)]/50">名称：</span>
-                {validation.parsed.name || "未命名主题"}
-              </div>
-              <div>
-                <span className="font-bold text-[var(--foreground)]/50">作者：</span>
-                {validation.parsed.author || "—"}
-              </div>
-              <div>
-                <span className="font-bold text-[var(--foreground)]/50">版本：</span>
-                {validation.parsed.version || "—"}
-              </div>
-              <div>
                 <span className="font-bold text-[var(--foreground)]/50">我的气泡：</span>
                 {wechatThemeBubblePresetOptions.find((item) => item.value === validation.parsed.selfBubblePreset)?.label ||
                   "微信默认"}
