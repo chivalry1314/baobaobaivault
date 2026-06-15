@@ -127,6 +127,35 @@ export type DiscoverSystemThemeItem = {
   accessCodeStatus: "none" | "required" | "expired" | "exhausted";
 };
 
+export type ShareWechatTheme = {
+  protocol: string;
+  id: string;
+  format: string;
+  supported: boolean;
+  name: string;
+  author: string;
+  version: string;
+  description: string;
+  tags: string[];
+  chatBackgroundImage: string;
+  chatBackgroundOpacity: number;
+  selfBubblePreset: string;
+  peerBubblePreset: string;
+  rendererSource: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+};
+
+export type DiscoverWechatThemeItem = {
+  card: PlatformCard;
+  creator: PublicCreator;
+  stats: CardStats;
+  asset: CardAsset;
+  wechatTheme: ShareWechatTheme;
+  accessCodeStatus: "none" | "required" | "expired" | "exhausted";
+};
+
 export type ShareDesktopComponent = {
   protocol: string;
   format: string;
@@ -535,6 +564,7 @@ export type CardDetailResponse = {
   stats: CardStats;
   assets: CardAsset[];
   systemTheme?: ShareSystemTheme;
+  wechatTheme?: ShareWechatTheme;
   desktopComponent?: ShareDesktopComponent;
   canEdit: boolean;
   canDownload: boolean;

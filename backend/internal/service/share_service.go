@@ -87,6 +87,8 @@ var (
 	ErrShareReviewReasonRequired           = errors.New("review reason is required")
 	ErrShareInvalidSystemThemePackage      = errors.New("invalid system theme package")
 	ErrShareSystemThemePackageTooLarge     = errors.New("system theme package exceeds 20MB")
+	ErrShareInvalidWechatThemePackage      = errors.New("invalid wechat theme package")
+	ErrShareWechatThemePackageTooLarge     = errors.New("wechat theme package exceeds 20MB")
 	ErrShareInvalidDesktopComponent        = errors.New("invalid desktop component file")
 	ErrShareDesktopComponentTooLarge       = errors.New("desktop component file exceeds 2MB")
 	ErrShareInvalidVerificationCodeTTL     = errors.New("invalid verification code ttl")
@@ -387,6 +389,7 @@ type ShareCardDetail struct {
 	Stats             ShareCardStats                `json:"stats"`
 	Assets            []ShareCardAssetView          `json:"assets"`
 	SystemTheme       *ShareSystemThemeView         `json:"systemTheme,omitempty"`
+	WechatTheme       *ShareWechatThemeView         `json:"wechatTheme,omitempty"`
 	DesktopComponent  *ShareDesktopComponentView    `json:"desktopComponent,omitempty"`
 	CanEdit           bool                          `json:"canEdit"`
 	CanDownload       bool                          `json:"canDownload"`

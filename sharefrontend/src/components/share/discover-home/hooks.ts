@@ -35,18 +35,27 @@ export function useDiscoverHome({
 }: {
   initialDiscover?: DiscoverInitialPayload;
 } = {}): DiscoverHomeHookResult {
+  const [activeChip, setActiveChip] = useState<FilterChip>("all");
+  const activeSlot = useMemo(
+    () => (activeChip === "all" ? "" : activeChip),
+    [activeChip],
+  );
+  const canUseInitialDiscover =
+    activeChip === "all" && initialDiscover !== null;
+
   const [cards, setCards] = useState<DiscoverCardItem[]>(
-    initialDiscover?.cards ?? [],
+    canUseInitialDiscover ? initialDiscover.cards : [],
   );
-  const [page, setPage] = useState(initialDiscover?.pagination.page ?? 1);
+  const [page, setPage] = useState(
+    canUseInitialDiscover ? initialDiscover.pagination.page : 1,
+  );
   const [hasMore, setHasMore] = useState(
-    initialDiscover?.pagination.hasMore ?? true,
+    canUseInitialDiscover ? initialDiscover.pagination.hasMore : true,
   );
-  const [loading, setLoading] = useState(initialDiscover === null);
+  const [loading, setLoading] = useState(!canUseInitialDiscover);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
-  const [activeChip, setActiveChip] = useState<FilterChip>("all");
   const [accessModeFilter, setAccessModeFilter] =
     useState<ShareAccessModeFilter>("all");
   const [columnCount, setColumnCount] = useState(1);
@@ -54,8 +63,76 @@ export function useDiscoverHome({
 
   const virtualListRef = useRef<HTMLDivElement | null>(null);
   const loadedCardIdsRef = useRef<Set<string>>(
-    new Set((initialDiscover?.cards ?? []).map((item) => item.card.id)),
+    new Set(
+      (canUseInitialDiscover ? initialDiscover.cards : []).map(
+        (item) => item.card.id,
+      ),
+    ),
   );
+
+  useEffect(() => {
+    if (activeChip === "all" && initialDiscover) {
+      setCards(initialDiscover.cards);
+      setPage(initialDiscover.pagination.page);
+      setHasMore(initialDiscover.pagination.hasMore);
+      loadedCardIdsRef.current = new Set(
+        initialDiscover.cards.map((item) => item.card.id),
+      );
+      setLoading(false);
+      setError("");
+      return;
+    }
+
+    let active = true;
+
+    async function loadFirstPage() {
+      setLoading(true);
+      setError("");
+      loadedCardIdsRef.current = new Set();
+
+      try {
+        const payload = await shareApi.discoverCards({
+          page: 1,
+          size: DISCOVER_PAGE_SIZE,
+          slot: activeSlot,
+        });
+
+        if (!active) {
+          return;
+        }
+
+        loadedCardIdsRef.current = new Set(
+          payload.cards.map((item) => item.card.id),
+        );
+        setCards(payload.cards);
+        setPage(payload.pagination.page);
+        setHasMore(payload.pagination.hasMore);
+      } catch (loadError) {
+        if (!active) {
+          return;
+        }
+
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "加载失败，请稍后重试。",
+        );
+        setCards([]);
+        setPage(1);
+        setHasMore(false);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadFirstPage();
+    return () => {
+      active = false;
+    };
+  }, [activeChip, activeSlot, initialDiscover]);
+
   const loadMore = useCallback(async () => {
     if (!hasMore || loading || loadingMore) {
       return;
@@ -68,6 +145,7 @@ export function useDiscoverHome({
       const payload = await shareApi.discoverCards({
         page: nextPage,
         size: DISCOVER_PAGE_SIZE,
+        slot: activeSlot,
       });
       const existingCardIds = loadedCardIdsRef.current;
       const nextCards = payload.cards.filter(
@@ -95,7 +173,7 @@ export function useDiscoverHome({
     } finally {
       setLoadingMore(false);
     }
-  }, [hasMore, loading, loadingMore, page]);
+  }, [activeSlot, hasMore, loading, loadingMore, page]);
 
   const { ref: loadMoreRef } = useInView({
     onChange: (inView) => {
@@ -124,54 +202,6 @@ export function useDiscoverHome({
       window.removeEventListener("resize", updateColumns);
     };
   }, []);
-
-  useEffect(() => {
-    if (initialDiscover) {
-      return;
-    }
-
-    let active = true;
-
-    async function loadFirstPage() {
-      setLoading(true);
-      setError("");
-
-      try {
-        const payload = await shareApi.discoverCards({
-          page: 1,
-          size: DISCOVER_PAGE_SIZE,
-        });
-
-        if (!active) {
-          return;
-        }
-
-        loadedCardIdsRef.current = new Set(
-          payload.cards.map((item) => item.card.id),
-        );
-        setCards(payload.cards);
-        setPage(payload.pagination.page);
-        setHasMore(payload.pagination.hasMore);
-      } catch (loadError) {
-        if (!active) {
-          return;
-        }
-
-        setError(
-          loadError instanceof Error ? loadError.message : "加载失败，请稍后重试。",
-        );
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void loadFirstPage();
-    return () => {
-      active = false;
-    };
-  }, [initialDiscover]);
 
   const sourceCards = useMemo(() => toHomeFeedCards(cards), [cards]);
 

@@ -221,6 +221,14 @@ func (s *ShareService) CreateCardBundle(ctx context.Context, input ShareCreateCa
 			input.Assets[index].FileReader = validatedReader
 			continue
 		}
+		if slot == "wechat_theme" {
+			validatedReader, err := validateAndCloneShareWechatThemeReader(input.Assets[index].FileName, input.Assets[index].FileReader)
+			if err != nil {
+				return nil, err
+			}
+			input.Assets[index].FileReader = validatedReader
+			continue
+		}
 		if slot == "desktop_component" {
 			validatedReader, err := validateAndCloneShareDesktopComponentReader(input.Assets[index].FileName, input.Assets[index].FileReader)
 			if err != nil {
@@ -1149,6 +1157,13 @@ func (s *ShareService) ReplaceCardAssetByOwner(ctx context.Context, input ShareU
 	}
 	if slot == "system_theme" {
 		validatedReader, err := validateAndCloneShareSystemThemeReader(input.FileName, input.FileReader)
+		if err != nil {
+			return nil, err
+		}
+		input.FileReader = validatedReader
+	}
+	if slot == "wechat_theme" {
+		validatedReader, err := validateAndCloneShareWechatThemeReader(input.FileName, input.FileReader)
 		if err != nil {
 			return nil, err
 		}

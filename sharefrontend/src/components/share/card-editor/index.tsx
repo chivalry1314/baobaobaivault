@@ -182,6 +182,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                 handleDeleteAsset={(slot) => {
                   void handleDeleteAsset(slot);
                 }}
+                authorName={authorName}
               />
 
               <CardInfoPanel

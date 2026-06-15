@@ -32,6 +32,7 @@ share_public_read_cors:
   # Public read-only share endpoints are intentionally exposed like query APIs:
   #   - /api/share/discover/cards
   #   - /api/share/discover/system-themes
+  #   - /api/share/discover/wechat-themes
   #   - /api/share/discover/desktop-components
   #   - /api/share/cards/:cardId and public preview/download resources beneath it
   # This keeps public card/theme metadata and package downloads callable from

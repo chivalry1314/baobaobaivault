@@ -12,6 +12,7 @@
   DiscoverCardsPagination,
   DiscoverDesktopComponentItem,
   DiscoverSystemThemeItem,
+  DiscoverWechatThemeItem,
   FavoritesResponse,
   ExternalSessionUser,
   PlatformCard,
@@ -380,13 +381,16 @@ export const shareApi = {
     });
   },
 
-  discoverCards(input?: { page?: number; size?: number }) {
+  discoverCards(input?: { page?: number; size?: number; slot?: string }) {
     const params = new URLSearchParams();
     if (input?.page && input.page > 0) {
       params.set("page", String(input.page));
     }
     if (input?.size && input.size > 0) {
       params.set("size", String(input.size));
+    }
+    if (input?.slot && input.slot.trim()) {
+      params.set("slot", input.slot.trim());
     }
     const query = params.toString();
     const path = query ? `${API_ROOT}/discover/cards?${query}` : `${API_ROOT}/discover/cards`;
@@ -404,6 +408,19 @@ export const shareApi = {
     const query = params.toString();
     const path = query ? `${API_ROOT}/discover/system-themes?${query}` : `${API_ROOT}/discover/system-themes`;
     return request<{ items: DiscoverSystemThemeItem[]; pagination: DiscoverCardsPagination }>(path);
+  },
+
+  discoverWechatThemes(input?: { page?: number; size?: number }) {
+    const params = new URLSearchParams();
+    if (input?.page && input.page > 0) {
+      params.set("page", String(input.page));
+    }
+    if (input?.size && input.size > 0) {
+      params.set("size", String(input.size));
+    }
+    const query = params.toString();
+    const path = query ? `${API_ROOT}/discover/wechat-themes?${query}` : `${API_ROOT}/discover/wechat-themes`;
+    return request<{ items: DiscoverWechatThemeItem[]; pagination: DiscoverCardsPagination }>(path);
   },
 
   discoverDesktopComponents(input?: { page?: number; size?: number }) {

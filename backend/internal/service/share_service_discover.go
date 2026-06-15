@@ -12,7 +12,16 @@ import (
 	"gorm.io/gorm"
 )
 
-func (s *ShareService) ListDiscoverCards(ctx context.Context, page, size int, viewerUserID string) ([]ShareDiscoverCardItem, int64, error) {
+var discoverCardSlots = map[string]struct{}{
+	"system_theme":      {},
+	"wechat_theme":      {},
+	"app":               {},
+	"character_persona": {},
+	"world_book":        {},
+	"desktop_component": {},
+}
+
+func (s *ShareService) ListDiscoverCards(ctx context.Context, page, size int, viewerUserID, slot string) ([]ShareDiscoverCardItem, int64, error) {
 	if page <= 0 {
 		page = 1
 	}
@@ -23,7 +32,14 @@ func (s *ShareService) ListDiscoverCards(ctx context.Context, page, size int, vi
 		size = 60
 	}
 
-	cacheKey := cache.Key("discover", "cards", fmt.Sprintf("%d", page), fmt.Sprintf("%d", size), viewerUserID)
+	slot = strings.TrimSpace(slot)
+	if slot != "" {
+		if _, ok := discoverCardSlots[slot]; !ok {
+			return []ShareDiscoverCardItem{}, 0, nil
+		}
+	}
+
+	cacheKey := cache.Key("discover", "cards", fmt.Sprintf("%d", page), fmt.Sprintf("%d", size), slot, viewerUserID)
 	var cached struct {
 		Items []ShareDiscoverCardItem `json:"items"`
 		Total int64                   `json:"total"`
@@ -39,6 +55,10 @@ func (s *ShareService) ListDiscoverCards(ctx context.Context, page, size int, vi
 			model.SharePlatformCardStatusPublished,
 			model.SharePlatformCardReviewStatusApproved,
 		)
+
+	if slot != "" {
+		query = query.Joins("JOIN share_platform_card_assets ON share_platform_card_assets.card_id = share_platform_cards.id AND share_platform_card_assets.slot = ?", slot)
+	}
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {

@@ -51,6 +51,10 @@ func (s *ShareService) GetCardDetail(ctx context.Context, cardID, viewerUserID s
 	if err != nil {
 		return nil, err
 	}
+	wechatTheme, err := s.loadCardWechatThemeView(ctx, &card, assets)
+	if err != nil {
+		return nil, err
+	}
 	desktopComponent, err := s.loadCardDesktopComponentView(ctx, &card, assets)
 	if err != nil {
 		return nil, err
@@ -80,6 +84,7 @@ func (s *ShareService) GetCardDetail(ctx context.Context, cardID, viewerUserID s
 		Stats:            statsByCard[card.ID],
 		Assets:           assetsView,
 		SystemTheme:      systemTheme,
+		WechatTheme:      wechatTheme,
 		DesktopComponent: desktopComponent,
 		CanEdit:          canEdit,
 		CanDownload:      canDownload,

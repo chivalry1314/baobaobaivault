@@ -36,7 +36,8 @@ func (h *Handler) shareDiscoverCards(c *gin.Context) {
 	}
 
 	viewerUserID := h.currentShareUserID(c)
-	cards, total, err := h.shareService.ListDiscoverCards(c.Request.Context(), page, size, viewerUserID)
+	slot := strings.TrimSpace(c.Query("slot"))
+	cards, total, err := h.shareService.ListDiscoverCards(c.Request.Context(), page, size, viewerUserID, slot)
 	if err != nil {
 		jsonError(c, http.StatusInternalServerError, err)
 		return
