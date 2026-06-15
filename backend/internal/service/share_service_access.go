@@ -63,6 +63,10 @@ func (s *ShareService) GetCardDetail(ctx context.Context, cardID, viewerUserID s
 	if err != nil {
 		return nil, err
 	}
+	characterPersona, err := s.loadCardCharacterPersonaView(ctx, &card, assets)
+	if err != nil {
+		return nil, err
+	}
 
 	var creator model.ShareExternalUser
 	if err := s.db.WithContext(ctx).First(&creator, "id = ?", card.CreatorExternalUserID).Error; err != nil {
@@ -91,6 +95,7 @@ func (s *ShareService) GetCardDetail(ctx context.Context, cardID, viewerUserID s
 		WechatTheme:      wechatTheme,
 		DesktopComponent: desktopComponent,
 		WorldBook:        worldBook,
+		CharacterPersona: characterPersona,
 		CanEdit:          canEdit,
 		CanDownload:      canDownload,
 		AccessCodeStatus: accessCodeStatus,

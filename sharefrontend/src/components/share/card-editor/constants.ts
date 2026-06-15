@@ -53,6 +53,37 @@ export const wechatThemeProtocol = "baobaobaiphone.wechat-theme-package.v1";
 
 export const worldBookProtocol = "baobaobaiphone.world-book-package.v1";
 
+export const characterPersonaProtocol = "baobaobaiphone.character-persona-package.v1";
+
+export type CharacterPersonaContact = {
+  name: string;
+  phone: string;
+  avatar: string;
+  description: string;
+  greeting: string;
+  note: string;
+};
+
+export type CharacterPersonaMetadata = {
+  version: number;
+  contacts: CharacterPersonaContact[];
+};
+
+export const characterPersonaMetaDefaults: CharacterPersonaMetadata = {
+  version: 1,
+  contacts: [],
+};
+
+export const characterPersonaMetaLimits = {
+  contact: {
+    name: { min: 1, max: 80 },
+    phone: { max: 40 },
+    description: { max: 500 },
+    greeting: { max: 500 },
+    note: { max: 1000 },
+  },
+};
+
 export type WorldBookTriggerMode = "keyword" | "constant" | "disabled";
 export type WorldBookScope = "global" | "character";
 
@@ -68,17 +99,11 @@ export type WorldBookEntry = {
 
 export type WorldBookMetadata = {
   version: number;
-  name: string;
-  author: string;
-  tags: string[];
   worldBook: WorldBookEntry[];
 };
 
 export const worldBookMetaDefaults: WorldBookMetadata = {
   version: 1,
-  name: "",
-  author: "",
-  tags: [],
   worldBook: [],
 };
 
@@ -96,11 +121,6 @@ export const worldBookScopeOptions: Array<{ value: WorldBookScope; label: string
 export type WechatThemeBubblePreset = "wechat" | "rounded" | "glass" | "outline";
 
 export type WechatThemeMetadata = {
-  name: string;
-  author: string;
-  version: string;
-  description: string;
-  tags: string[];
   chatBackgroundOpacity: number;
   selfBubblePreset: WechatThemeBubblePreset;
   peerBubblePreset: WechatThemeBubblePreset;
@@ -115,11 +135,6 @@ export const wechatThemeBubblePresetOptions: Array<{ value: WechatThemeBubblePre
 ];
 
 export const wechatThemeMetaDefaults: WechatThemeMetadata = {
-  name: "",
-  author: "",
-  version: "1.0.0",
-  description: "",
-  tags: [],
   chatBackgroundOpacity: 0,
   selfBubblePreset: "wechat",
   peerBubblePreset: "wechat",
@@ -127,12 +142,7 @@ export const wechatThemeMetaDefaults: WechatThemeMetadata = {
 };
 
 export const wechatThemeMetaLimits = {
-  name: { min: 1, max: 120 },
-  author: { max: 80 },
-  version: { max: 40 },
-  description: { max: 500 },
   chatBackgroundOpacity: { min: 0, max: 1 },
-  tags: { maxCount: 12, maxLength: 32 },
 };
 
 export const wechatThemeImageExtensions = [".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif"] as const;

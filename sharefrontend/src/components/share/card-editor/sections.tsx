@@ -5,6 +5,7 @@ import { slotOptions } from "@/components/share/card-editor/constants";
 import { DesktopComponentSpecPanel } from "@/components/share/card-editor/DesktopComponentSpecPanel";
 import { WechatThemeSpecPanel } from "@/components/share/card-editor/WechatThemeSpecPanel";
 import { WorldBookSpecPanel } from "@/components/share/card-editor/WorldBookSpecPanel";
+import { CharacterPersonaSpecPanel } from "@/components/share/card-editor/CharacterPersonaSpecPanel";
 import { findAssetBySlot, getReviewStatusLabel, getSlotLabel, getStatusLabel, type SlotFileItem } from "@/components/share/card-editor/helpers";
 import { ShareImage } from "@/components/share/share-image";
 import type { AssetOpMode, CreateMode, EditorMode, SubmitMode } from "@/components/share/card-editor/types";
@@ -155,7 +156,7 @@ export function CardAssetsPanel(props: {
                   <WechatThemeSpecPanel
                     file={item.file}
                     onFileChange={(file) => setSlotFile(index, file)}
-                    defaultAuthor={authorName}
+                    cardTitle={previewTitle}
                   />
                 </>
               ) : item.slot === "desktop_component" ? (
@@ -176,7 +177,16 @@ export function CardAssetsPanel(props: {
                   <WorldBookSpecPanel
                     file={item.file}
                     onFileChange={(file) => setSlotFile(index, file)}
-                    defaultAuthor={authorName}
+                  />
+                </>
+              ) : item.slot === "character_persona" ? (
+                <>
+                  <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/55">
+                    角色人设支持直接上传 `.json`，也可以通过下方表单一键生成。角色世界书无需在此填写。
+                  </p>
+                  <CharacterPersonaSpecPanel
+                    file={item.file}
+                    onFileChange={(file) => setSlotFile(index, file)}
                   />
                 </>
               ) : null}
@@ -252,7 +262,7 @@ export function CardAssetsPanel(props: {
                     </div>
 
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                      {slot === "wechat_theme" || slot === "world_book" ? null : (
+                      {slot === "wechat_theme" || slot === "world_book" || slot === "character_persona" ? null : (
                         <label className="cursor-pointer rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1.5 text-[10px] font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)]">
                           {pendingMode === "replace" ? "替换中..." : "替换文件"}
                           <input
@@ -289,7 +299,7 @@ export function CardAssetsPanel(props: {
                           }
                         }}
                         existingTheme={loadedCard?.wechatTheme}
-                        defaultAuthor={authorName}
+                        cardTitle={loadedCard?.card.title}
                         disabled={slotBusy || publishPending}
                       />
                     ) : slot === "desktop_component" ? (
@@ -304,9 +314,18 @@ export function CardAssetsPanel(props: {
                             void handleReplaceAsset(slot, file);
                           }
                         }}
-                        existingWorldBook={loadedCard?.worldBook}
                         existingDownloadUrl={asset?.downloadUrl}
-                        defaultAuthor={authorName}
+                        disabled={slotBusy || publishPending}
+                      />
+                    ) : slot === "character_persona" ? (
+                      <CharacterPersonaSpecPanel
+                        file={null}
+                        onFileChange={(file) => {
+                          if (file) {
+                            void handleReplaceAsset(slot, file);
+                          }
+                        }}
+                        existingDownloadUrl={asset?.downloadUrl}
                         disabled={slotBusy || publishPending}
                       />
                     ) : null}

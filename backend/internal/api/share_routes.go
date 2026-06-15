@@ -31,6 +31,7 @@ func (h *Handler) registerShareRoutes(r *gin.Engine) {
 		group.GET("/discover/wechat-themes", h.shareDiscoverWechatThemes)
 		group.GET("/discover/desktop-components", h.shareDiscoverDesktopComponents)
 		group.GET("/discover/world-books", h.shareDiscoverWorldBooks)
+		group.GET("/discover/character-personas", h.shareDiscoverCharacterPersonas)
 		group.GET("/discover/site-branding", h.sharePublicSiteBrandingSettings)
 		group.GET("/discover/media-storage", h.sharePublicMediaStorageSettings)
 		group.GET("/discover/site-branding/logo", h.sharePublicSiteBrandingLogo)

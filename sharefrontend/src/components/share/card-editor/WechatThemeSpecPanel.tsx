@@ -5,15 +5,12 @@ import { useEffect, useId, useMemo, useState } from "react";
 import {
   wechatThemeBubblePresetOptions,
   wechatThemeMetaDefaults,
-  wechatThemeMetaLimits,
   wechatThemeProtocol,
   type WechatThemeMetadata,
 } from "@/components/share/card-editor/constants";
 import {
   createCompliantWechatThemeZip,
   detectWechatThemeFormat,
-  formatTagInput,
-  parseTagInput,
   validateWechatThemeFile,
   type WechatThemeBuildFiles,
   type WechatThemeValidationResult,
@@ -26,16 +23,11 @@ interface WechatThemeSpecPanelProps {
   file: File | null;
   onFileChange: (file: File | null) => void;
   existingTheme?: ShareWechatTheme | null;
-  defaultAuthor?: string;
+  cardTitle?: string;
   disabled?: boolean;
 }
 
 const labelMap: Record<keyof WechatThemeMetadata, string> = {
-  name: "主题名称",
-  author: "作者",
-  version: "版本",
-  description: "描述",
-  tags: "标签",
   chatBackgroundOpacity: "背景透明度",
   selfBubblePreset: "我的气泡",
   peerBubblePreset: "对方气泡",
@@ -49,14 +41,13 @@ export function WechatThemeSpecPanel({
   file,
   onFileChange,
   existingTheme,
-  defaultAuthor = "",
+  cardTitle = "",
   disabled = false,
 }: WechatThemeSpecPanelProps) {
   const [panelMode, setPanelMode] = useState<PanelMode>("upload");
   const [validation, setValidation] = useState<WechatThemeValidationResult | null>(null);
   const [checking, setChecking] = useState(false);
   const [buildForm, setBuildForm] = useState<WechatThemeMetadata>({ ...wechatThemeMetaDefaults });
-  const [tagDraft, setTagDraft] = useState("");
   const [buildFiles, setBuildFiles] = useState<WechatThemeBuildFiles>({
     chatBackgroundImage: null,
     rendererSourceFile: null,
@@ -71,24 +62,13 @@ export function WechatThemeSpecPanel({
     if (existingTheme) {
       setBuildForm((current) => ({
         ...current,
-        name: existingTheme.name || current.name,
-        author: existingTheme.author || current.author || defaultAuthor,
-        version: existingTheme.version || current.version,
-        description: existingTheme.description || current.description,
-        tags: existingTheme.tags?.length ? existingTheme.tags : current.tags,
         chatBackgroundOpacity: existingTheme.chatBackgroundOpacity ?? current.chatBackgroundOpacity,
         selfBubblePreset: (existingTheme.selfBubblePreset as WechatThemeMetadata["selfBubblePreset"]) || current.selfBubblePreset,
         peerBubblePreset: (existingTheme.peerBubblePreset as WechatThemeMetadata["peerBubblePreset"]) || current.peerBubblePreset,
         rendererSource: existingTheme.rendererSource || current.rendererSource,
       }));
-      setTagDraft(formatTagInput(existingTheme.tags || []));
-    } else if (defaultAuthor) {
-      setBuildForm((current) => ({
-        ...current,
-        author: current.author || defaultAuthor,
-      }));
     }
-  }, [existingTheme, defaultAuthor]);
+  }, [existingTheme]);
 
   useEffect(() => {
     if (!file || panelMode !== "upload") {
@@ -101,20 +81,14 @@ export function WechatThemeSpecPanel({
     validateWechatThemeFile(file).then((result) => {
       if (!active) return;
       setValidation(result);
-      if (result.parsed.name) {
+      if (result.valid) {
         setBuildForm((current) => ({
           ...current,
-          name: result.parsed.name || current.name,
-          author: result.parsed.author || current.author,
-          version: result.parsed.version || current.version,
-          description: result.parsed.description || current.description,
-          tags: result.parsed.tags?.length ? result.parsed.tags : current.tags,
           chatBackgroundOpacity: result.parsed.chatBackgroundOpacity ?? current.chatBackgroundOpacity,
           selfBubblePreset: result.parsed.selfBubblePreset || current.selfBubblePreset,
           peerBubblePreset: result.parsed.peerBubblePreset || current.peerBubblePreset,
           rendererSource: result.parsed.rendererSource || current.rendererSource,
         }));
-        setTagDraft(formatTagInput(result.parsed.tags || []));
       }
       setChecking(false);
     });
@@ -128,19 +102,9 @@ export function WechatThemeSpecPanel({
     setBuildForm((current) => ({ ...current, [key]: value }));
   };
 
-  const handleTagDraftChange = (value: string) => {
-    setTagDraft(value);
-    const tags = parseTagInput(value);
-    handleFormChange("tags", tags.slice(0, wechatThemeMetaLimits.tags.maxCount));
-  };
-
-  const handleTagDraftBlur = () => {
-    setTagDraft(formatTagInput(buildForm.tags));
-  };
-
   const handleBuild = async () => {
-    if (!buildForm.name.trim()) {
-      setBuildError("请填写主题名称。");
+    if (!cardTitle.trim()) {
+      setBuildError("请先在卡片信息中填写主题名称（卡片标题）。");
       return;
     }
 
@@ -148,7 +112,7 @@ export function WechatThemeSpecPanel({
     setBuildError(null);
 
     try {
-      const nextFile = await createCompliantWechatThemeZip(buildForm, buildFiles);
+      const nextFile = await createCompliantWechatThemeZip(buildForm, buildFiles, cardTitle);
       onFileChange(nextFile);
       setPanelMode("upload");
     } catch (error) {
@@ -324,94 +288,6 @@ export function WechatThemeSpecPanel({
               {buildError}
             </div>
           ) : null}
-
-          {(
-            [
-              { key: "name", type: "text", placeholder: "输入主题名称", required: true },
-              { key: "author", type: "text", placeholder: "输入作者（可选）" },
-              { key: "version", type: "text", placeholder: "例如 1.0.0" },
-            ] as const
-          ).map((field) => {
-            const fieldKey = field.key as keyof WechatThemeMetadata;
-            const inputId = `${baseId}-${field.key}`;
-            return (
-              <div key={field.key} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
-                <label htmlFor={inputId} className="min-w-[5.5rem] text-[10px] font-black text-[var(--foreground)]/70">
-                  {labelMap[fieldKey]}
-                  {"required" in field && field.required ? <span className="text-rose-500"> *</span> : null}
-                </label>
-                <input
-                  id={inputId}
-                  type={field.type}
-                  placeholder={field.placeholder}
-                  value={buildForm[fieldKey] as string}
-                  disabled={disabled}
-                  onChange={(event) => handleFormChange(fieldKey, event.target.value as WechatThemeMetadata[typeof fieldKey])}
-                  className="h-8 flex-1 rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1 text-[11px] font-bold text-[var(--foreground)] focus:border-[var(--outline)] focus:bg-white focus:outline-none disabled:opacity-60"
-                />
-              </div>
-            );
-          })}
-
-          <div className="flex flex-col gap-1">
-            <label htmlFor={`${baseId}-description`} className="text-[10px] font-black text-[var(--foreground)]/70">
-              {labelMap.description}
-            </label>
-            <textarea
-              id={`${baseId}-description`}
-              rows={3}
-              placeholder="补充主题说明..."
-              value={buildForm.description}
-              disabled={disabled}
-              onChange={(event) => handleFormChange("description", event.target.value)}
-              className="w-full resize-y rounded-[1rem] border border-[var(--outline)]/20 bg-white px-3 py-2 text-[11px] font-bold leading-5 text-[var(--foreground)] placeholder:text-[var(--foreground)]/35 focus:border-[var(--outline)] focus:outline-none disabled:opacity-60"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label htmlFor={`${baseId}-tags`} className="text-[10px] font-black text-[var(--foreground)]/70">
-              {labelMap.tags}
-              <span className="font-normal text-[var(--foreground)]/50">
-                {" "}
-                （用逗号、回车或分号分隔，最多 {wechatThemeMetaLimits.tags.maxCount} 个）
-              </span>
-            </label>
-            <input
-              id={`${baseId}-tags`}
-              type="text"
-              placeholder="例如：简约, 深色, 微信风"
-              value={tagDraft}
-              disabled={disabled}
-              onChange={(event) => handleTagDraftChange(event.target.value)}
-              onBlur={handleTagDraftBlur}
-              className="h-8 rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1 text-[11px] font-bold text-[var(--foreground)] placeholder:text-[var(--foreground)]/35 focus:border-[var(--outline)] focus:bg-white focus:outline-none disabled:opacity-60"
-            />
-            {buildForm.tags.length > 0 ? (
-              <div className="flex flex-wrap gap-1">
-                {buildForm.tags.map((tag, index) => (
-                  <span
-                    key={`${tag}-${index}`}
-                    className="inline-flex items-center gap-1 rounded-full border border-[var(--outline)]/20 bg-white px-2 py-0.5 text-[10px] font-black text-[var(--foreground)]"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const nextTags = buildForm.tags.filter((_, i) => i !== index);
-                        handleFormChange("tags", nextTags);
-                        setTagDraft(formatTagInput(nextTags));
-                      }}
-                      disabled={disabled}
-                      className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-[#ff9c9c] bg-[#fff2f1] text-[8px] leading-none text-[#b64031] disabled:opacity-60"
-                      aria-label={`删除标签 ${tag}`}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            ) : null}
-          </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1">

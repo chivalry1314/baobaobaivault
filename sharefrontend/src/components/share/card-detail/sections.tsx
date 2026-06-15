@@ -264,6 +264,68 @@ export function CardDetailContent(props: {
           </section>
         ) : null}
 
+        {detail.characterPersona ? (
+          <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--secondary)] text-base">🧸</span>
+                <div>
+                  <h3 className="text-sm font-black text-[var(--foreground)]">角色人设协议</h3>
+                  <p className="text-[10px] font-bold text-[var(--foreground)]/55">baobaobaiphone 可安装</p>
+                </div>
+              </div>
+              <span
+                className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-black ${
+                  detail.characterPersona.supported
+                    ? "bg-[var(--secondary)] text-[var(--foreground)]"
+                    : "bg-[var(--accent)] text-[var(--foreground)]"
+                }`}
+              >
+                {detail.characterPersona.supported ? "已识别协议" : "待校验协议"}
+              </span>
+            </div>
+
+            <div className="mt-3 rounded-[1rem] border border-[var(--outline)]/12 bg-[var(--surface-container)] p-3">
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-lg bg-white px-2.5 py-2">
+                  <p className="text-[10px] font-bold text-[var(--foreground)]/50">协议</p>
+                  <p className="mt-0.5 truncate font-mono font-black text-[var(--foreground)]/90">{detail.characterPersona.protocol}</p>
+                </div>
+                <div className="rounded-lg bg-white px-2.5 py-2">
+                  <p className="text-[10px] font-bold text-[var(--foreground)]/50">格式</p>
+                  <p className="mt-0.5 font-black text-[var(--foreground)]/90">{detail.characterPersona.format.toUpperCase()}</p>
+                </div>
+                <div className="rounded-lg bg-white px-2.5 py-2">
+                  <p className="text-[10px] font-bold text-[var(--foreground)]/50">大小</p>
+                  <p className="mt-0.5 font-black text-[var(--foreground)]/90">{formatBytes(detail.characterPersona.size)}</p>
+                </div>
+                <div className="rounded-lg bg-white px-2.5 py-2">
+                  <p className="text-[10px] font-bold text-[var(--foreground)]/50">联系人</p>
+                  <p className="mt-0.5 font-black text-[var(--foreground)]/90">{detail.characterPersona.contactCount} 位</p>
+                </div>
+              </div>
+
+              <div className="mt-2 rounded-lg bg-white px-2.5 py-2">
+                <p className="text-[10px] font-bold text-[var(--foreground)]/50">文件名</p>
+                <p className="mt-0.5 truncate font-mono font-black text-[var(--foreground)]/90">{detail.characterPersona.fileName}</p>
+              </div>
+
+              {detail.characterPersona.tags.length > 0 ? (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {detail.characterPersona.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-[var(--foreground)]/75"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
+
         <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--tertiary)] text-base">⬇️</span>

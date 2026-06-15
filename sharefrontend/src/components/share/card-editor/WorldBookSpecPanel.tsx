@@ -13,16 +13,13 @@ import {
   type WorldBookTriggerMode,
 } from "@/components/share/card-editor/constants";
 import { parseTagInput } from "@/components/share/card-editor/wechat-theme";
-import type { ShareWorldBook } from "@/lib/shared";
 
 type PanelMode = "upload" | "build";
 
 interface WorldBookSpecPanelProps {
   file: File | null;
   onFileChange: (file: File | null) => void;
-  existingWorldBook?: ShareWorldBook | null;
   existingDownloadUrl?: string | null;
-  defaultAuthor?: string;
   disabled?: boolean;
 }
 
@@ -53,9 +50,6 @@ function buildWorldBookFile(metadata: WorldBookMetadata): File {
   const payload = {
     version: metadata.version,
     protocol: worldBookProtocol,
-    name: metadata.name,
-    author: metadata.author,
-    tags: metadata.tags,
     worldBook: metadata.worldBook.map((entry) => ({
       id: entry.id,
       name: entry.name,
@@ -67,7 +61,7 @@ function buildWorldBookFile(metadata: WorldBookMetadata): File {
     })),
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  return new File([blob], `${metadata.name || "worldbook"}.json`, { type: "application/json" });
+  return new File([blob], "worldbook.json", { type: "application/json" });
 }
 
 async function parseWorldBookFile(file: File | Blob): Promise<WorldBookMetadata | null> {
@@ -101,11 +95,6 @@ async function parseWorldBookFile(file: File | Blob): Promise<WorldBookMetadata 
 
     return {
       version: typeof parsed.version === "number" ? parsed.version : 1,
-      name: typeof parsed.name === "string" ? parsed.name : "",
-      author: typeof parsed.author === "string" ? parsed.author : "",
-      tags: Array.isArray(parsed.tags)
-        ? parsed.tags.filter((t): t is string => typeof t === "string")
-        : [],
       worldBook: entries,
     };
   } catch {
@@ -116,36 +105,16 @@ async function parseWorldBookFile(file: File | Blob): Promise<WorldBookMetadata 
 export function WorldBookSpecPanel({
   file,
   onFileChange,
-  existingWorldBook,
   existingDownloadUrl,
-  defaultAuthor = "",
   disabled = false,
 }: WorldBookSpecPanelProps) {
   const [panelMode, setPanelMode] = useState<PanelMode>("upload");
   const [buildForm, setBuildForm] = useState<WorldBookMetadata>({ ...worldBookMetaDefaults });
-  const [tagDraft, setTagDraft] = useState("");
   const [buildPending, setBuildPending] = useState(false);
   const [buildError, setBuildError] = useState<string | null>(null);
   const [existingLoading, setExistingLoading] = useState(false);
   const [loadedExistingUrl, setLoadedExistingUrl] = useState<string | null>(null);
   const baseId = useId();
-
-  useEffect(() => {
-    if (existingWorldBook) {
-      setBuildForm((current) => ({
-        ...current,
-        name: existingWorldBook.name || current.name,
-        author: existingWorldBook.author || current.author || defaultAuthor,
-        tags: existingWorldBook.tags?.length ? existingWorldBook.tags : current.tags,
-      }));
-      setTagDraft("");
-    } else if (defaultAuthor) {
-      setBuildForm((current) => ({
-        ...current,
-        author: current.author || defaultAuthor,
-      }));
-    }
-  }, [existingWorldBook, defaultAuthor]);
 
   useEffect(() => {
     if (!file || panelMode !== "upload") {
@@ -157,12 +126,8 @@ export function WorldBookSpecPanel({
       if (!active || !parsed) return;
       setBuildForm((current) => ({
         ...current,
-        name: parsed.name || current.name,
-        author: parsed.author || current.author,
-        tags: parsed.tags?.length ? parsed.tags : current.tags,
         worldBook: parsed.worldBook.length ? parsed.worldBook : current.worldBook,
       }));
-      setTagDraft("");
     });
 
     return () => {
@@ -201,12 +166,8 @@ export function WorldBookSpecPanel({
         if (!active || !parsed) return;
         setBuildForm((current) => ({
           ...current,
-          name: parsed.name || current.name,
-          author: parsed.author || current.author || defaultAuthor,
-          tags: parsed.tags?.length ? parsed.tags : current.tags,
           worldBook: parsed.worldBook.length ? parsed.worldBook : current.worldBook,
         }));
-        setTagDraft("");
         setLoadedExistingUrl(existingDownloadUrl);
       })
       .catch(() => {
@@ -221,61 +182,10 @@ export function WorldBookSpecPanel({
     return () => {
       active = false;
     };
-  }, [panelMode, existingDownloadUrl, loadedExistingUrl, buildForm.worldBook.length, defaultAuthor]);
+  }, [panelMode, existingDownloadUrl, loadedExistingUrl, buildForm.worldBook.length]);
 
   const handleFormChange = <K extends keyof WorldBookMetadata>(key: K, value: WorldBookMetadata[K]) => {
     setBuildForm((current) => ({ ...current, [key]: value }));
-  };
-
-  const normalizeTag = (value: string): string => {
-    return value.trim().replace(/\s+/g, " ").slice(0, 32).trim();
-  };
-
-  const handleAddTag = () => {
-    const tag = normalizeTag(tagDraft);
-    if (!tag) {
-      setTagDraft("");
-      return;
-    }
-    if (buildForm.tags.some((existing) => existing.toLowerCase() === tag.toLowerCase())) {
-      setTagDraft("");
-      return;
-    }
-    if (buildForm.tags.length >= 12) {
-      return;
-    }
-    handleFormChange("tags", [...buildForm.tags, tag]);
-    setTagDraft("");
-  };
-
-  const handleRemoveTag = (index: number) => {
-    handleFormChange(
-      "tags",
-      buildForm.tags.filter((_, i) => i !== index),
-    );
-  };
-
-  const handleTagKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter" || event.key === "," || event.key === "，" || event.key === ";" || event.key === "；") {
-      event.preventDefault();
-      handleAddTag();
-    }
-  };
-
-  const handleTagPaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
-    const pasted = event.clipboardData.getData("text");
-    if (!pasted) return;
-    const tags = parseTagInput(pasted);
-    const nextTags = [...buildForm.tags];
-    for (const tag of tags) {
-      const normalized = normalizeTag(tag);
-      if (!normalized) continue;
-      if (nextTags.some((existing) => existing.toLowerCase() === normalized.toLowerCase())) continue;
-      if (nextTags.length >= 12) break;
-      nextTags.push(normalized);
-    }
-    handleFormChange("tags", nextTags);
-    event.preventDefault();
   };
 
   const handleEntryChange = <K extends keyof WorldBookEntry>(
@@ -310,10 +220,6 @@ export function WorldBookSpecPanel({
   };
 
   const handleBuild = async () => {
-    if (!buildForm.name.trim()) {
-      setBuildError("请填写世界书名称。");
-      return;
-    }
     if (buildForm.worldBook.length === 0) {
       setBuildError("请至少添加一条世界书条目。");
       return;
@@ -339,8 +245,7 @@ export function WorldBookSpecPanel({
 
   const handleClear = () => {
     onFileChange(null);
-    setBuildForm({ ...worldBookMetaDefaults, author: defaultAuthor });
-    setTagDraft("");
+    setBuildForm({ ...worldBookMetaDefaults });
   };
 
   return (
@@ -406,75 +311,9 @@ export function WorldBookSpecPanel({
               正在从已有世界书文件中加载条目...
             </div>
           ) : null}
-          <div className="grid gap-2 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-[10px] font-black text-[var(--foreground)]/70">世界书名称</label>
-              <input
-                type="text"
-                value={buildForm.name}
-                onChange={(event) => handleFormChange("name", event.target.value)}
-                className="h-8 w-full rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1 text-xs font-bold text-[var(--foreground)] focus:border-[var(--outline)] focus:outline-none"
-                placeholder="如：奇幻大陆设定集"
-                disabled={disabled}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-[10px] font-black text-[var(--foreground)]/70">作者</label>
-              <input
-                type="text"
-                value={buildForm.author}
-                onChange={(event) => handleFormChange("author", event.target.value)}
-                className="h-8 w-full rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1 text-xs font-bold text-[var(--foreground)] focus:border-[var(--outline)] focus:outline-none"
-                placeholder="作者名"
-                disabled={disabled}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-[10px] font-black text-[var(--foreground)]/70">标签</label>
-            <div className="flex flex-wrap items-center gap-2 rounded-full border border-[var(--outline)]/20 bg-white px-2 py-1 text-xs font-bold text-[var(--foreground)]">
-              {buildForm.tags.map((tag, index) => (
-                <span
-                  key={`${tag}-${index}`}
-                  className="inline-flex items-center gap-1 rounded-full bg-[var(--surface-container)] px-2 py-0.5 text-[10px] font-black"
-                >
-                  {tag}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTag(index)}
-                    className="ml-0.5 rounded-full px-1 text-[10px] text-[var(--foreground)]/60 transition hover:bg-[var(--outline)]/20 hover:text-[var(--foreground)]"
-                    disabled={disabled}
-                    aria-label={`删除标签 ${tag}`}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-              <input
-                type="text"
-                value={tagDraft}
-                onChange={(event) => setTagDraft(event.target.value)}
-                onKeyDown={handleTagKeyDown}
-                onBlur={handleAddTag}
-                onPaste={handleTagPaste}
-                className="h-6 min-w-[80px] flex-1 bg-transparent px-1 py-0.5 text-xs font-bold text-[var(--foreground)] outline-none"
-                placeholder={buildForm.tags.length === 0 ? "输入标签后按回车添加" : ""}
-                disabled={disabled || buildForm.tags.length >= 12}
-              />
-              <button
-                type="button"
-                onClick={handleAddTag}
-                disabled={disabled || buildForm.tags.length >= 12 || !tagDraft.trim()}
-                className="rounded-full bg-[var(--button-primary)] px-2 py-0.5 text-[10px] font-black text-white transition hover:opacity-90 disabled:opacity-40"
-              >
-                添加
-              </button>
-            </div>
-            <p className="mt-1 text-[10px] font-bold text-[var(--foreground)]/50">
-              已添加 {buildForm.tags.length}/12 个标签
-            </p>
-          </div>
+          <p className="text-[10px] font-bold text-[var(--foreground)]/55">
+            世界书名称、作者与标签将使用卡片级信息，无需在此重复填写。
+          </p>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">

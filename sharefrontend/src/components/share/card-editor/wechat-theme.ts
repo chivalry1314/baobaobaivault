@@ -9,9 +9,18 @@ import {
   type WechatThemeMetadata,
 } from "@/components/share/card-editor/constants";
 
-export type WechatThemePackageDescriptor = WechatThemeMetadata & {
+export type WechatThemePackageDescriptor = {
   id?: string;
+  name?: string;
+  author?: string;
+  version?: string;
+  description?: string;
+  tags?: string[];
   chatBackgroundImage?: string;
+  chatBackgroundOpacity?: number;
+  selfBubblePreset?: WechatThemeBubblePreset;
+  peerBubblePreset?: WechatThemeBubblePreset;
+  rendererSource?: string;
 };
 
 export type WechatThemeValidationResult = {
@@ -153,11 +162,11 @@ async function validateDescriptor(descriptor: WechatThemePackageDescriptor): Pro
     warnings.push("缺少 version 字段，将按 1.0.0 处理。");
   }
 
-  if (descriptor.description.length > 500) {
+  if ((descriptor.description || "").length > 500) {
     warnings.push("描述过长，建议控制在 500 字以内。");
   }
 
-  if (descriptor.tags.length > 12) {
+  if ((descriptor.tags || []).length > 12) {
     warnings.push("标签数量超过 12 个，多余标签将被忽略。");
   }
 
@@ -348,10 +357,11 @@ export type WechatThemeBuildFiles = {
 export async function createCompliantWechatThemeZip(
   metadata: WechatThemeMetadata,
   files: WechatThemeBuildFiles,
+  cardTitle?: string,
 ): Promise<File> {
-  const name = metadata.name.trim();
+  const name = (cardTitle || "").trim();
   if (!name) {
-    throw new Error("主题名称为必填项。");
+    throw new Error("请先在卡片信息中填写主题名称（卡片标题）。");
   }
 
   const safeId = name
@@ -360,15 +370,10 @@ export async function createCompliantWechatThemeZip(
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
 
-  const tags = metadata.tags.slice(0, 12).map((tag) => tag.slice(0, 32).trim());
-
   const descriptor: WechatThemePackageDescriptor = {
     id: safeId || undefined,
     name,
-    author: metadata.author.trim().slice(0, 80),
-    version: metadata.version.trim().slice(0, 40) || "1.0.0",
-    description: metadata.description.trim().slice(0, 500),
-    tags,
+    version: "1.0.0",
     chatBackgroundOpacity: Math.max(0, Math.min(1, metadata.chatBackgroundOpacity)),
     selfBubblePreset: metadata.selfBubblePreset,
     peerBubblePreset: metadata.peerBubblePreset,
