@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 
+import { LoadingSpinner } from "@/components/share/loading-spinner";
 import { normalizeNextPath } from "@/components/share/auth-redirect/helpers";
 import type { AuthRedirectProps } from "@/components/share/auth-redirect/types";
 
@@ -15,9 +16,9 @@ export function AuthRedirect({ nextPath = "/creator" }: AuthRedirectProps) {
   }, [loginHref]);
 
   return (
-    <div className="min-h-screen bg-[var(--background)] px-4 py-10 sm:px-6">
-      <div className="mx-auto max-w-7xl rounded-[32px] border-[4px] border-[var(--outline)] bg-white px-6 py-14 text-center text-[var(--foreground)]/72 shadow-[0_24px_64px_-42px_rgba(120,85,94,0.32)]">
-        <p className="text-lg">正在跳转到登录页...</p>
+    <div className="flex min-h-screen items-center justify-center bg-[var(--background)] px-4 py-10 sm:px-6">
+      <div className="mx-auto flex w-full max-w-md flex-col items-center rounded-[32px] border-[4px] border-[var(--outline)] bg-white px-6 py-14 text-center text-[var(--foreground)]/72 shadow-[0_24px_64px_-42px_rgba(120,85,94,0.32)]">
+        <LoadingSpinner label="正在跳转到登录页..." />
         <Link
           href={loginHref}
           className="mt-6 inline-flex rounded-full bg-[var(--primary)] px-6 py-3 text-sm font-medium text-white transition hover:-translate-y-0.5"

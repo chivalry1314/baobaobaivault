@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
+import { LoadingSpinner } from "@/components/share/loading-spinner";
 import { useShareSession } from "@/components/share/session-provider";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 
@@ -75,7 +76,7 @@ export function FavoriteButton(props: {
         } disabled:opacity-60 ${className}`}
         aria-label={favorited ? "取消收藏" : "收藏"}
       >
-        <HeartIcon filled={favorited} className="h-3.5 w-3.5" />
+        {pending ? <LoadingSpinner size="sm" inline /> : <HeartIcon filled={favorited} className="h-3.5 w-3.5" />}
         <span>{count}</span>
       </button>
     );
@@ -91,7 +92,7 @@ export function FavoriteButton(props: {
       } disabled:opacity-60 ${className}`}
       aria-label={favorited ? "取消收藏" : "收藏"}
     >
-      <HeartIcon filled={favorited} className="h-5 w-5" />
+      {pending ? <LoadingSpinner size="sm" inline /> : <HeartIcon filled={favorited} className="h-5 w-5" />}
       <span>{count}</span>
     </button>
   );

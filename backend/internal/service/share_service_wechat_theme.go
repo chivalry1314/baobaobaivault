@@ -19,7 +19,7 @@ import (
 const (
 	shareWechatThemeProtocol     = "baobaobaiphone.wechat-theme-package.v1"
 	shareWechatThemeMaxReadBytes = 24 * 1024 * 1024
-	shareWechatThemeMaxZipFiles  = 50
+	shareWechatThemeMaxZipFiles  = 110
 )
 
 var (
@@ -39,24 +39,39 @@ var (
 	}
 )
 
+type ShareWechatThemeSticker struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	File string `json:"file"`
+}
+
+type ShareWechatThemeStickerPack struct {
+	ID       string                  `json:"id"`
+	Name     string                  `json:"name"`
+	Cover    string                  `json:"cover"`
+	Stickers []ShareWechatThemeSticker `json:"stickers"`
+}
+
 type ShareWechatThemeView struct {
-	Protocol           string   `json:"protocol"`
-	ID                 string   `json:"id"`
-	Format             string   `json:"format"`
-	Supported          bool     `json:"supported"`
-	Name               string   `json:"name"`
-	Author             string   `json:"author"`
-	Version            string   `json:"version"`
-	Description        string   `json:"description"`
-	Tags               []string `json:"tags"`
-	ChatBackgroundImage string  `json:"chatBackgroundImage"`
-	ChatBackgroundOpacity float64 `json:"chatBackgroundOpacity"`
-	SelfBubblePreset   string   `json:"selfBubblePreset"`
-	PeerBubblePreset   string   `json:"peerBubblePreset"`
-	RendererSource     string   `json:"rendererSource"`
-	FileName           string   `json:"fileName"`
-	MimeType           string   `json:"mimeType"`
-	Size               int64    `json:"size"`
+	Protocol              string                       `json:"protocol"`
+	ID                    string                       `json:"id"`
+	Format                string                       `json:"format"`
+	Supported             bool                         `json:"supported"`
+	Name                  string                       `json:"name"`
+	Author                string                       `json:"author"`
+	Version               string                       `json:"version"`
+	Description           string                       `json:"description"`
+	Tags                  []string                     `json:"tags"`
+	ChatBackgroundImage   string                       `json:"chatBackgroundImage"`
+	ChatBackgroundOpacity float64                      `json:"chatBackgroundOpacity"`
+	SelfBubblePreset      string                       `json:"selfBubblePreset"`
+	PeerBubblePreset      string                       `json:"peerBubblePreset"`
+	RendererSource        string                       `json:"rendererSource"`
+	StickerPacks          []ShareWechatThemeStickerPack `json:"stickerPacks"`
+	Features              []string                     `json:"features"`
+	FileName              string                       `json:"fileName"`
+	MimeType              string                       `json:"mimeType"`
+	Size                  int64                        `json:"size"`
 }
 
 type ShareDiscoverWechatThemeItem struct {
@@ -69,17 +84,31 @@ type ShareDiscoverWechatThemeItem struct {
 }
 
 type shareWechatThemePackageDescriptor struct {
-	ID                    string   `json:"id"`
-	Name                  string   `json:"name"`
-	Author                string   `json:"author"`
-	Version               string   `json:"version"`
-	Description           string   `json:"description"`
-	Tags                  []string `json:"tags"`
-	ChatBackgroundImage   string   `json:"chatBackgroundImage"`
-	ChatBackgroundOpacity float64  `json:"chatBackgroundOpacity"`
-	SelfBubblePreset      string   `json:"selfBubblePreset"`
-	PeerBubblePreset      string   `json:"peerBubblePreset"`
-	RendererSource        string   `json:"rendererSource"`
+	ID                    string                           `json:"id"`
+	Name                  string                           `json:"name"`
+	Author                string                           `json:"author"`
+	Version               string                           `json:"version"`
+	Description           string                           `json:"description"`
+	Tags                  []string                         `json:"tags"`
+	ChatBackgroundImage   string                           `json:"chatBackgroundImage"`
+	ChatBackgroundOpacity float64                          `json:"chatBackgroundOpacity"`
+	SelfBubblePreset      string                           `json:"selfBubblePreset"`
+	PeerBubblePreset      string                           `json:"peerBubblePreset"`
+	RendererSource        string                           `json:"rendererSource"`
+	StickerPacks          []shareWechatThemeStickerPack    `json:"stickerPacks"`
+}
+
+type shareWechatThemeSticker struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	File string `json:"file"`
+}
+
+type shareWechatThemeStickerPack struct {
+	ID       string                      `json:"id"`
+	Name     string                      `json:"name"`
+	Cover    string                      `json:"cover"`
+	Stickers []shareWechatThemeSticker   `json:"stickers"`
 }
 
 func (s *ShareService) ListDiscoverWechatThemes(ctx context.Context, page, size int) ([]ShareDiscoverWechatThemeItem, int64, error) {
@@ -254,6 +283,7 @@ func (s *ShareService) buildWechatThemeView(ctx context.Context, card *model.Sha
 		SelfBubblePreset:      "wechat",
 		PeerBubblePreset:      "wechat",
 		RendererSource:        "",
+		Features:              []string{},
 		FileName:              strings.TrimSpace(asset.OriginalFileName),
 		MimeType:              strings.TrimSpace(asset.MimeType),
 		Size:                  asset.Size,
@@ -287,8 +317,26 @@ func (s *ShareService) buildWechatThemeView(ctx context.Context, card *model.Sha
 	return mergeShareWechatThemeDescriptor(view, descriptor), nil
 }
 
+func deriveShareWechatThemeFeatures(descriptor shareWechatThemePackageDescriptor) []string {
+	features := make([]string, 0, 4)
+	if isValidWechatBubblePreset(descriptor.SelfBubblePreset) && isValidWechatBubblePreset(descriptor.PeerBubblePreset) {
+		features = append(features, "bubble")
+	}
+	if strings.TrimSpace(descriptor.ChatBackgroundImage) != "" {
+		features = append(features, "background")
+	}
+	if len(descriptor.StickerPacks) > 0 {
+		features = append(features, "stickers")
+	}
+	if strings.TrimSpace(descriptor.RendererSource) != "" {
+		features = append(features, "renderer")
+	}
+	return features
+}
+
 func mergeShareWechatThemeDescriptor(view ShareWechatThemeView, descriptor shareWechatThemePackageDescriptor) ShareWechatThemeView {
 	view.Supported = true
+	view.Features = deriveShareWechatThemeFeatures(descriptor)
 	if id := strings.TrimSpace(descriptor.ID); id != "" {
 		view.ID = id
 	}
@@ -322,7 +370,31 @@ func mergeShareWechatThemeDescriptor(view ShareWechatThemeView, descriptor share
 	if source := strings.TrimSpace(descriptor.RendererSource); source != "" {
 		view.RendererSource = source
 	}
+	if len(descriptor.StickerPacks) > 0 {
+		view.StickerPacks = mergeShareWechatThemeStickerPacks(descriptor.StickerPacks)
+	}
 	return view
+}
+
+func mergeShareWechatThemeStickerPacks(packs []shareWechatThemeStickerPack) []ShareWechatThemeStickerPack {
+	result := make([]ShareWechatThemeStickerPack, 0, len(packs))
+	for _, pack := range packs {
+		stickers := make([]ShareWechatThemeSticker, 0, len(pack.Stickers))
+		for _, s := range pack.Stickers {
+			stickers = append(stickers, ShareWechatThemeSticker{
+				ID:   s.ID,
+				Name: s.Name,
+				File: s.File,
+			})
+		}
+		result = append(result, ShareWechatThemeStickerPack{
+			ID:       pack.ID,
+			Name:     pack.Name,
+			Cover:    pack.Cover,
+			Stickers: stickers,
+		})
+	}
+	return result
 }
 
 func inspectShareWechatThemePackage(fileName string, data []byte) (shareWechatThemePackageDescriptor, error) {
@@ -355,17 +427,60 @@ func decodeShareWechatThemePackageDescriptor(data []byte) (shareWechatThemePacka
 	descriptor.ChatBackgroundImage = strings.TrimSpace(descriptor.ChatBackgroundImage)
 	descriptor.SelfBubblePreset = strings.ToLower(strings.TrimSpace(descriptor.SelfBubblePreset))
 	descriptor.PeerBubblePreset = strings.ToLower(strings.TrimSpace(descriptor.PeerBubblePreset))
-	if !isValidWechatBubblePreset(descriptor.SelfBubblePreset) {
-		descriptor.SelfBubblePreset = "wechat"
-	}
-	if !isValidWechatBubblePreset(descriptor.PeerBubblePreset) {
-		descriptor.PeerBubblePreset = "wechat"
-	}
+	// 不在这里填充默认气泡预设，由 merge 阶段处理；
+	// 这样 deriveShareWechatThemeFeatures 才能区分“未设置”和“显式设置”。
 	if descriptor.ChatBackgroundOpacity < 0 || descriptor.ChatBackgroundOpacity > 1 {
 		descriptor.ChatBackgroundOpacity = 0
 	}
 	descriptor.RendererSource = strings.TrimSpace(descriptor.RendererSource)
+	descriptor.StickerPacks = normalizeShareWechatThemeStickerPacks(descriptor.StickerPacks)
 	return descriptor, nil
+}
+
+func normalizeShareWechatThemeStickerPacks(packs []shareWechatThemeStickerPack) []shareWechatThemeStickerPack {
+	if len(packs) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(packs))
+	result := make([]shareWechatThemeStickerPack, 0, len(packs))
+	for _, raw := range packs {
+		id := strings.TrimSpace(raw.ID)
+		name := strings.TrimSpace(raw.Name)
+		if id == "" || name == "" {
+			continue
+		}
+		if _, exists := seen[id]; exists {
+			continue
+		}
+		seen[id] = struct{}{}
+		pack := shareWechatThemeStickerPack{
+			ID:    id,
+			Name:  name,
+			Cover: strings.TrimSpace(raw.Cover),
+		}
+		stickerSeen := make(map[string]struct{})
+		for _, s := range raw.Stickers {
+			sid := strings.TrimSpace(s.ID)
+			sname := strings.TrimSpace(s.Name)
+			if sid == "" || sname == "" {
+				continue
+			}
+			if _, exists := stickerSeen[sid]; exists {
+				continue
+			}
+			stickerSeen[sid] = struct{}{}
+			pack.Stickers = append(pack.Stickers, shareWechatThemeSticker{
+				ID:   sid,
+				Name: sname,
+				File: strings.TrimSpace(s.File),
+			})
+		}
+		result = append(result, pack)
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
 }
 
 func detectShareWechatThemeFormat(fileName, mimeType string) string {
@@ -425,6 +540,22 @@ func inspectShareWechatThemeZipPackage(data []byte) (shareWechatThemePackageDesc
 	if descriptor.ChatBackgroundImage != "" {
 		if !shareWechatThemeAssetExists(manifestDir, descriptor.ChatBackgroundImage, entryMap) {
 			return shareWechatThemePackageDescriptor{}, ErrShareInvalidWechatThemePackage
+		}
+	}
+
+	for _, pack := range descriptor.StickerPacks {
+		if pack.Cover != "" {
+			if !shareWechatThemeAssetExists(manifestDir, pack.Cover, entryMap) {
+				return shareWechatThemePackageDescriptor{}, ErrShareInvalidWechatThemePackage
+			}
+		}
+		for _, sticker := range pack.Stickers {
+			if sticker.File == "" {
+				return shareWechatThemePackageDescriptor{}, ErrShareInvalidWechatThemePackage
+			}
+			if !shareWechatThemeAssetExists(manifestDir, sticker.File, entryMap) {
+				return shareWechatThemePackageDescriptor{}, ErrShareInvalidWechatThemePackage
+			}
 		}
 	}
 

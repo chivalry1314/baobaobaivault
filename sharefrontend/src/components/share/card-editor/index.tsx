@@ -8,6 +8,7 @@ import { isCategoryEnabled, useShareCategorySettings } from "@/components/share/
 import { AppShell } from "@/components/share/app-shell";
 import { AuthRedirect } from "@/components/share/auth-redirect/index";
 import { useShareCardEditor } from "@/components/share/card-editor/hooks";
+import { LoadingSpinner } from "@/components/share/loading-spinner";
 import { CardAssetsPanel, CardInfoPanel, PublishActionsPanel, RealtimePreviewPanel } from "@/components/share/card-editor/sections";
 import type { ShareCardEditorProps } from "@/components/share/card-editor/types";
 import type { CardContentSlot } from "@/lib/shared";
@@ -59,7 +60,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
     handleCreateModeChange,
     coverPreviewUrl,
     coverPending,
-    handleCreateCoverChange,
+    handleCreateCoverFile,
     clearCreateCover,
     previewUrl,
     previewTitle,
@@ -96,9 +97,9 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
 
   if (sessionChecking || (mode === "edit" && currentUser && cardLoading)) {
     return (
-      <div className="min-h-screen bg-[var(--background)] px-4 py-8 sm:px-6 sm:py-10">
-        <div className="mx-auto max-w-7xl rounded-[32px] border border-white/80 bg-white/82 px-6 py-14 text-center text-[var(--foreground)]/72 shadow-[0_24px_64px_-42px_rgba(120,85,94,0.32)]">
-          正在加载编辑页...
+      <div className="flex min-h-screen items-center justify-center bg-[var(--background)] px-4 py-8 sm:px-6 sm:py-10">
+        <div className="mx-auto flex w-full max-w-md flex-col items-center rounded-[32px] border border-white/80 bg-white/82 px-6 py-14 text-center text-[var(--foreground)]/72 shadow-[0_24px_64px_-42px_rgba(120,85,94,0.32)]">
+          <LoadingSpinner label="正在加载编辑页..." />
         </div>
       </div>
     );
@@ -176,7 +177,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                 removeSlotRow={removeSlotRow}
                 coverPreviewUrl={coverPreviewUrl}
                 createCoverInputRef={createCoverInputRef}
-                handleCreateCoverChange={handleCreateCoverChange}
+                handleCreateCoverFile={handleCreateCoverFile}
                 clearCreateCover={clearCreateCover}
                 previewUrl={previewUrl}
                 previewTitle={previewTitle}

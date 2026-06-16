@@ -1,20 +1,26 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useId, useMemo, useState } from "react";
 
 import {
   wechatThemeBubblePresetOptions,
   wechatThemeMetaDefaults,
+  wechatThemeMetaLimits,
   wechatThemeProtocol,
   type WechatThemeMetadata,
+  type WechatThemeStickerPack,
 } from "@/components/share/card-editor/constants";
+import { WechatThemeStickerEditor } from "@/components/share/card-editor/WechatThemeStickerEditor";
 import {
   createCompliantWechatThemeZip,
   detectWechatThemeFormat,
   validateWechatThemeFile,
+  wechatThemeBuildSectionsDefault,
   type WechatThemeBuildFiles,
+  type WechatThemeBuildSections,
   type WechatThemeValidationResult,
 } from "@/components/share/card-editor/wechat-theme";
+import { LoadingSpinner } from "@/components/share/loading-spinner";
 import type { ShareWechatTheme } from "@/lib/shared";
 
 type PanelMode = "upload" | "build";
@@ -27,7 +33,40 @@ interface WechatThemeSpecPanelProps {
   disabled?: boolean;
 }
 
-const labelMap: Record<keyof WechatThemeMetadata, string> = {
+interface SectionCardProps {
+  title: string;
+  enabled: boolean;
+  onToggle: (enabled: boolean) => void;
+  children: ReactNode;
+  disabled?: boolean;
+}
+
+function SectionCard({ title, enabled, onToggle, children, disabled = false }: SectionCardProps) {
+  return (
+    <div
+      className={`rounded-[1rem] border bg-white p-3 transition ${
+        enabled ? "border-[var(--outline)]/15" : "border-[var(--outline)]/10 bg-[var(--surface-container)]/40"
+      }`}
+    >
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-[11px] font-black text-[var(--foreground)]/80">{title}</span>
+        <label className="flex cursor-pointer items-center gap-1.5 text-[10px] font-bold text-[var(--foreground)]/70">
+          <input
+            type="checkbox"
+            checked={enabled}
+            disabled={disabled}
+            onChange={(event) => onToggle(event.target.checked)}
+            className="h-3.5 w-3.5 accent-[var(--button-primary)] disabled:opacity-60"
+          />
+          启用
+        </label>
+      </div>
+      <div className={`space-y-3 ${enabled ? "" : "pointer-events-none opacity-50"}`}>{children}</div>
+    </div>
+  );
+}
+
+const labelMap: Record<"chatBackgroundOpacity" | "selfBubblePreset" | "peerBubblePreset" | "rendererSource", string> = {
   chatBackgroundOpacity: "背景透明度",
   selfBubblePreset: "我的气泡",
   peerBubblePreset: "对方气泡",
@@ -52,6 +91,9 @@ export function WechatThemeSpecPanel({
     chatBackgroundImage: null,
     rendererSourceFile: null,
   });
+  const [buildSections, setBuildSections] = useState<WechatThemeBuildSections>({
+    ...wechatThemeBuildSectionsDefault,
+  });
   const [buildPending, setBuildPending] = useState(false);
   const [buildError, setBuildError] = useState<string | null>(null);
   const baseId = useId();
@@ -66,6 +108,16 @@ export function WechatThemeSpecPanel({
         selfBubblePreset: (existingTheme.selfBubblePreset as WechatThemeMetadata["selfBubblePreset"]) || current.selfBubblePreset,
         peerBubblePreset: (existingTheme.peerBubblePreset as WechatThemeMetadata["peerBubblePreset"]) || current.peerBubblePreset,
         rendererSource: existingTheme.rendererSource || current.rendererSource,
+        stickerPacks: (existingTheme.stickerPacks || []).map((pack) => ({
+          id: pack.id,
+          name: pack.name,
+          cover: null,
+          stickers: pack.stickers.map((sticker) => ({
+            id: sticker.id,
+            name: sticker.name,
+            file: null,
+          })),
+        })),
       }));
     }
   }, [existingTheme]);
@@ -88,6 +140,16 @@ export function WechatThemeSpecPanel({
           selfBubblePreset: result.parsed.selfBubblePreset || current.selfBubblePreset,
           peerBubblePreset: result.parsed.peerBubblePreset || current.peerBubblePreset,
           rendererSource: result.parsed.rendererSource || current.rendererSource,
+          stickerPacks: (result.parsed.stickerPacks || []).map((pack) => ({
+            id: pack.id,
+            name: pack.name,
+            cover: null,
+            stickers: pack.stickers.map((sticker) => ({
+              id: sticker.id,
+              name: sticker.name,
+              file: null,
+            })),
+          })),
         }));
       }
       setChecking(false);
@@ -108,11 +170,34 @@ export function WechatThemeSpecPanel({
       return;
     }
 
+    if (buildSections.stickers) {
+      for (const pack of buildForm.stickerPacks) {
+        if (!pack.name.trim()) {
+          setBuildError("请为每个表情包填写名称。");
+          return;
+        }
+        if (pack.stickers.length === 0) {
+          setBuildError(`表情包「${pack.name || "未命名"}」至少需要包含一个表情。`);
+          return;
+        }
+        for (const sticker of pack.stickers) {
+          if (!sticker.name.trim()) {
+            setBuildError("请为每个表情填写名称。");
+            return;
+          }
+          if (!sticker.file) {
+            setBuildError(`表情「${sticker.name || "未命名"}」尚未上传图片。`);
+            return;
+          }
+        }
+      }
+    }
+
     setBuildPending(true);
     setBuildError(null);
 
     try {
-      const nextFile = await createCompliantWechatThemeZip(buildForm, buildFiles, cardTitle);
+      const nextFile = await createCompliantWechatThemeZip(buildForm, buildFiles, cardTitle, buildSections);
       onFileChange(nextFile);
       setPanelMode("upload");
     } catch (error) {
@@ -126,6 +211,8 @@ export function WechatThemeSpecPanel({
     onFileChange(null);
     setValidation(null);
     setBuildFiles({ chatBackgroundImage: null, rendererSourceFile: null });
+    setBuildForm({ ...wechatThemeMetaDefaults });
+    setBuildSections({ ...wechatThemeBuildSectionsDefault });
   };
 
   const allGood = Boolean(validation?.valid && validation.errors.length === 0 && validation.warnings.length === 0);
@@ -277,126 +364,160 @@ export function WechatThemeSpecPanel({
             </div>
           ) : null}
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="flex flex-col gap-1">
-              <label htmlFor={`${baseId}-selfBubblePreset`} className="text-[10px] font-black text-[var(--foreground)]/70">
-                {labelMap.selfBubblePreset}
-              </label>
-              <select
-                id={`${baseId}-selfBubblePreset`}
-                value={buildForm.selfBubblePreset}
-                disabled={disabled}
-                onChange={(event) =>
-                  handleFormChange("selfBubblePreset", event.target.value as WechatThemeMetadata["selfBubblePreset"])
-                }
-                className="h-8 rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1 text-[11px] font-bold text-[var(--foreground)] focus:border-[var(--outline)] focus:outline-none disabled:opacity-60"
-              >
-                {wechatThemeBubblePresetOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label htmlFor={`${baseId}-peerBubblePreset`} className="text-[10px] font-black text-[var(--foreground)]/70">
-                {labelMap.peerBubblePreset}
-              </label>
-              <select
-                id={`${baseId}-peerBubblePreset`}
-                value={buildForm.peerBubblePreset}
-                disabled={disabled}
-                onChange={(event) =>
-                  handleFormChange("peerBubblePreset", event.target.value as WechatThemeMetadata["peerBubblePreset"])
-                }
-                className="h-8 rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1 text-[11px] font-bold text-[var(--foreground)] focus:border-[var(--outline)] focus:outline-none disabled:opacity-60"
-              >
-                {wechatThemeBubblePresetOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center justify-between">
-              <label htmlFor={`${baseId}-opacity`} className="text-[10px] font-black text-[var(--foreground)]/70">
-                {labelMap.chatBackgroundOpacity}
-              </label>
-              <span className="text-[10px] font-bold text-[var(--foreground)]/60">
-                {Math.round(buildForm.chatBackgroundOpacity * 100)}%
-              </span>
-            </div>
-            <input
-              id={`${baseId}-opacity`}
-              type="range"
-              min={0}
-              max={100}
-              step={1}
-              value={Math.round(buildForm.chatBackgroundOpacity * 100)}
-              disabled={disabled}
-              onChange={(event) =>
-                handleFormChange(
-                  "chatBackgroundOpacity",
-                  clamp(Number(event.target.value) / 100, 0, 1),
-                )
-              }
-              className="w-full accent-[var(--button-primary)] disabled:opacity-60"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-black text-[var(--foreground)]/70">
-              聊天背景图（可选）
-            </label>
-            <label className="w-fit cursor-pointer rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1.5 text-[10px] font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)]">
-              {buildFiles.chatBackgroundImage ? "替换背景图" : "上传背景图"}
-              <input
-                type="file"
-                accept="image/*"
-                disabled={disabled}
-                className="hidden"
-                onChange={(event) => {
-                  const selected = event.target.files?.[0] ?? null;
-                  event.target.value = "";
-                  setBuildFiles((current) => ({ ...current, chatBackgroundImage: selected }));
-                }}
-              />
-            </label>
-            {buildFiles.chatBackgroundImage ? (
-              <div className="text-[10px] font-bold text-[var(--foreground)]/60">
-                已选择：{buildFiles.chatBackgroundImage.name}
+          <SectionCard
+            title="气泡样式"
+            enabled={buildSections.bubble}
+            onToggle={(enabled) => setBuildSections((current) => ({ ...current, bubble: enabled }))}
+            disabled={disabled}
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="flex flex-col gap-1">
+                <label htmlFor={`${baseId}-selfBubblePreset`} className="text-[10px] font-black text-[var(--foreground)]/70">
+                  {labelMap.selfBubblePreset}
+                </label>
+                <select
+                  id={`${baseId}-selfBubblePreset`}
+                  value={buildForm.selfBubblePreset}
+                  disabled={disabled}
+                  onChange={(event) =>
+                    handleFormChange("selfBubblePreset", event.target.value as WechatThemeMetadata["selfBubblePreset"])
+                  }
+                  className="h-8 rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1 text-[11px] font-bold text-[var(--foreground)] focus:border-[var(--outline)] focus:outline-none disabled:opacity-60"
+                >
+                  {wechatThemeBubblePresetOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </div>
-            ) : null}
-          </div>
 
-          <div className="flex flex-col gap-1">
-            <label htmlFor={`${baseId}-rendererSource`} className="text-[10px] font-black text-[var(--foreground)]/70">
-              {labelMap.rendererSource}
-              <span className="font-normal text-[var(--foreground)]/50">（可选，JSON 或 module.exports）</span>
-            </label>
-            <textarea
-              id={`${baseId}-rendererSource`}
-              rows={5}
-              placeholder="粘贴 JSON 或 module.exports 源码..."
-              value={buildForm.rendererSource}
+              <div className="flex flex-col gap-1">
+                <label htmlFor={`${baseId}-peerBubblePreset`} className="text-[10px] font-black text-[var(--foreground)]/70">
+                  {labelMap.peerBubblePreset}
+                </label>
+                <select
+                  id={`${baseId}-peerBubblePreset`}
+                  value={buildForm.peerBubblePreset}
+                  disabled={disabled}
+                  onChange={(event) =>
+                    handleFormChange("peerBubblePreset", event.target.value as WechatThemeMetadata["peerBubblePreset"])
+                  }
+                  className="h-8 rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1 text-[11px] font-bold text-[var(--foreground)] focus:border-[var(--outline)] focus:outline-none disabled:opacity-60"
+                >
+                  {wechatThemeBubblePresetOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </SectionCard>
+
+          <SectionCard
+            title="聊天背景"
+            enabled={buildSections.background}
+            onToggle={(enabled) => setBuildSections((current) => ({ ...current, background: enabled }))}
+            disabled={disabled}
+          >
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <label htmlFor={`${baseId}-opacity`} className="text-[10px] font-black text-[var(--foreground)]/70">
+                  {labelMap.chatBackgroundOpacity}
+                </label>
+                <span className="text-[10px] font-bold text-[var(--foreground)]/60">
+                  {Math.round(buildForm.chatBackgroundOpacity * 100)}%
+                </span>
+              </div>
+              <input
+                id={`${baseId}-opacity`}
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={Math.round(buildForm.chatBackgroundOpacity * 100)}
+                disabled={disabled}
+                onChange={(event) =>
+                  handleFormChange(
+                    "chatBackgroundOpacity",
+                    clamp(Number(event.target.value) / 100, 0, 1),
+                  )
+                }
+                className="w-full accent-[var(--button-primary)] disabled:opacity-60"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-black text-[var(--foreground)]/70">
+                聊天背景图
+              </label>
+              <label className="w-fit cursor-pointer rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1.5 text-[10px] font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)]">
+                {buildFiles.chatBackgroundImage ? "替换背景图" : "上传背景图"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={disabled}
+                  className="hidden"
+                  onChange={(event) => {
+                    const selected = event.target.files?.[0] ?? null;
+                    event.target.value = "";
+                    setBuildFiles((current) => ({ ...current, chatBackgroundImage: selected }));
+                  }}
+                />
+              </label>
+              {buildFiles.chatBackgroundImage ? (
+                <div className="text-[10px] font-bold text-[var(--foreground)]/60">
+                  已选择：{buildFiles.chatBackgroundImage.name}
+                </div>
+              ) : null}
+            </div>
+          </SectionCard>
+
+          <SectionCard
+            title="关联表情包"
+            enabled={buildSections.stickers}
+            onToggle={(enabled) => setBuildSections((current) => ({ ...current, stickers: enabled }))}
+            disabled={disabled}
+          >
+            <WechatThemeStickerEditor
+              stickerPacks={buildForm.stickerPacks}
+              onChange={(stickerPacks) => handleFormChange("stickerPacks", stickerPacks)}
               disabled={disabled}
-              onChange={(event) => handleFormChange("rendererSource", event.target.value)}
-              className="w-full resize-y rounded-[1rem] border border-[var(--outline)]/20 bg-white px-3 py-2 font-mono text-[11px] font-bold leading-5 text-[var(--foreground)] placeholder:text-[var(--foreground)]/35 focus:border-[var(--outline)] focus:outline-none disabled:opacity-60"
             />
-          </div>
+          </SectionCard>
+
+          <SectionCard
+            title="渲染源码"
+            enabled={buildSections.renderer}
+            onToggle={(enabled) => setBuildSections((current) => ({ ...current, renderer: enabled }))}
+            disabled={disabled}
+          >
+            <div className="flex flex-col gap-1">
+              <label htmlFor={`${baseId}-rendererSource`} className="text-[10px] font-black text-[var(--foreground)]/70">
+                {labelMap.rendererSource}
+                <span className="font-normal text-[var(--foreground)]/50">（JSON 或 module.exports）</span>
+              </label>
+              <textarea
+                id={`${baseId}-rendererSource`}
+                rows={5}
+                placeholder="粘贴 JSON 或 module.exports 源码..."
+                value={buildForm.rendererSource}
+                disabled={disabled}
+                onChange={(event) => handleFormChange("rendererSource", event.target.value)}
+                className="w-full resize-y rounded-[1rem] border border-[var(--outline)]/20 bg-white px-3 py-2 font-mono text-[11px] font-bold leading-5 text-[var(--foreground)] placeholder:text-[var(--foreground)]/35 focus:border-[var(--outline)] focus:outline-none disabled:opacity-60"
+              />
+            </div>
+          </SectionCard>
 
           <div className="flex items-center gap-2 pt-1">
             <button
               type="button"
               onClick={() => void handleBuild()}
               disabled={buildPending || disabled}
-              className="rounded-full border border-transparent bg-[var(--button-primary)] px-4 py-1.5 text-[10px] font-black text-white transition hover:opacity-90 disabled:opacity-60"
+              className="inline-flex items-center justify-center rounded-full border border-transparent bg-[var(--button-primary)] px-4 py-1.5 text-[10px] font-black text-white transition hover:opacity-90 disabled:opacity-60"
             >
-              {buildPending ? "生成中..." : "生成并应用主题包"}
+              {buildPending ? <LoadingSpinner size="sm" inline label="生成中..." /> : "生成并应用主题包"}
             </button>
             <span className="text-[10px] font-bold text-[var(--foreground)]/50">
               点击后会打包为符合协议的 .zip 并替换当前文件

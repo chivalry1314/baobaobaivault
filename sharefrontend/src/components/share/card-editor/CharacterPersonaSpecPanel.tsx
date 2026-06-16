@@ -13,6 +13,7 @@ import {
   createEmptyCharacterPersonaContact,
   parseCharacterPersonaFile,
 } from "@/components/share/card-editor/character-persona";
+import { LoadingSpinner } from "@/components/share/loading-spinner";
 
 type PanelMode = "upload" | "build";
 
@@ -227,8 +228,8 @@ export function CharacterPersonaSpecPanel({
       ) : (
         <div className="space-y-4">
           {existingLoading ? (
-            <div className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-[var(--foreground)]/60">
-              正在加载已有角色人设信息…
+            <div className="rounded-xl bg-white px-3 py-4">
+              <LoadingSpinner size="sm" label="正在加载已有角色人设信息…" />
             </div>
           ) : null}
 
@@ -389,9 +390,9 @@ export function CharacterPersonaSpecPanel({
               type="button"
               onClick={handleBuildFile}
               disabled={disabled || buildPending}
-              className="rounded-full bg-[var(--button-primary)] px-4 py-2 text-xs font-black text-[var(--foreground)] shadow-sm transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center justify-center rounded-full bg-[var(--button-primary)] px-4 py-2 text-xs font-black text-[var(--foreground)] shadow-sm transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {buildPending ? "生成中…" : "生成角色人设文件"}
+              {buildPending ? <LoadingSpinner size="sm" inline label="生成中…" /> : "生成角色人设文件"}
             </button>
             <button
               type="button"

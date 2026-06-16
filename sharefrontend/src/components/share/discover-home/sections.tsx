@@ -19,21 +19,23 @@ export function DiscoverSearchBar(props: {
   const { query, setQuery } = props;
 
   return (
-    <div className="group relative">
-      <input
-        type="text"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder="搜索卡片..."
-        className="w-full rounded-full border-[4px] border-[var(--outline)] bg-white px-5 py-3 pr-16 text-lg font-bold text-[var(--foreground)] placeholder:text-[var(--text-subtle)] transition-all group-hover:bg-gray-50"
-      />
-      <button
-        type="button"
-        aria-label="搜索"
-        className="absolute bottom-1.5 right-1.5 top-1.5 flex h-12 w-12 items-center justify-center rounded-full bg-[#cdb4f3] shadow-sm transition-all hover:opacity-90"
-      >
-        <SearchIcon />
-      </button>
+    <div className="mx-auto w-full max-w-xl sm:max-w-2xl lg:max-w-3xl">
+      <div className="group relative">
+        <input
+          type="text"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="搜索卡片..."
+          className="w-full rounded-full border-2 border-[var(--outline)]/25 bg-white px-5 py-3 pr-14 text-base font-bold text-[var(--foreground)] shadow-sm outline-none transition-all placeholder:text-[var(--foreground)]/40 hover:border-[var(--outline)]/40 hover:bg-white focus:border-[#cdb4f3] focus:bg-white focus:shadow-md focus:ring-4 focus:ring-[#cdb4f3]/15"
+        />
+        <button
+          type="button"
+          aria-label="搜索"
+          className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-br from-[#cdb4f3] to-[#b8a0e8] text-white shadow-md transition-all hover:scale-105 hover:shadow-lg active:scale-95"
+        >
+          <SearchIcon />
+        </button>
+      </div>
     </div>
   );
 }

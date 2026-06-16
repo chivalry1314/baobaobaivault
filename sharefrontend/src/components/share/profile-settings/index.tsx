@@ -7,6 +7,7 @@ import {
   maskPhone,
 } from "@/components/share/profile-settings/helpers";
 import { useShareProfileSettings } from "@/components/share/profile-settings/hooks";
+import { LoadingSpinner } from "@/components/share/loading-spinner";
 import { ShareImage } from "@/components/share/share-image";
 import {
   ModalCard,
@@ -292,9 +293,9 @@ export function ShareProfileSettings({
             type="button"
             disabled={savePending}
             onClick={() => void handleSaveProfile()}
-            className="rounded-full border-2 border-[var(--outline)] bg-[var(--button-primary)] px-6 py-2 text-xs font-black text-[var(--foreground)] shadow-sm transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center justify-center rounded-full border-2 border-[var(--outline)] bg-[var(--button-primary)] px-6 py-2 text-xs font-black text-[var(--foreground)] shadow-sm transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {savePending ? "保存中..." : "保存修改"}
+            {savePending ? <LoadingSpinner size="sm" inline label="保存中..." /> : "保存修改"}
           </button>
         </div>
       </section>
@@ -379,9 +380,9 @@ export function ShareProfileSettings({
               type="button"
               disabled={modalPending}
               onClick={() => void handleChangePassword()}
-              className="rounded-full border-2 border-[var(--outline)] bg-[var(--button-primary)] px-4 py-2 text-xs font-black shadow-sm transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center justify-center rounded-full border-2 border-[var(--outline)] bg-[var(--button-primary)] px-4 py-2 text-xs font-black shadow-sm transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {modalPending ? "提交中..." : "确认修改"}
+              {modalPending ? <LoadingSpinner size="sm" inline label="提交中..." /> : "确认修改"}
             </button>
           </div>
         </ModalCard>
@@ -424,9 +425,9 @@ export function ShareProfileSettings({
               type="button"
               disabled={modalPending}
               onClick={() => void handleSavePhone()}
-              className="rounded-full border-2 border-[var(--outline)] bg-[var(--button-primary)] px-4 py-2 text-xs font-black shadow-sm transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center justify-center rounded-full border-2 border-[var(--outline)] bg-[var(--button-primary)] px-4 py-2 text-xs font-black shadow-sm transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {modalPending ? "保存中..." : "保存手机号"}
+              {modalPending ? <LoadingSpinner size="sm" inline label="保存中..." /> : "保存手机号"}
             </button>
           </div>
         </ModalCard>
@@ -473,9 +474,9 @@ export function ShareProfileSettings({
               type="button"
               disabled={modalPending}
               onClick={() => void handleDeleteAccount()}
-              className="rounded-full border-2 border-[#c94c3b] bg-[#c94c3b] px-4 py-2 text-xs font-black text-white shadow-sm transition hover:bg-[#b64031] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center justify-center rounded-full border-2 border-[#c94c3b] bg-[#c94c3b] px-4 py-2 text-xs font-black text-white shadow-sm transition hover:bg-[#b64031] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {modalPending ? "注销中..." : "确认注销"}
+              {modalPending ? <LoadingSpinner size="sm" inline label="注销中..." /> : "确认注销"}
             </button>
           </div>
         </ModalCard>

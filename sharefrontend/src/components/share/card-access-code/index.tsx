@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 
 import { AppShell } from "@/components/share/app-shell";
 import { AuthRedirect } from "@/components/share/auth-redirect/index";
+import { LoadingSpinner } from "@/components/share/loading-spinner";
 import { useShareCardAccessCode } from "@/components/share/card-access-code/hooks";
 import {
   AccessCodeCardPreview,
@@ -48,9 +49,9 @@ export function ShareCardAccessCode({ cardId }: ShareCardAccessCodeProps) {
 
   if (sessionChecking) {
     return (
-      <div className="min-h-screen bg-[var(--background)] px-4 py-8 sm:px-6 sm:py-10">
-        <div className="mx-auto max-w-7xl rounded-[32px] border border-white/80 bg-white/82 px-6 py-14 text-center text-[var(--foreground)]/72 shadow-[0_24px_64px_-42px_rgba(120,85,94,0.32)]">
-          正在验证登录状态...
+      <div className="flex min-h-screen items-center justify-center bg-[var(--background)] px-4 py-8 sm:px-6 sm:py-10">
+        <div className="mx-auto flex w-full max-w-md flex-col items-center rounded-[32px] border border-white/80 bg-white/82 px-6 py-14 text-center text-[var(--foreground)]/72 shadow-[0_24px_64px_-42px_rgba(120,85,94,0.32)]">
+          <LoadingSpinner label="正在验证登录状态..." />
         </div>
       </div>
     );

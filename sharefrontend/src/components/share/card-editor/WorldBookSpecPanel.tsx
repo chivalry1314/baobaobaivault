@@ -17,6 +17,7 @@ import {
   parseWorldBookFile,
 } from "@/components/share/card-editor/world-book";
 import { parseTagInput } from "@/components/share/card-editor/wechat-theme";
+import { LoadingSpinner } from "@/components/share/loading-spinner";
 
 type PanelMode = "upload" | "build";
 
@@ -233,8 +234,8 @@ export function WorldBookSpecPanel({
       ) : (
         <div className="space-y-3">
           {existingLoading ? (
-            <div className="rounded-[0.8rem] bg-[var(--surface-container)] p-2 text-[10px] font-bold text-[var(--foreground)]/70">
-              正在从已有世界书文件中加载条目...
+            <div className="rounded-[0.8rem] bg-[var(--surface-container)] p-3">
+              <LoadingSpinner size="sm" label="正在从已有世界书文件中加载条目..." />
             </div>
           ) : null}
           <p className="text-[10px] font-bold text-[var(--foreground)]/55">
@@ -369,9 +370,9 @@ export function WorldBookSpecPanel({
             type="button"
             onClick={() => void handleBuild()}
             disabled={buildPending || disabled}
-            className="w-full rounded-full border border-transparent bg-[var(--button-primary)] px-3 py-2 text-xs font-black text-white transition hover:opacity-90 disabled:opacity-60"
+            className="flex w-full items-center justify-center rounded-full border border-transparent bg-[var(--button-primary)] px-3 py-2 text-xs font-black text-white transition hover:opacity-90 disabled:opacity-60"
           >
-            {buildPending ? "生成中..." : "生成世界书 JSON"}
+            {buildPending ? <LoadingSpinner size="sm" inline label="生成中..." /> : "生成世界书 JSON"}
           </button>
         </div>
       )}

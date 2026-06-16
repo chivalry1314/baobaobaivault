@@ -68,6 +68,9 @@ export function useDiscoverHome({
   const [loading, setLoading] = useState(!canUseInitialDiscover);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
+  const [pageSize, setPageSize] = useState(
+    canUseInitialDiscover ? initialDiscover.pagination.size : DISCOVER_PAGE_SIZE,
+  );
   const [query, setQuery] = useState("");
   const [accessModeFilter, setAccessModeFilter] =
     useState<ShareAccessModeFilter>("all");
@@ -94,6 +97,7 @@ export function useDiscoverHome({
       setCards(initialDiscover.cards);
       setPage(initialDiscover.pagination.page);
       setHasMore(initialDiscover.pagination.hasMore);
+      setPageSize(initialDiscover.pagination.size);
       loadedCardIdsRef.current = new Set(
         initialDiscover.cards.map((item) => item.card.id),
       );
@@ -108,11 +112,13 @@ export function useDiscoverHome({
       setLoading(true);
       setError("");
       loadedCardIdsRef.current = new Set();
+      const currentPageSize = DISCOVER_PAGE_SIZE;
+      setPageSize(currentPageSize);
 
       try {
         const payload = await shareApi.discoverCards({
           page: 1,
-          size: DISCOVER_PAGE_SIZE,
+          size: currentPageSize,
           slot: activeSlot,
         });
 
@@ -163,7 +169,7 @@ export function useDiscoverHome({
     try {
       const payload = await shareApi.discoverCards({
         page: nextPage,
-        size: DISCOVER_PAGE_SIZE,
+        size: pageSize,
         slot: activeSlot,
       });
       const existingCardIds = loadedCardIdsRef.current;
@@ -192,7 +198,7 @@ export function useDiscoverHome({
     } finally {
       setLoadingMore(false);
     }
-  }, [activeSlot, hasMore, loading, loadingMore, page]);
+  }, [activeSlot, hasMore, loading, loadingMore, page, pageSize]);
 
   const { ref: loadMoreRef } = useInView({
     onChange: (inView) => {
@@ -203,6 +209,29 @@ export function useDiscoverHome({
     rootMargin: "640px 0px",
     threshold: 0,
   });
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const handleScroll = () => {
+      if (!hasMore || loading || loadingMore) {
+        return;
+      }
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const scrollHeight = document.documentElement.scrollHeight;
+      const clientHeight = window.innerHeight;
+      if (scrollHeight - scrollTop - clientHeight < 800) {
+        void loadMore();
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [hasMore, loading, loadingMore, loadMore]);
 
   const deferredQuery = useDeferredValue(query);
 

@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { LoadingSpinner } from "@/components/share/loading-spinner";
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 import type { ExternalSessionUser, SessionResponse } from "@/lib/shared";
 
@@ -271,9 +272,9 @@ function ForcePasswordChangeDialog(props: {
             type="button"
             onClick={() => void handleSubmit()}
             disabled={pending || Boolean(success)}
-            className="btn-primary rounded-full px-5 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn-primary inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {pending ? "提交中..." : success ? "已完成" : "确认修改"}
+            {pending ? <LoadingSpinner size="sm" inline label="提交中..." /> : success ? "已完成" : "确认修改"}
           </button>
         </div>
       </div>

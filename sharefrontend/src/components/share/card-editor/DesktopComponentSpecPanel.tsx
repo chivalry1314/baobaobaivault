@@ -13,6 +13,7 @@ import {
   validateDesktopComponentFile,
   type DesktopComponentValidationResult,
 } from "@/components/share/card-editor/desktop-component";
+import { LoadingSpinner } from "@/components/share/loading-spinner";
 
 interface DesktopComponentSpecPanelProps {
   file: File | null;
@@ -229,9 +230,9 @@ export function DesktopComponentSpecPanel({ file, onFileChange }: DesktopCompone
               type="button"
               onClick={() => void handleApply()}
               disabled={applyPending || !file}
-              className="rounded-full border border-transparent bg-[var(--button-primary)] px-4 py-1.5 text-[10px] font-black text-white transition hover:opacity-90 disabled:opacity-60"
+              className="inline-flex items-center justify-center rounded-full border border-transparent bg-[var(--button-primary)] px-4 py-1.5 text-[10px] font-black text-white transition hover:opacity-90 disabled:opacity-60"
             >
-              {applyPending ? "生成中..." : "应用规范到 HTML"}
+              {applyPending ? <LoadingSpinner size="sm" inline label="生成中..." /> : "应用规范到 HTML"}
             </button>
             <span className="text-[10px] font-bold text-[var(--foreground)]/50">
               点击后会将 meta 标签写入 HTML 并替换当前文件

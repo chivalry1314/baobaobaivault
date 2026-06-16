@@ -9,6 +9,19 @@ import {
   type WechatThemeMetadata,
 } from "@/components/share/card-editor/constants";
 
+export type WechatThemePackageSticker = {
+  id: string;
+  name: string;
+  file: string;
+};
+
+export type WechatThemePackageStickerPack = {
+  id: string;
+  name: string;
+  cover?: string;
+  stickers: WechatThemePackageSticker[];
+};
+
 export type WechatThemePackageDescriptor = {
   id?: string;
   name?: string;
@@ -21,6 +34,8 @@ export type WechatThemePackageDescriptor = {
   selfBubblePreset?: WechatThemeBubblePreset;
   peerBubblePreset?: WechatThemeBubblePreset;
   rendererSource?: string;
+  stickerPacks?: WechatThemePackageStickerPack[];
+  features?: string[];
 };
 
 export type WechatThemeValidationResult = {
@@ -98,6 +113,44 @@ const normalizeTags = (value: unknown): string[] => {
   return result;
 };
 
+const normalizeStickerPacks = (value: unknown): WechatThemePackageStickerPack[] => {
+  if (!Array.isArray(value)) return [];
+  const packSeen = new Set<string>();
+  const packs: WechatThemePackageStickerPack[] = [];
+
+  value.forEach((rawPack) => {
+    if (!rawPack || typeof rawPack !== "object") return;
+    const pack = rawPack as Record<string, unknown>;
+    const id = String(pack.id || "").trim();
+    const name = String(pack.name || "").trim();
+    if (!id || !name || packSeen.has(id)) return;
+    packSeen.add(id);
+
+    const stickerSeen = new Set<string>();
+    const stickers: WechatThemePackageSticker[] = [];
+    const rawStickers = Array.isArray(pack.stickers) ? pack.stickers : [];
+    rawStickers.forEach((rawSticker) => {
+      if (!rawSticker || typeof rawSticker !== "object") return;
+      const sticker = rawSticker as Record<string, unknown>;
+      const sid = String(sticker.id || "").trim();
+      const sname = String(sticker.name || "").trim();
+      const file = String(sticker.file || "").trim();
+      if (!sid || !sname || !file || stickerSeen.has(sid)) return;
+      stickerSeen.add(sid);
+      stickers.push({ id: sid, name: sname, file });
+    });
+
+    packs.push({
+      id,
+      name,
+      cover: String(pack.cover || "").trim() || undefined,
+      stickers,
+    });
+  });
+
+  return packs;
+};
+
 const normalizeDescriptor = (raw: unknown): WechatThemePackageDescriptor => {
   const input = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
 
@@ -116,6 +169,7 @@ const normalizeDescriptor = (raw: unknown): WechatThemePackageDescriptor => {
     selfBubblePreset: normalizeBubblePreset(String(input.selfBubblePreset || "")),
     peerBubblePreset: normalizeBubblePreset(String(input.peerBubblePreset || "")),
     rendererSource: String(input.rendererSource || "").trim(),
+    stickerPacks: normalizeStickerPacks(input.stickerPacks),
   };
 };
 
@@ -276,6 +330,33 @@ async function validateWechatThemeZip(file: File): Promise<WechatThemeValidation
     }
   }
 
+  (descriptor.stickerPacks || []).forEach((pack) => {
+    if (pack.cover) {
+      try {
+        const resolved = joinPath(manifestDir, pack.cover).toLowerCase();
+        if (!entryMap.has(resolved)) {
+          errors.push(`表情包「${pack.name}」封面资源未找到：${pack.cover}`);
+        } else if (!isImageExtension(resolved)) {
+          errors.push(`表情包「${pack.name}」封面格式不支持：${pack.cover}`);
+        }
+      } catch (error) {
+        errors.push(error instanceof Error ? error.message : `表情包「${pack.name}」封面路径非法。`);
+      }
+    }
+    pack.stickers.forEach((sticker) => {
+      try {
+        const resolved = joinPath(manifestDir, sticker.file).toLowerCase();
+        if (!entryMap.has(resolved)) {
+          errors.push(`表情「${sticker.name}」资源未找到：${sticker.file}`);
+        } else if (!isImageExtension(resolved)) {
+          errors.push(`表情「${sticker.name}」格式不支持：${sticker.file}`);
+        }
+      } catch (error) {
+        errors.push(error instanceof Error ? error.message : `表情「${sticker.name}」路径非法。`);
+      }
+    });
+  });
+
   return {
     valid: errors.length === 0,
     errors,
@@ -344,10 +425,37 @@ export type WechatThemeBuildFiles = {
   rendererSourceFile: File | null;
 };
 
+export type WechatThemeBuildSections = {
+  bubble: boolean;
+  background: boolean;
+  stickers: boolean;
+  renderer: boolean;
+};
+
+export const wechatThemeBuildSectionsDefault: WechatThemeBuildSections = {
+  bubble: false,
+  background: false,
+  stickers: false,
+  renderer: false,
+};
+
+const sanitizeFileName = (name: string): string => {
+  return name
+    .replace(/[^a-zA-Z0-9\u4e00-\u9fa5._-]/g, "_")
+    .replace(/_{2,}/g, "_")
+    .slice(0, 80);
+};
+
+const getSafeExtension = (fileName: string): string => {
+  const ext = (fileName.split(".").pop() || "").toLowerCase();
+  return ext ? `.${ext}` : "";
+};
+
 export async function createCompliantWechatThemeZip(
   metadata: WechatThemeMetadata,
   files: WechatThemeBuildFiles,
   cardTitle?: string,
+  sections: WechatThemeBuildSections = wechatThemeBuildSectionsDefault,
 ): Promise<File> {
   const name = (cardTitle || "").trim();
   if (!name) {
@@ -362,20 +470,74 @@ export async function createCompliantWechatThemeZip(
 
   const descriptor: WechatThemePackageDescriptor = {
     id: safeId || undefined,
-    chatBackgroundOpacity: Math.max(0, Math.min(1, metadata.chatBackgroundOpacity)),
-    selfBubblePreset: metadata.selfBubblePreset,
-    peerBubblePreset: metadata.peerBubblePreset,
-    rendererSource: metadata.rendererSource.trim().slice(0, 50000),
   };
+
+  if (sections.bubble) {
+    descriptor.selfBubblePreset = metadata.selfBubblePreset;
+    descriptor.peerBubblePreset = metadata.peerBubblePreset;
+  }
 
   const zip = new JSZip();
 
-  if (files.chatBackgroundImage) {
+  if (sections.background && files.chatBackgroundImage) {
     const imageFile = files.chatBackgroundImage;
     const imageName = imageFile.name || "chat-background.png";
     const imageBuffer = await imageFile.arrayBuffer();
     zip.file(imageName, new Uint8Array(imageBuffer));
     descriptor.chatBackgroundImage = imageName;
+    descriptor.chatBackgroundOpacity = Math.max(0, Math.min(1, metadata.chatBackgroundOpacity));
+  }
+
+  if (sections.stickers) {
+    const packageStickerPacks: WechatThemePackageStickerPack[] = [];
+    for (const pack of metadata.stickerPacks || []) {
+      const packDir = `stickers/${sanitizeFileName(pack.id)}`;
+      const packagePack: WechatThemePackageStickerPack = {
+        id: pack.id,
+        name: pack.name,
+        stickers: [],
+      };
+
+      if (pack.cover) {
+        const coverName = `cover${getSafeExtension(pack.cover.name) || ".png"}`;
+        const coverPath = `${packDir}/${coverName}`;
+        const coverBuffer = await pack.cover.arrayBuffer();
+        zip.file(coverPath, new Uint8Array(coverBuffer));
+        packagePack.cover = coverPath;
+      }
+
+      for (const sticker of pack.stickers) {
+        if (!sticker.file) continue;
+        const stickerName = `${sanitizeFileName(sticker.id)}${getSafeExtension(sticker.file.name) || ".png"}`;
+        const stickerPath = `${packDir}/${stickerName}`;
+        const stickerBuffer = await sticker.file.arrayBuffer();
+        zip.file(stickerPath, new Uint8Array(stickerBuffer));
+        packagePack.stickers.push({ id: sticker.id, name: sticker.name, file: stickerPath });
+      }
+
+      if (packagePack.stickers.length > 0) {
+        packageStickerPacks.push(packagePack);
+      }
+    }
+    if (packageStickerPacks.length > 0) {
+      descriptor.stickerPacks = packageStickerPacks;
+    }
+  }
+
+  if (sections.renderer && metadata.rendererSource.trim()) {
+    descriptor.rendererSource = metadata.rendererSource.trim().slice(0, 50000);
+  }
+
+  const features: string[] = [];
+  if (sections.bubble) features.push("bubble");
+  if (sections.background && files.chatBackgroundImage) features.push("background");
+  const hasStickers =
+    sections.stickers &&
+    (metadata.stickerPacks || []).some((pack) => pack.stickers.some((sticker) => sticker.file));
+  if (hasStickers) features.push("stickers");
+  if (sections.renderer && metadata.rendererSource.trim()) features.push("renderer");
+  if (features.length > 0) {
+    descriptor.features = features;
   }
 
   zip.file("manifest.json", JSON.stringify(descriptor, null, 2));

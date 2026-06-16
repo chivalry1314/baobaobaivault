@@ -7,6 +7,7 @@ import {
   getSubmitButtonLabel,
   getUsageHelperText,
 } from "@/components/share/card-access-code/helpers";
+import { LoadingSpinner } from "@/components/share/loading-spinner";
 import { ShareImage } from "@/components/share/share-image";
 import type {
   CardAccessCodeConfig,
@@ -302,8 +303,14 @@ export function AccessCodeFormPanel(props: {
           onClick={onSubmit}
           className="inline-flex min-w-[10rem] items-center justify-center gap-1.5 rounded-full bg-[var(--button-primary)] px-6 py-2.5 text-sm font-black text-[var(--foreground)] shadow-sm transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <span>{getSubmitButtonLabel(pending)}</span>
-          <CheckIcon className="h-4 w-4" />
+          {pending ? (
+            <LoadingSpinner size="sm" inline label={getSubmitButtonLabel(pending)} />
+          ) : (
+            <>
+              <span>{getSubmitButtonLabel(pending)}</span>
+              <CheckIcon className="h-4 w-4" />
+            </>
+          )}
         </button>
       </div>
     </section>

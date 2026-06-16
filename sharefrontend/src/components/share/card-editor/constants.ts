@@ -102,11 +102,25 @@ export const worldBookScopeOptions: Array<{ value: WorldBookScope; label: string
 
 export type WechatThemeBubblePreset = "wechat" | "rounded" | "glass" | "outline";
 
+export type WechatThemeSticker = {
+  id: string;
+  name: string;
+  file: File | null;
+};
+
+export type WechatThemeStickerPack = {
+  id: string;
+  name: string;
+  cover: File | null;
+  stickers: WechatThemeSticker[];
+};
+
 export type WechatThemeMetadata = {
   chatBackgroundOpacity: number;
   selfBubblePreset: WechatThemeBubblePreset;
   peerBubblePreset: WechatThemeBubblePreset;
   rendererSource: string;
+  stickerPacks: WechatThemeStickerPack[];
 };
 
 export const wechatThemeBubblePresetOptions: Array<{ value: WechatThemeBubblePreset; label: string }> = [
@@ -121,14 +135,19 @@ export const wechatThemeMetaDefaults: WechatThemeMetadata = {
   selfBubblePreset: "wechat",
   peerBubblePreset: "wechat",
   rendererSource: "",
+  stickerPacks: [],
 };
 
 export const wechatThemeMetaLimits = {
   chatBackgroundOpacity: { min: 0, max: 1 },
+  stickerPackCount: { min: 0, max: 4 },
+  stickersPerPack: { min: 1, max: 24 },
+  stickerName: { min: 1, max: 32 },
+  stickerPackName: { min: 1, max: 40 },
 };
 
 export const wechatThemeImageExtensions = [".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif"] as const;
 
 export const wechatThemeMaxFileSize = 24 * 1024 * 1024;
 
-export const wechatThemeMaxZipFiles = 50;
+export const wechatThemeMaxZipFiles = 110;

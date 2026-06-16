@@ -157,6 +157,7 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
   const [accessMode, setAccessMode] = useState<ShareCardAccessMode>("free");
   const [createMode, setCreateMode] = useState<CreateMode>("single");
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
   const [slotItems, setSlotItems] = useState<SlotFileItem[]>([
     createEmptySlotItem(0, enabledSlotList),
   ]);
@@ -228,6 +229,7 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
         }
 
         setLoadedCard(detail);
+        setEditCoverFile(null);
         setTitle(detail.card.title);
         setDescription(detail.card.description);
         setTags(mergeCardTags(detail.card.tags || []));
@@ -341,13 +343,16 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
 
   const previewUrl = useMemo(() => {
     if (mode === "edit") {
+      if (editCoverFile) {
+        return URL.createObjectURL(editCoverFile);
+      }
       return loadedCard?.card.previewUrl ?? "";
     }
     if (!previewImageFile) {
       return "";
     }
     return URL.createObjectURL(previewImageFile);
-  }, [loadedCard?.card.previewUrl, mode, previewImageFile]);
+  }, [loadedCard?.card.previewUrl, mode, previewImageFile, editCoverFile]);
 
   useEffect(() => {
     return () => {
@@ -393,9 +398,7 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
     });
   }
 
-  function handleCreateCoverChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0] ?? null;
-    event.target.value = "";
+  function handleCreateCoverFile(file: File | null) {
     if (!file) {
       return;
     }
@@ -405,6 +408,12 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
     }
     setFormError("");
     setCoverFile(file);
+  }
+
+  function handleCreateCoverChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = "";
+    handleCreateCoverFile(file);
   }
 
   function clearCreateCover() {
@@ -695,6 +704,7 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
       return;
     }
 
+    setEditCoverFile(file);
     setCoverPending("replace");
     setFormError("");
     try {
@@ -773,6 +783,7 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
           assets: payload.assets,
         };
       });
+      setEditCoverFile(null);
     } catch (error) {
       setFormError(getShareErrorMessage(error, "删除封面图失败，请稍后重试。"));
     } finally {
@@ -912,7 +923,7 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
     coverPreviewUrl,
     coverPending,
     coverFile,
-    handleCreateCoverChange,
+    handleCreateCoverFile,
     clearCreateCover,
     previewUrl,
     previewTitle,

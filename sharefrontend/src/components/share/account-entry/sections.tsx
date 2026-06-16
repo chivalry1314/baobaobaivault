@@ -7,15 +7,17 @@ import {
   getEntryTitle,
   getInitials,
 } from "@/components/share/account-entry/helpers";
+import { LoadingSpinner } from "@/components/share/loading-spinner";
 import { ShareImage } from "@/components/share/share-image";
 import type { ExternalSessionUser } from "@/lib/shared";
 
 export function AccountEntryButton(props: {
   user: ExternalSessionUser | null;
   href: string;
+  navigating: boolean;
   onClick: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
-  const { user, href, onClick } = props;
+  const { user, href, navigating, onClick } = props;
   const label = getEntryLabel(user);
   const title = getEntryTitle(user);
 
@@ -25,9 +27,12 @@ export function AccountEntryButton(props: {
       onClick={onClick}
       aria-label={label}
       title={title}
-      className="inline-flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-[3px] border-[var(--outline)] bg-[#fcb4c7] text-[var(--foreground)] transition-all hover:opacity-90 sm:h-14 sm:w-14"
+      className="inline-flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-[3px] border-[var(--outline)] bg-[#fcb4c7] text-[var(--foreground)] transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:h-14 sm:w-14"
+      aria-disabled={navigating}
     >
-      {user?.avatar.trim() ? (
+      {navigating ? (
+        <LoadingSpinner size="sm" />
+      ) : user?.avatar.trim() ? (
         <ShareImage src={user.avatar} alt={getDisplayName(user)} fill sizes="(max-width: 640px) 48px, 56px" className="object-cover" />
       ) : user ? (
         <span className="text-sm font-black leading-none text-[var(--foreground)]/78">

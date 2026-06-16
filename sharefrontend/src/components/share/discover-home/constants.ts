@@ -32,7 +32,7 @@ export const CHIP_VISUALS: Record<FilterChip, { className: string }> = {
   desktop_component: { className: "bg-[#b8e0ff]" },
 };
 
-export const DISCOVER_PAGE_SIZE = 12;
+export const DISCOVER_PAGE_SIZE = 8;
 
 export const CARD_BG_CLASSES = [
   "bg-[#fcf1a7]",

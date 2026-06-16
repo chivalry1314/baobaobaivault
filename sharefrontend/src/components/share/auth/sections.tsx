@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { AuthFormCardProps, FieldProps } from "@/components/share/auth/types";
+import { LoadingSpinner } from "@/components/share/loading-spinner";
 import { ShareSiteBrandMark } from "@/components/share/site-brand";
 import { useShareSiteBrand } from "@/components/share/site-brand/provider";
 
@@ -91,8 +92,8 @@ function Field({
 
 export function AuthCheckingCard() {
   return (
-    <section className="relative z-10 w-full max-w-md rounded-[2rem] border-[4px] border-[var(--outline)] bg-white p-8 text-center text-sm font-black text-[var(--foreground)] md:p-12">
-      {baseAuthText.checking}
+    <section className="relative z-10 flex w-full max-w-md flex-col items-center justify-center rounded-[2rem] border-[4px] border-[var(--outline)] bg-white p-8 text-center md:p-12">
+      <LoadingSpinner label={baseAuthText.checking} />
     </section>
   );
 }
@@ -331,13 +332,15 @@ export function AuthFormCard(props: AuthFormCardProps) {
                   type="button"
                   onClick={onResendVerificationCode}
                   disabled={pending || resendPending || resendCooldownSeconds > 0}
-                  className="w-full rounded-2xl border-[3px] border-[var(--outline)] bg-white px-4 py-3 text-sm font-black text-[var(--foreground)] transition hover:bg-[#f6f8fa] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex w-full items-center justify-center rounded-2xl border-[3px] border-[var(--outline)] bg-white px-4 py-3 text-sm font-black text-[var(--foreground)] transition hover:bg-[#f6f8fa] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {resendPending
-                    ? authText.resendPending
-                    : resendCooldownSeconds > 0
-                      ? `${authText.resendCooldownPrefix}${resendCooldownSeconds}${authText.resendCooldownSuffix}`
-                      : authText.resendCode}
+                  {resendPending ? (
+                    <LoadingSpinner size="sm" inline label={authText.resendPending} />
+                  ) : resendCooldownSeconds > 0 ? (
+                    `${authText.resendCooldownPrefix}${resendCooldownSeconds}${authText.resendCooldownSuffix}`
+                  ) : (
+                    authText.resendCode
+                  )}
                 </button>
               ) : null}
             </>
@@ -348,8 +351,14 @@ export function AuthFormCard(props: AuthFormCardProps) {
             disabled={pending}
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-[3px] border-[var(--outline)] bg-[var(--button-primary)] px-5 py-3.5 text-lg font-black text-[var(--foreground)] transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {submitLabel}
-            <ArrowRightIcon className="h-5 w-5" />
+            {pending ? (
+              <LoadingSpinner size="sm" inline label={authText.processing} />
+            ) : (
+              <>
+                {submitLabel}
+                <ArrowRightIcon className="h-5 w-5" />
+              </>
+            )}
           </button>
         </form>
 

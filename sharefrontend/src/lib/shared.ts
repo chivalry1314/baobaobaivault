@@ -142,6 +142,19 @@ export type DiscoverSystemThemeItem = {
   accessCodeStatus: "none" | "required" | "expired" | "exhausted";
 };
 
+export type ShareWechatThemeSticker = {
+  id: string;
+  name: string;
+  file: string;
+};
+
+export type ShareWechatThemeStickerPack = {
+  id: string;
+  name: string;
+  cover: string;
+  stickers: ShareWechatThemeSticker[];
+};
+
 export type ShareWechatTheme = {
   protocol: string;
   id: string;
@@ -157,6 +170,8 @@ export type ShareWechatTheme = {
   selfBubblePreset: string;
   peerBubblePreset: string;
   rendererSource: string;
+  stickerPacks: ShareWechatThemeStickerPack[];
+  features: string[];
   fileName: string;
   mimeType: string;
   size: number;

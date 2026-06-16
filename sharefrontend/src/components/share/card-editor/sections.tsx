@@ -1,7 +1,9 @@
 ﻿import Link from "next/link";
-import { type ChangeEvent, type KeyboardEvent, type RefObject } from "react";
+import { Fragment, type ChangeEvent, type KeyboardEvent, type RefObject, useState } from "react";
 
+import { CoverImageCropper } from "@/components/share/card-editor/CoverImageCropper";
 import { findAssetBySlot, getReviewStatusLabel, getSlotLabel, getStatusLabel, type SlotFileItem } from "@/components/share/card-editor/helpers";
+import { LoadingSpinner } from "@/components/share/loading-spinner";
 import { getSlotDefinitions, getEnabledSlotDefinitions, getSlotDefinition, type SlotPanelContext } from "@/components/share/card-editor/slot-registry";
 import { ShareImage } from "@/components/share/share-image";
 import type { AssetOpMode, CreateMode, EditorMode, SubmitMode } from "@/components/share/card-editor/types";
@@ -19,7 +21,7 @@ export function CardAssetsPanel(props: {
   removeSlotRow: (index: number) => void;
   coverPreviewUrl: string;
   createCoverInputRef: RefObject<HTMLInputElement | null>;
-  handleCreateCoverChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  handleCreateCoverFile: (file: File | null) => void;
   clearCreateCover: () => void;
   previewUrl: string;
   previewTitle: string;
@@ -46,7 +48,7 @@ export function CardAssetsPanel(props: {
     removeSlotRow,
     coverPreviewUrl,
     createCoverInputRef,
-    handleCreateCoverChange,
+    handleCreateCoverFile,
     clearCreateCover,
     previewUrl,
     previewTitle,
@@ -66,8 +68,38 @@ export function CardAssetsPanel(props: {
   const createSlotDefs = enabledSlots ? getEnabledSlotDefinitions(enabledSlots) : getSlotDefinitions();
   const allSlotDefs = getSlotDefinitions();
 
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const [cropMode, setCropMode] = useState<"create" | "edit" | null>(null);
+
+  const startCoverCrop = (file: File | null, mode: "create" | "edit") => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      window.alert("请上传图片文件");
+      return;
+    }
+    setCropMode(mode);
+    setCropFile(file);
+  };
+
+  const handleCropConfirm = (file: File) => {
+    setCropFile(null);
+    const targetMode = cropMode;
+    setCropMode(null);
+    if (targetMode === "edit") {
+      void handleReplaceCover(file);
+    } else {
+      handleCreateCoverFile(file);
+    }
+  };
+
+  const handleCropCancel = () => {
+    setCropFile(null);
+    setCropMode(null);
+  };
+
   return (
-    <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
+    <Fragment>
+      <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
       <div className="mb-3 border-b border-[var(--outline)]/20 pb-2">
         <h2 className="text-base font-black text-[var(--foreground)]">{mode === "edit" ? "分类文件管理" : "封面与分类文件"}</h2>
       </div>
@@ -76,11 +108,11 @@ export function CardAssetsPanel(props: {
         <div className="space-y-3">
           <div className="rounded-[1.2rem] border border-[var(--outline)]/20 bg-[var(--surface-container)] p-3">
             <p className="text-xs font-black text-[var(--foreground)]/70">卡片封面（可选，仅用于浏览）</p>
-            <div className="mt-2 flex min-h-[140px] items-center justify-center overflow-hidden rounded-[1rem] border-2 border-dashed border-[var(--outline)]/25 bg-white">
+            <div className="relative mt-2 aspect-[3/2] w-full overflow-hidden rounded-[1rem] border-2 border-dashed border-[var(--outline)]/25 bg-white">
               {coverPreviewUrl ? (
-                <ShareImage src={coverPreviewUrl} alt="卡片封面预览" className="max-h-[180px] w-full object-contain" />
+                <ShareImage src={coverPreviewUrl} alt="卡片封面预览" className="h-full w-full object-cover" />
               ) : (
-                <div className="px-6 text-center text-xs font-bold text-[var(--foreground)]/50">点击下方按钮上传封面图（可选）</div>
+                <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-xs font-bold text-[var(--foreground)]/50">点击下方按钮上传封面图（可选）</div>
               )}
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -93,7 +125,17 @@ export function CardAssetsPanel(props: {
                 </button>
               ) : null}
             </div>
-            <input ref={createCoverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCreateCoverChange} />
+            <input
+              ref={createCoverInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                event.currentTarget.value = "";
+                startCoverCrop(file, "create");
+              }}
+            />
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -181,7 +223,7 @@ export function CardAssetsPanel(props: {
             <p className="text-xs font-black text-[var(--foreground)]/70">卡片封面图（浏览用）</p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <label className="cursor-pointer rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1.5 text-[10px] font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)]">
-                {coverPending === "replace" ? "替换中..." : "替换封面图"}
+                {coverPending === "replace" ? <LoadingSpinner size="sm" inline label="替换中..." /> : "替换封面图"}
                 <input
                   type="file"
                   accept="image/*"
@@ -190,7 +232,7 @@ export function CardAssetsPanel(props: {
                   onChange={(event) => {
                     const file = event.target.files?.[0] ?? null;
                     event.currentTarget.value = "";
-                    void handleReplaceCover(file);
+                    startCoverCrop(file, "edit");
                   }}
                 />
               </label>
@@ -200,7 +242,7 @@ export function CardAssetsPanel(props: {
                 disabled={!hasCoverOnCard || Boolean(coverPending) || publishPending}
                 onClick={() => void handleDeleteCover()}
               >
-                {coverPending === "remove" ? "删除中..." : "删除封面图"}
+                {coverPending === "remove" ? <LoadingSpinner size="sm" inline label="删除中..." /> : "删除封面图"}
               </button>
             </div>
             <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/50">{hasCoverOnCard ? "当前已设置独立封面图" : "当前未设置独立封面图，将回退为分类文件预览"}</p>
@@ -247,7 +289,7 @@ export function CardAssetsPanel(props: {
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       {definition.showFileInput && enabled ? (
                         <label className="cursor-pointer rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1.5 text-[10px] font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)]">
-                          {pendingMode === "replace" ? "替换中..." : "替换文件"}
+                          {pendingMode === "replace" ? <LoadingSpinner size="sm" inline label="替换中..." /> : "替换文件"}
                           <input
                             type="file"
                             accept={definition.accept}
@@ -267,7 +309,7 @@ export function CardAssetsPanel(props: {
                         disabled={!canDelete || slotBusy || publishPending}
                         onClick={() => void handleDeleteAsset(slot)}
                       >
-                        {pendingMode === "remove" ? "删除中..." : "删除该分类文件"}
+                        {pendingMode === "remove" ? <LoadingSpinner size="sm" inline label="删除中..." /> : "删除该分类文件"}
                       </button>
                     </div>
                     {!enabled ? (
@@ -287,6 +329,15 @@ export function CardAssetsPanel(props: {
         </div>
       )}
     </section>
+    {cropFile ? (
+      <CoverImageCropper
+        imageFile={cropFile}
+        aspect={3 / 2}
+        onConfirm={handleCropConfirm}
+        onCancel={handleCropCancel}
+      />
+    ) : null}
+  </Fragment>
   );
 }
 
@@ -434,7 +485,7 @@ export function RealtimePreviewPanel(props: {
 
       <div className="overflow-hidden rounded-[1.2rem] border border-[var(--outline)]/20 bg-white shadow-sm">
         <div className="relative aspect-[4/3] bg-[linear-gradient(135deg,#3b272d_0%,#5a4049_40%,#2e1c21_100%)]">
-          {previewUrl ? <ShareImage src={previewUrl} alt={previewTitle} fill sizes="(max-width: 640px) 100vw, 50vw" className="object-cover" /> : <div className="flex h-full items-center justify-center text-xs font-bold text-white/76">等待可预览文件...</div>}
+          {previewUrl ? <ShareImage src={previewUrl} alt={previewTitle} fill sizes="(max-width: 640px) 100vw, 50vw" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-xs font-bold text-white/76">等待可预览文件...</div>}
         </div>
 
         <div className="p-3">
@@ -537,17 +588,17 @@ export function PublishActionsPanel(props: {
           <button
             type="submit"
             disabled={publishPending || hasAssetPending || reviewSubmitPending}
-            className="w-full rounded-full bg-[var(--button-primary)] py-2 text-xs font-black shadow-sm transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex w-full items-center justify-center rounded-full bg-[var(--button-primary)] py-2 text-xs font-black shadow-sm transition hover:bg-[var(--button-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {submitMode === "published" ? "提交中..." : submitPrimaryLabel}
+            {submitMode === "published" ? <LoadingSpinner size="sm" inline label="提交中..." /> : submitPrimaryLabel}
           </button>
           <button
             type="button"
             disabled={publishPending || hasAssetPending || reviewSubmitPending}
             onClick={submitDraft}
-            className="w-full rounded-full border border-[var(--outline)]/20 bg-white py-2 text-xs font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex w-full items-center justify-center rounded-full border border-[var(--outline)]/20 bg-white py-2 text-xs font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {submitMode === "draft" ? "提交中..." : submitSecondaryLabel}
+            {submitMode === "draft" ? <LoadingSpinner size="sm" inline label="提交中..." /> : submitSecondaryLabel}
           </button>
 
           {mode === "edit" && loadedCard ? (
@@ -555,9 +606,9 @@ export function PublishActionsPanel(props: {
               type="button"
               disabled={!canSubmitReview}
               onClick={handleSubmitReview}
-              className="w-full rounded-full border border-[var(--outline)]/20 bg-white py-2 text-xs font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)] disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex w-full items-center justify-center rounded-full border border-[var(--outline)]/20 bg-white py-2 text-xs font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {reviewSubmitPending ? "提交审核中..." : "提交审核"}
+              {reviewSubmitPending ? <LoadingSpinner size="sm" inline label="提交审核中..." /> : "提交审核"}
             </button>
           ) : null}
 
@@ -572,9 +623,9 @@ export function PublishActionsPanel(props: {
               type="button"
               disabled={publishPending || hasAssetPending || reviewSubmitPending}
               onClick={handleDelete}
-              className="w-full rounded-full border border-[#ff9c9c] bg-[#fff2f1] py-2 text-xs font-black text-[#b64031] shadow-sm transition hover:bg-[#ffe5e3] disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex w-full items-center justify-center rounded-full border border-[#ff9c9c] bg-[#fff2f1] py-2 text-xs font-black text-[#b64031] shadow-sm transition hover:bg-[#ffe5e3] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {submitMode === "delete" ? "删除中..." : "删除这张卡片"}
+              {submitMode === "delete" ? <LoadingSpinner size="sm" inline label="删除中..." /> : "删除这张卡片"}
             </button>
           ) : null}
         </section>

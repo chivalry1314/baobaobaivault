@@ -5,6 +5,8 @@ import { FavoriteButton } from "@/components/share/favorite-button";
 import { ShareImage } from "@/components/share/share-image";
 import { SLOT_LABEL_MAP } from "@/components/share/card-detail/constants";
 import { formatBytes, formatMetric, getInitials } from "@/components/share/card-detail/helpers";
+import { DesktopComponentPreview } from "@/components/share/card-detail/desktop-component-preview";
+import { WechatThemePreview } from "@/components/share/card-detail/wechat-theme-preview";
 import type { CardViewModel } from "@/components/share/card-detail/types";
 import type { CardAsset, CardContentSlot, CardDetailResponse } from "@/lib/shared";
 
@@ -64,10 +66,10 @@ export function CardDetailContent(props: {
   const themePackageDescription = detail.systemTheme?.description.trim() || themeCardDescription;
 
   return (
-    <div className="fade-slide-in flex flex-col gap-5 lg:flex-row lg:items-stretch">
+    <div className="fade-slide-in flex flex-col gap-5 lg:flex-row lg:items-start">
       <section className="flex w-full flex-col lg:w-[50%] xl:w-[52%]">
-        <div className="flex h-full flex-col overflow-hidden rounded-[1.4rem] border-2 border-[var(--outline)] bg-white shadow-sm">
-          <div className="relative aspect-[3/4] w-full overflow-hidden bg-[var(--secondary)] lg:aspect-auto lg:flex-1">
+        <div className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white shadow-sm">
+          <div className="relative aspect-[3/4] w-full overflow-hidden bg-[var(--secondary)]">
             {viewModel.heroImageUrl ? (
               <ShareImage
                 src={viewModel.heroImageUrl}
@@ -114,6 +116,52 @@ export function CardDetailContent(props: {
             <p className="mt-1.5 text-xs font-bold text-[var(--foreground)]/60">
               {detail.card.description.trim() || "暂无卡片副标题"}
             </p>
+
+            {detail.card.tags.length > 0 ? (
+              <div className="mt-2.5 flex flex-wrap gap-1.5">
+                {detail.card.tags.map((tag, index) => (
+                  <span
+                    key={`card-tag-${tag}-${index}`}
+                    className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-black text-[var(--foreground)] ${
+                      index % 4 === 0
+                        ? "bg-[var(--secondary)]"
+                        : index % 4 === 1
+                          ? "bg-[var(--primary)]"
+                          : index % 4 === 2
+                            ? "bg-[var(--tertiary)]"
+                            : "bg-[var(--accent)]"
+                    }`}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+
+            {detail.wechatTheme ? <WechatThemePreview detail={detail} unlockCode={unlockCode} /> : null}
+
+            {detail.desktopComponent ? <DesktopComponentPreview detail={detail} unlockCode={unlockCode} /> : null}
+
+            {detail.wechatTheme?.features && detail.wechatTheme.features.length > 0 ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {detail.wechatTheme.features.map((feature) => {
+                  const featureLabels: Record<string, string> = {
+                    bubble: "气泡",
+                    background: "背景",
+                    stickers: "表情包",
+                    renderer: "渲染源码",
+                  };
+                  return (
+                    <span
+                      key={feature}
+                      className="inline-flex items-center gap-1 rounded-full bg-[var(--surface-container-high)] px-2.5 py-1 text-[11px] font-black text-[var(--foreground)]/80"
+                    >
+                      {featureLabels[feature] || feature}
+                    </span>
+                  );
+                })}
+              </div>
+            ) : null}
 
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <StatPill icon={<DownloadIcon className="h-3.5 w-3.5" />} label="下载" value={formatMetric(detail.stats.downloadCount)} />

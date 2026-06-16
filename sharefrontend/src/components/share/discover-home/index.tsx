@@ -72,13 +72,20 @@ export function DiscoverHome({ initialDiscover }: DiscoverHomeProps) {
               ) : showNoResult ? (
                 <DiscoverNoResult onReset={resetFilters} />
               ) : (
-                <DiscoverVirtualRows
-                  columnCount={columnCount}
-                  totalHeight={totalHeight}
-                  virtualRows={virtualRows}
-                  rowVirtualizer={rowVirtualizer}
-                  cardRows={cardRows}
-                />
+                <>
+                  <DiscoverVirtualRows
+                    columnCount={columnCount}
+                    totalHeight={totalHeight}
+                    virtualRows={virtualRows}
+                    rowVirtualizer={rowVirtualizer}
+                    cardRows={cardRows}
+                  />
+                  <div
+                    ref={loadMoreRef}
+                    className="h-4 w-full"
+                    aria-hidden="true"
+                  />
+                </>
               )}
             </div>
 
@@ -93,8 +100,6 @@ export function DiscoverHome({ initialDiscover }: DiscoverHomeProps) {
               loadingMore={loadingMore}
               hasMore={hasMore}
             />
-
-            <div ref={loadMoreRef} className="h-1 w-full" aria-hidden="true" />
           </div>
         </main>
       </section>

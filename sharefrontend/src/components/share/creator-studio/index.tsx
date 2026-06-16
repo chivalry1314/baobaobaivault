@@ -6,6 +6,7 @@ import {
   formatUid,
   getUserTagline,
 } from "@/components/share/creator-studio/helpers";
+import { LoadingSpinner } from "@/components/share/loading-spinner";
 import { useCreatorStudio } from "@/components/share/creator-studio/hooks";
 import {
   Avatar,
@@ -72,9 +73,9 @@ export function CreatorStudio() {
 
   if (sessionChecking) {
     return (
-      <div className="min-h-screen bg-[var(--background)] px-4 py-10 sm:px-6">
-        <div className="mx-auto max-w-7xl rounded-[1.4rem] border-2 border-[var(--outline)] bg-white px-6 py-14 text-center text-[var(--foreground)]/72 shadow-sm">
-          正在加载创作中心...
+      <div className="flex min-h-screen items-center justify-center bg-[var(--background)] px-4 py-10 sm:px-6">
+        <div className="mx-auto flex w-full max-w-md flex-col items-center rounded-[1.4rem] border-2 border-[var(--outline)] bg-white px-6 py-14 text-center text-[var(--foreground)]/72 shadow-sm">
+          <LoadingSpinner label="正在加载创作中心..." />
         </div>
       </div>
     );
@@ -311,8 +312,8 @@ export function CreatorStudio() {
 
                   {activeTab === "collections" ? (
                     favoritesLoading && favorites.length === 0 ? (
-                      <div className="py-10 text-center text-[var(--foreground)]/62">
-                        正在加载收藏...
+                      <div className="py-10 text-center">
+                        <LoadingSpinner label="正在加载收藏..." />
                       </div>
                     ) : favoritesError ? (
                       <div className="flex flex-col gap-3 rounded-[1.2rem] border border-[#e59273] bg-[#fff6ef] px-4 py-3 text-sm text-[#9a3412] sm:flex-row sm:items-center sm:justify-between">

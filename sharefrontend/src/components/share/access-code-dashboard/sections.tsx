@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { AccessModeBadge } from "@/components/share/access-mode-badge";
+import { LoadingSpinner } from "@/components/share/loading-spinner";
 import { ShareImage } from "@/components/share/share-image";
 import {
   formatDate,
@@ -168,22 +169,40 @@ export function AccessCodeCard(props: {
         {active ? (
           <>
             <ActionButton disabled={pendingAction === `copy:${item.card.id}`} onClick={onCopy}>
-              <LinkIcon className="h-3.5 w-3.5" />
-              {pendingAction === `copy:${item.card.id}` ? "复制中..." : "复制链接"}
+              {pendingAction === `copy:${item.card.id}` ? (
+                <LoadingSpinner size="sm" inline />
+              ) : (
+                <>
+                  <LinkIcon className="h-3.5 w-3.5" />
+                  复制链接
+                </>
+              )}
             </ActionButton>
             <ActionButton danger disabled={pendingAction === `hide:${item.card.id}`} onClick={onHide}>
-              <HideIcon className="h-3.5 w-3.5" />
-              {pendingAction === `hide:${item.card.id}` ? "停用中..." : "停用"}
+              {pendingAction === `hide:${item.card.id}` ? (
+                <LoadingSpinner size="sm" inline />
+              ) : (
+                <>
+                  <HideIcon className="h-3.5 w-3.5" />
+                  停用
+                </>
+              )}
             </ActionButton>
           </>
         ) : (
           <>
             <ActionButton disabled={pendingAction === `reactivate:${item.card.id}`} onClick={onReactivate}>
-              <RefreshIcon className="h-3.5 w-3.5" />
-              {pendingAction === `reactivate:${item.card.id}` ? "启用中..." : "重新启用"}
+              {pendingAction === `reactivate:${item.card.id}` ? (
+                <LoadingSpinner size="sm" inline />
+              ) : (
+                <>
+                  <RefreshIcon className="h-3.5 w-3.5" />
+                  重新启用
+                </>
+              )}
             </ActionButton>
             <IconActionButton danger disabled={pendingAction === `delete:${item.card.id}`} onClick={onDelete}>
-              <TrashIcon className="h-3.5 w-3.5" />
+              {pendingAction === `delete:${item.card.id}` ? <LoadingSpinner size="sm" inline /> : <TrashIcon className="h-3.5 w-3.5" />}
             </IconActionButton>
           </>
         )}
