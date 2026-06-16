@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useMemo, useRef, type FormEvent } from "react";
+import { useMemo, type FormEvent } from "react";
 
 import { isCategoryEnabled, useShareCategorySettings } from "@/components/share/category-provider";
 
@@ -14,7 +14,6 @@ import type { ShareCardEditorProps } from "@/components/share/card-editor/types"
 import type { CardContentSlot } from "@/lib/shared";
 
 export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
-  const createCoverInputRef = useRef<HTMLInputElement>(null);
   const categorySettings = useShareCategorySettings();
   const enabledSlots = useMemo(() => {
     const allSlots: CardContentSlot[] = [
@@ -59,7 +58,6 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
     removeSlotRow,
     handleCreateModeChange,
     coverPreviewUrl,
-    coverPending,
     handleCreateCoverFile,
     clearCreateCover,
     previewUrl,
@@ -72,8 +70,6 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
     reviewSubmitPending,
     publishPending,
     hasCoverOnCard,
-    hasAssetPending,
-    assetPending,
     pageTitle,
     pageDescription,
     submitPrimaryLabel,
@@ -86,8 +82,6 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
     handleDelete,
     handleReplaceCover,
     handleDeleteCover,
-    handleReplaceAsset,
-    handleDeleteAsset,
   } = useShareCardEditor({ mode, cardId });
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -176,13 +170,10 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                 addSlotRow={addSlotRow}
                 removeSlotRow={removeSlotRow}
                 coverPreviewUrl={coverPreviewUrl}
-                createCoverInputRef={createCoverInputRef}
                 handleCreateCoverFile={handleCreateCoverFile}
                 clearCreateCover={clearCreateCover}
                 previewUrl={previewUrl}
                 previewTitle={previewTitle}
-                loadedCard={loadedCard}
-                coverPending={coverPending}
                 publishPending={publishPending}
                 hasCoverOnCard={hasCoverOnCard}
                 handleReplaceCover={(file) => {
@@ -191,14 +182,6 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                 handleDeleteCover={() => {
                   void handleDeleteCover();
                 }}
-                assetPending={assetPending}
-                handleReplaceAsset={(slot, file) => {
-                  void handleReplaceAsset(slot, file);
-                }}
-                handleDeleteAsset={(slot) => {
-                  void handleDeleteAsset(slot);
-                }}
-                authorName={authorName}
                 enabledSlots={enabledSlots}
               />
 
@@ -230,7 +213,7 @@ export function ShareCardEditor({ mode, cardId }: ShareCardEditorProps) {
                 accessMode={accessMode}
                 setAccessMode={setAccessMode}
                 publishPending={publishPending}
-                hasAssetPending={hasAssetPending}
+                hasAssetPending={false}
                 reviewSubmitPending={reviewSubmitPending}
                 submitMode={submitMode}
                 submitPrimaryLabel={submitPrimaryLabel}

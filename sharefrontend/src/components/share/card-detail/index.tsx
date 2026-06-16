@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { AppShell } from "@/components/share/app-shell";
 import { CardDetailContent, CardDetailError, CardDetailLoading } from "@/components/share/card-detail/sections";
 import { useCardDetail } from "@/components/share/card-detail/hooks";
@@ -32,6 +34,20 @@ export default function CardDetailClientPage({
         </div>
 
         <section className="relative z-10 mx-auto w-full max-w-[var(--layout-max)] px-4 pb-16 pt-10 sm:px-6">
+          {!loading && !error && detail ? (
+            <div className="mb-4">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1 rounded-full border border-[var(--outline)]/15 bg-white px-3 py-1.5 text-xs font-black text-[var(--foreground)] shadow-sm transition hover:bg-[var(--surface-container)] hover:-translate-y-0.5"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 12H5" />
+                  <path d="m12 19-7-7 7-7" />
+                </svg>
+                返回
+              </Link>
+            </div>
+          ) : null}
           {loading ? <CardDetailLoading /> : null}
           {!loading && error ? <CardDetailError error={error} /> : null}
           {!loading && detail ? (

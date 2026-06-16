@@ -68,8 +68,8 @@ export function CardDetailContent(props: {
   return (
     <div className="fade-slide-in flex flex-col gap-5 lg:flex-row lg:items-start">
       <section className="flex w-full flex-col lg:w-[50%] xl:w-[52%]">
-        <div className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white shadow-sm">
-          <div className="relative aspect-[3/4] w-full overflow-hidden bg-[var(--secondary)]">
+        <div className="overflow-hidden rounded-[1.4rem] border-2 border-[var(--outline)] bg-white shadow-sm">
+          <div className="relative aspect-[3/2] w-full overflow-hidden bg-[var(--secondary)]">
             {viewModel.heroImageUrl ? (
               <ShareImage
                 src={viewModel.heroImageUrl}
@@ -84,16 +84,6 @@ export function CardDetailContent(props: {
                 {viewModel.heroFallbackText}
               </div>
             )}
-
-            <div className="absolute left-4 top-4 z-10">
-              <Link
-                href="/"
-                className="inline-flex items-center gap-1 rounded-full border border-[var(--outline)]/15 bg-white/90 px-3 py-1.5 text-xs font-black text-[var(--foreground)] shadow-sm backdrop-blur-sm transition hover:bg-white hover:-translate-y-0.5"
-              >
-                <ArrowLeftIcon className="h-3.5 w-3.5" />
-                返回
-              </Link>
-            </div>
 
             <div className="absolute right-4 top-4 z-10">
               <FavoriteButton
@@ -481,15 +471,6 @@ function StatPill(props: { icon: React.ReactNode; label: string; value: string }
         {props.label} {props.value}
       </span>
     </span>
-  );
-}
-
-function ArrowLeftIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M19 12H5" />
-      <path d="m12 19-7-7 7-7" />
-    </svg>
   );
 }
 

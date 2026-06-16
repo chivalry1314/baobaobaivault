@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { LoadingSpinner } from "@/components/share/loading-spinner";
 import type { CardDetailResponse } from "@/lib/shared";
 
@@ -19,29 +19,19 @@ export function DesktopComponentPreview({ detail, unlockCode }: DesktopComponent
 
   const desktopComponent = detail.desktopComponent;
   const asset = detail.assets.find((a) => a.slot === "desktop_component");
+  const assetUrl = asset?.downloadUrl ?? "";
 
-  if (!desktopComponent || !asset) {
-    return null;
-  }
-
-  const handleToggle = async () => {
-    if (expanded) {
-      setExpanded(false);
-      return;
-    }
-
-    if (htmlContent) {
-      setExpanded(true);
-      return;
-    }
-
-    setExpanded(true);
+  const loadHtml = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      let downloadUrl = asset.downloadUrl;
-      if (!downloadUrl.startsWith("http")) {
+      let downloadUrl = assetUrl;
+      const isLocalApi = !downloadUrl.startsWith("http");
+      if (isLocalApi) {
         downloadUrl = `${window.location.origin}${downloadUrl}`;
+      }
+      if (isLocalApi) {
+        downloadUrl += `${downloadUrl.includes("?") ? "&" : "?"}t=${Date.now()}`;
       }
       if (unlockCode) {
         downloadUrl += `${downloadUrl.includes("?") ? "&" : "?"}code=${encodeURIComponent(unlockCode)}`;
@@ -59,7 +49,33 @@ export function DesktopComponentPreview({ detail, unlockCode }: DesktopComponent
     } finally {
       setLoading(false);
     }
+  }, [assetUrl, unlockCode]);
+
+  useEffect(() => {
+    if (!assetUrl) return;
+    // 资产发生变化（重新上传/替换）后清空缓存，确保下次预览加载最新文件
+    setHtmlContent(null);
+    if (expanded) {
+      void loadHtml();
+    }
+  }, [assetUrl, expanded, loadHtml]);
+
+  const handleToggle = async () => {
+    if (expanded) {
+      setExpanded(false);
+      return;
+    }
+
+    setExpanded(true);
+    if (htmlContent) {
+      return;
+    }
+    await loadHtml();
   };
+
+  if (!desktopComponent || !asset) {
+    return null;
+  }
 
   return (
     <div className="mt-3">

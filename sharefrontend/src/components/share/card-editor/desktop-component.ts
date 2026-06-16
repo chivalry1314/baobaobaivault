@@ -255,13 +255,13 @@ export function buildCompliantDesktopComponentHtml(html: string, metadata: Deskt
   setMeta("widget-shadow", String(clamp(metadata.shadow, desktopComponentMetaLimits.shadow.min, desktopComponentMetaLimits.shadow.max)));
   setMeta("widget-background-opacity", String(clamp(metadata.backgroundOpacity, desktopComponentMetaLimits.backgroundOpacity.min, desktopComponentMetaLimits.backgroundOpacity.max)));
 
-  const serializer = new XMLSerializer();
-  const serialized = serializer.serializeToString(doc);
-
-  // XMLSerializer 会输出 XML 声明和 xmlns，移除这些以保持 HTML 风格
-  return serialized
-    .replace(/^\s*<\?xml[^?]*\?>\s*/i, "")
-    .replace(/\sxmlns="http:\/\/www\.w3\.org\/1999\/xhtml"/gi, "");
+  // 使用 outerHTML 而不是 XMLSerializer，避免 <script> 等内容被 XML 实体转义
+  const doctype = doc.doctype ? `<!DOCTYPE ${doc.doctype.name}>` : "";
+  const htmlElement = doc.documentElement;
+  if (!htmlElement) {
+    return html;
+  }
+  return doctype ? `${doctype}\n${htmlElement.outerHTML}` : htmlElement.outerHTML;
 }
 
 export function createCompliantDesktopComponentFile(originalFile: File, metadata: DesktopComponentMetadata): Promise<File> {

@@ -1,12 +1,12 @@
 ﻿import Link from "next/link";
-import { Fragment, type ChangeEvent, type KeyboardEvent, type RefObject, useState } from "react";
+import { Fragment, type KeyboardEvent, useState } from "react";
 
 import { CoverImageCropper } from "@/components/share/card-editor/CoverImageCropper";
-import { findAssetBySlot, getReviewStatusLabel, getSlotLabel, getStatusLabel, type SlotFileItem } from "@/components/share/card-editor/helpers";
+import { getReviewStatusLabel, getStatusLabel, type SlotFileItem } from "@/components/share/card-editor/helpers";
 import { LoadingSpinner } from "@/components/share/loading-spinner";
 import { getSlotDefinitions, getEnabledSlotDefinitions, getSlotDefinition, type SlotPanelContext } from "@/components/share/card-editor/slot-registry";
 import { ShareImage } from "@/components/share/share-image";
-import type { AssetOpMode, CreateMode, EditorMode, SubmitMode } from "@/components/share/card-editor/types";
+import type { CreateMode, EditorMode, SubmitMode } from "@/components/share/card-editor/types";
 import type { CardContentSlot, CardDetailResponse, ShareCardAccessMode } from "@/lib/shared";
 
 
@@ -20,21 +20,14 @@ export function CardAssetsPanel(props: {
   addSlotRow: () => void;
   removeSlotRow: (index: number) => void;
   coverPreviewUrl: string;
-  createCoverInputRef: RefObject<HTMLInputElement | null>;
   handleCreateCoverFile: (file: File | null) => void;
   clearCreateCover: () => void;
   previewUrl: string;
   previewTitle: string;
-  loadedCard: CardDetailResponse | null;
-  coverPending: "replace" | "remove" | null;
   publishPending: boolean;
   hasCoverOnCard: boolean;
   handleReplaceCover: (file: File | null) => void;
   handleDeleteCover: () => void;
-  assetPending: Record<CardContentSlot, AssetOpMode | null>;
-  handleReplaceAsset: (slot: CardContentSlot, file: File | null) => void;
-  handleDeleteAsset: (slot: CardContentSlot) => void;
-  authorName?: string;
   enabledSlots?: Set<CardContentSlot>;
 }) {
   const {
@@ -47,26 +40,18 @@ export function CardAssetsPanel(props: {
     addSlotRow,
     removeSlotRow,
     coverPreviewUrl,
-    createCoverInputRef,
     handleCreateCoverFile,
     clearCreateCover,
     previewUrl,
     previewTitle,
-    loadedCard,
-    coverPending,
     publishPending,
     hasCoverOnCard,
     handleReplaceCover,
     handleDeleteCover,
-    assetPending,
-    handleReplaceAsset,
-    handleDeleteAsset,
-    authorName,
     enabledSlots,
   } = props;
 
   const createSlotDefs = enabledSlots ? getEnabledSlotDefinitions(enabledSlots) : getSlotDefinitions();
-  const allSlotDefs = getSlotDefinitions();
 
   const [cropFile, setCropFile] = useState<File | null>(null);
   const [cropMode, setCropMode] = useState<"create" | "edit" | null>(null);
@@ -101,233 +86,165 @@ export function CardAssetsPanel(props: {
     <Fragment>
       <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
       <div className="mb-3 border-b border-[var(--outline)]/20 pb-2">
-        <h2 className="text-base font-black text-[var(--foreground)]">{mode === "edit" ? "分类文件管理" : "封面与分类文件"}</h2>
+        <h2 className="text-base font-black text-[var(--foreground)]">封面与分类文件</h2>
       </div>
 
-      {mode === "create" ? (
-        <div className="space-y-3">
-          <div className="rounded-[1.2rem] border border-[var(--outline)]/20 bg-[var(--surface-container)] p-3">
-            <p className="text-xs font-black text-[var(--foreground)]/70">卡片封面（可选，仅用于浏览）</p>
-            <div className="relative mt-2 aspect-[3/2] w-full overflow-hidden rounded-[1rem] border-2 border-dashed border-[var(--outline)]/25 bg-white">
-              {coverPreviewUrl ? (
-                <ShareImage src={coverPreviewUrl} alt="卡片封面预览" className="h-full w-full object-cover" />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-xs font-bold text-[var(--foreground)]/50">点击下方按钮上传封面图（可选）</div>
-              )}
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <button type="button" className="rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1.5 text-[10px] font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)]" onClick={() => createCoverInputRef.current?.click()}>
-                {coverPreviewUrl ? "替换封面图" : "上传封面图"}
-              </button>
-              {coverPreviewUrl ? (
-                <button type="button" className="rounded-full border border-[#ff9c9c] bg-[#fff2f1] px-3 py-1.5 text-[10px] font-black text-[#b64031] transition hover:bg-[#ffe5e3]" onClick={clearCreateCover}>
-                  移除封面图
-                </button>
-              ) : null}
-            </div>
-            <input
-              ref={createCoverInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(event) => {
-                const file = event.target.files?.[0] ?? null;
-                event.currentTarget.value = "";
-                startCoverCrop(file, "create");
-              }}
-            />
+      <div className="space-y-3">
+        <div className="rounded-[1.2rem] border border-[var(--outline)]/20 bg-[var(--surface-container)] p-3">
+          <p className="text-xs font-black text-[var(--foreground)]/70">
+            {mode === "edit" ? "卡片封面图（浏览用）" : "卡片封面（可选，仅用于浏览）"}
+          </p>
+          <div className="relative mt-2 aspect-[3/2] w-full overflow-hidden rounded-[1rem] border-2 border-dashed border-[var(--outline)]/25 bg-white">
+            {(() => {
+              const displayUrl = mode === "edit" ? previewUrl || coverPreviewUrl : coverPreviewUrl || previewUrl;
+              if (!displayUrl) {
+                return (
+                  <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-xs font-bold text-[var(--foreground)]/50">
+                    {mode === "edit" ? "当前卡片暂无可预览封面图" : "点击下方按钮上传封面图（可选）"}
+                  </div>
+                );
+              }
+              return <ShareImage src={displayUrl} alt="卡片封面预览" className="h-full w-full object-cover" />;
+            })()}
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className={`rounded-full border px-3 py-1.5 text-xs font-black transition ${createMode === "single" ? "border-transparent bg-[var(--button-primary)]" : "border-[var(--outline)]/20 bg-white hover:bg-[var(--surface-container)]"}`}
-              onClick={() => {
-                setCreateMode("single");
-              }}
-            >
-              单分类
-            </button>
-            <button
-              type="button"
-              className={`rounded-full border px-3 py-1.5 text-xs font-black transition ${createMode === "bundle" ? "border-transparent bg-[var(--button-primary)]" : "border-[var(--outline)]/20 bg-white hover:bg-[var(--surface-container)]"}`}
-              onClick={() => {
-                setCreateMode("bundle");
-              }}
-            >
-              多分类打包
-            </button>
-          </div>
-
-          {slotItems.map((item, index) => {
-            const definition = getSlotDefinition(item.slot) ?? createSlotDefs[0];
-            if (!definition) {
-              return null;
-            }
-            const panelContext: SlotPanelContext = {
-              file: item.file,
-              onFileChange: (file) => setSlotFile(index, file),
-              previewTitle,
-            };
-            return (
-              <div key={`${item.slot}-${index}`} className="rounded-[1.1rem] border border-[var(--outline)]/20 bg-white p-3">
-                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-center">
-                  <select className="h-8 rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-1 text-xs font-bold text-[var(--foreground)] focus:border-[var(--outline)] focus:bg-white focus:outline-none" value={item.slot} onChange={(event) => setSlotValue(index, event.target.value as CardContentSlot)}>
-                    {createSlotDefs.map((option) => (
-                      <option key={option.slot} value={option.slot}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-
-                  {definition.showFileInput ? (
-                    <input
-                      key={item.file ? `file-${item.file.name}` : `empty-${index}`}
-                      type="file"
-                      accept={definition.accept}
-                      className="h-8 w-full rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-1 text-xs font-bold text-[var(--foreground)] file:mr-2 file:rounded-full file:border-0 file:bg-white file:px-2 file:py-0.5 file:text-[10px] file:font-black"
-                      onChange={(event) => setSlotFile(index, event.target.files?.[0] ?? null)}
-                    />
-                  ) : null}
-
-                  {createMode === "bundle" ? (
-                    <button type="button" className="rounded-full border border-[#ff9c9c] bg-[#fff2f1] px-2.5 py-1.5 text-[10px] font-black text-[#b64031] transition hover:bg-[#ffe5e3]" onClick={() => removeSlotRow(index)} disabled={slotItems.length <= 1}>
-                      删除
-                    </button>
-                  ) : null}
-                </div>
-                <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/50">{item.file ? item.file.name : "未选择文件"}</p>
-                <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/55">{definition.description}</p>
-                {definition.renderCreatePanel(panelContext)}
-              </div>
-            );
-          })}
-
-          {createMode === "bundle" ? (
-            <button type="button" className="rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1.5 text-xs font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)]" onClick={addSlotRow} disabled={slotItems.length >= createSlotDefs.length}>
-              + 添加分类文件
-            </button>
-          ) : null}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <div className="flex min-h-[140px] flex-col items-center justify-center rounded-[1.2rem] border border-dashed border-[var(--outline)]/25 bg-[var(--surface-container)] px-4 py-4 text-center">
-            {previewUrl ? (
-              <ShareImage src={previewUrl} alt={previewTitle} className="max-h-[140px] rounded-[1rem] border border-[var(--outline)]/20 object-cover" />
-            ) : (
-              <div className="text-xs font-bold text-[var(--foreground)]/50">当前卡片暂无可预览图片</div>
-            )}
-          </div>
-
-          <div className="rounded-[1.2rem] border border-[var(--outline)]/20 bg-[var(--surface-container)] p-3">
-            <p className="text-xs font-black text-[var(--foreground)]/70">卡片封面图（浏览用）</p>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <label className="cursor-pointer rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1.5 text-[10px] font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)]">
-                {coverPending === "replace" ? <LoadingSpinner size="sm" inline label="替换中..." /> : "替换封面图"}
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  disabled={Boolean(coverPending) || publishPending}
-                  onChange={(event) => {
-                    const file = event.target.files?.[0] ?? null;
-                    event.currentTarget.value = "";
-                    startCoverCrop(file, "edit");
-                  }}
-                />
-              </label>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <label className="cursor-pointer rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1.5 text-[10px] font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)]">
+              {mode === "edit" ? (previewUrl ? "替换封面图" : "上传封面图") : (coverPreviewUrl ? "替换封面图" : "上传封面图")}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={publishPending}
+                onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null;
+                  event.currentTarget.value = "";
+                  startCoverCrop(file, mode);
+                }}
+              />
+            </label>
+            {mode === "edit" ? (
               <button
                 type="button"
                 className="rounded-full border border-[#ff9c9c] bg-[#fff2f1] px-3 py-1.5 text-[10px] font-black text-[#b64031] transition hover:bg-[#ffe5e3] disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={!hasCoverOnCard || Boolean(coverPending) || publishPending}
+                disabled={!hasCoverOnCard || publishPending}
                 onClick={() => void handleDeleteCover()}
               >
-                {coverPending === "remove" ? <LoadingSpinner size="sm" inline label="删除中..." /> : "删除封面图"}
+                删除封面图
               </button>
-            </div>
-            <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/50">{hasCoverOnCard ? "当前已设置独立封面图" : "当前未设置独立封面图，将回退为分类文件预览"}</p>
+            ) : coverPreviewUrl ? (
+              <button
+                type="button"
+                className="rounded-full border border-[#ff9c9c] bg-[#fff2f1] px-3 py-1.5 text-[10px] font-black text-[#b64031] transition hover:bg-[#ffe5e3]"
+                onClick={clearCreateCover}
+              >
+                移除封面图
+              </button>
+            ) : null}
           </div>
-
-          {loadedCard ? (
-            <div className="space-y-2">
-              {allSlotDefs.map((definition) => {
-                const slot = definition.slot;
-                const asset = findAssetBySlot(loadedCard.assets, slot);
-                const enabled = !enabledSlots || enabledSlots.has(slot);
-                if (!enabled) {
-                  return null;
-                }
-                const pendingMode = assetPending[slot];
-                const slotBusy = Boolean(pendingMode);
-                const canDelete = Boolean(asset) && loadedCard.assets.length > 1;
-                const panelContext: SlotPanelContext = {
-                  file: null,
-                  onFileChange: (file) => {
-                    if (file) {
-                      void handleReplaceAsset(slot, file);
-                    }
-                  },
-                  loadedCard,
-                  asset,
-                  disabled: slotBusy || publishPending,
-                };
-
-                return (
-                  <div key={slot} className="rounded-[1.1rem] border border-[var(--outline)]/20 bg-white p-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <p className="text-xs font-black text-[var(--foreground)]">{getSlotLabel(slot)}</p>
-                        <p className="text-[10px] font-bold text-[var(--foreground)]/50">{asset ? `${asset.originalFileName} (${Math.max(1, Math.round(asset.size / 1024))} KB)` : "该分类暂无文件"}</p>
-                      </div>
-                      {asset ? (
-                        <a href={asset.downloadUrl} className="rounded-full border border-[var(--outline)]/20 bg-white px-2.5 py-1 text-[10px] font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)]">
-                          下载
-                        </a>
-                      ) : null}
-                    </div>
-
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      {definition.showFileInput && enabled ? (
-                        <label className="cursor-pointer rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1.5 text-[10px] font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)]">
-                          {pendingMode === "replace" ? <LoadingSpinner size="sm" inline label="替换中..." /> : "替换文件"}
-                          <input
-                            type="file"
-                            accept={definition.accept}
-                            className="hidden"
-                            disabled={slotBusy || publishPending}
-                            onChange={(event) => {
-                              const file = event.target.files?.[0] ?? null;
-                              event.currentTarget.value = "";
-                              void handleReplaceAsset(slot, file);
-                            }}
-                          />
-                        </label>
-                      ) : null}
-                      <button
-                        type="button"
-                        className="rounded-full border border-[#ff9c9c] bg-[#fff2f1] px-3 py-1.5 text-[10px] font-black text-[#b64031] transition hover:bg-[#ffe5e3] disabled:cursor-not-allowed disabled:opacity-60"
-                        disabled={!canDelete || slotBusy || publishPending}
-                        onClick={() => void handleDeleteAsset(slot)}
-                      >
-                        {pendingMode === "remove" ? <LoadingSpinner size="sm" inline label="删除中..." /> : "删除该分类文件"}
-                      </button>
-                    </div>
-                    {!enabled ? (
-                      <p className="mt-1.5 text-[10px] font-bold text-amber-600">
-                        该分类已被管理员关闭，仅可删除已有文件，不能新增或替换。
-                      </p>
-                    ) : definition.renderEditPanel ? (
-                      definition.renderEditPanel(panelContext)
-                    ) : definition.editDescription ? (
-                      <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/55">{definition.editDescription}</p>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
+          {mode === "edit" ? (
+            <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/50">
+              {hasCoverOnCard ? "当前已设置独立封面图" : "当前未设置独立封面图，将回退为分类文件预览"}
+            </p>
           ) : null}
         </div>
-      )}
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className={`rounded-full border px-3 py-1.5 text-xs font-black transition ${createMode === "single" ? "border-transparent bg-[var(--button-primary)]" : "border-[var(--outline)]/20 bg-white hover:bg-[var(--surface-container)]"}`}
+            onClick={() => {
+              setCreateMode("single");
+            }}
+          >
+            单分类
+          </button>
+          <button
+            type="button"
+            className={`rounded-full border px-3 py-1.5 text-xs font-black transition ${createMode === "bundle" ? "border-transparent bg-[var(--button-primary)]" : "border-[var(--outline)]/20 bg-white hover:bg-[var(--surface-container)]"}`}
+            onClick={() => {
+              setCreateMode("bundle");
+            }}
+          >
+            多分类打包
+          </button>
+        </div>
+
+        {slotItems.map((item, index) => {
+          const definition = getSlotDefinition(item.slot) ?? createSlotDefs[0];
+          if (!definition) {
+            return null;
+          }
+          const panelContext: SlotPanelContext = {
+            file: item.file,
+            onFileChange: (file) => setSlotFile(index, file),
+            previewTitle,
+          };
+          const isDeleted = item.pendingDelete;
+          const currentFileName = item.file
+            ? item.file.name
+            : item.originalAsset
+              ? `${item.originalAsset.originalFileName} (${Math.max(1, Math.round(item.originalAsset.size / 1024))} KB)`
+              : "未选择文件";
+          return (
+            <div
+              key={`${item.slot}-${index}-${isDeleted ? "deleted" : "active"}`}
+              className={`rounded-[1.1rem] border border-[var(--outline)]/20 p-3 ${isDeleted ? "bg-[var(--surface-container)]/60 opacity-70" : "bg-white"}`}
+            >
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-center">
+                <select
+                  className="h-8 rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-1 text-xs font-bold text-[var(--foreground)] focus:border-[var(--outline)] focus:bg-white focus:outline-none disabled:opacity-60"
+                  value={item.slot}
+                  disabled={isDeleted || publishPending || (mode === "edit" && Boolean(item.originalAsset) && !isDeleted)}
+                  onChange={(event) => setSlotValue(index, event.target.value as CardContentSlot)}
+                >
+                  {createSlotDefs.map((option) => (
+                    <option key={option.slot} value={option.slot}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+
+                {definition.showFileInput ? (
+                  <input
+                    key={item.file ? `file-${item.file.name}` : `empty-${index}`}
+                    type="file"
+                    accept={definition.accept}
+                    disabled={isDeleted || publishPending}
+                    className="h-8 w-full rounded-full border border-[var(--outline)]/20 bg-[var(--surface-container)] px-3 py-1 text-xs font-bold text-[var(--foreground)] file:mr-2 file:rounded-full file:border-0 file:bg-white file:px-2 file:py-0.5 file:text-[10px] file:font-black disabled:opacity-60"
+                    onChange={(event) => setSlotFile(index, event.target.files?.[0] ?? null)}
+                  />
+                ) : null}
+
+                {createMode === "bundle" || mode === "edit" ? (
+                  <button
+                    type="button"
+                    className="rounded-full border border-[#ff9c9c] bg-[#fff2f1] px-2.5 py-1.5 text-[10px] font-black text-[#b64031] transition hover:bg-[#ffe5e3] disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() => removeSlotRow(index)}
+                    disabled={slotItems.length <= 1 || publishPending}
+                  >
+                    {isDeleted ? "恢复" : "删除"}
+                  </button>
+                ) : null}
+              </div>
+              <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/50">
+                {isDeleted ? "将在保存时删除" : currentFileName}
+              </p>
+              {!isDeleted ? (
+                <>
+                  <p className="mt-1.5 text-[10px] font-bold text-[var(--foreground)]/55">{definition.description}</p>
+                  {definition.renderCreatePanel(panelContext)}
+                </>
+              ) : null}
+            </div>
+          );
+        })}
+
+        {createMode === "bundle" ? (
+          <button type="button" className="rounded-full border border-[var(--outline)]/20 bg-white px-3 py-1.5 text-xs font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)]" onClick={addSlotRow} disabled={slotItems.length >= createSlotDefs.length || publishPending}>
+            + 添加分类文件
+          </button>
+        ) : null}
+      </div>
     </section>
     {cropFile ? (
       <CoverImageCropper

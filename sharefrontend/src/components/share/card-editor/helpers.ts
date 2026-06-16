@@ -14,6 +14,10 @@ import { shareSiteBrand } from "@/lib/site-config";
 export type SlotFileItem = {
   slot: CardContentSlot;
   file: File | null;
+  /** 编辑模式：当前已存在的资产（如果有） */
+  originalAsset?: CardAsset | null;
+  /** 编辑模式：标记计划删除已有资产 */
+  pendingDelete?: boolean;
 };
 
 export function getDisplayName(user: ExternalSessionUser) {
@@ -68,6 +72,52 @@ export function createEmptySlotItem(
     slot: source[index % source.length],
     file: null,
   };
+}
+
+export function createSlotItemsFromAssets(
+  assets: CardAsset[],
+  enabledSlots?: CardContentSlot[],
+): SlotFileItem[] {
+  if (assets.length === 0) {
+    return [createEmptySlotItem(0, enabledSlots)];
+  }
+  return assets.map((asset) => ({
+    slot: asset.slot,
+    file: null,
+    originalAsset: asset,
+  }));
+}
+
+export type SlotChangeItem = {
+  slot: CardContentSlot;
+  file: File;
+  originalAsset: CardAsset | null;
+};
+
+export type SlotDeleteItem = {
+  slot: CardContentSlot;
+  originalAsset: CardAsset;
+};
+
+export function computeSlotChanges(items: SlotFileItem[]): {
+  changes: SlotChangeItem[];
+  deletes: SlotDeleteItem[];
+} {
+  const changes: SlotChangeItem[] = [];
+  const deletes: SlotDeleteItem[] = [];
+
+  for (const item of items) {
+    if (item.pendingDelete && item.originalAsset) {
+      deletes.push({ slot: item.originalAsset.slot, originalAsset: item.originalAsset });
+      continue;
+    }
+
+    if (item.file) {
+      changes.push({ slot: item.slot, file: item.file, originalAsset: item.originalAsset ?? null });
+    }
+  }
+
+  return { changes, deletes };
 }
 
 export function isImageMime(file: File | null) {

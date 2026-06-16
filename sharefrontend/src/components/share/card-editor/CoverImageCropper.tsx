@@ -55,8 +55,8 @@ function getCroppedBlob(
 export function CoverImageCropper({
   imageFile,
   aspect = 3 / 2,
-  outputWidth = 900,
-  outputHeight = 600,
+  outputWidth = 1200,
+  outputHeight = 800,
   onConfirm,
   onCancel,
 }: CoverImageCropperProps) {

@@ -1,5 +1,5 @@
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   isCategoryEnabled,
@@ -9,8 +9,9 @@ import { slotOptions } from "@/components/share/card-editor/slot-registry";
 import { useConfirm } from "@/components/share/confirm-dialog";
 import {
   composeSearchableSummary,
+  computeSlotChanges,
   createEmptySlotItem,
-  findAssetBySlot,
+  createSlotItemsFromAssets,
   findDuplicateSlots,
   getDisplayName,
   getSlotLabel,
@@ -18,9 +19,9 @@ import {
   isImageMime,
   type SlotFileItem,
 } from "@/components/share/card-editor/helpers";
+import { createCompliantDesktopComponentFile } from "@/components/share/card-editor/desktop-component";
 import { useShareSession } from "@/components/share/session-provider";
 import type {
-  AssetPendingMap,
   CreateMode,
   EditorMode,
   SubmitMode,
@@ -28,7 +29,6 @@ import type {
 import { getShareErrorMessage, shareApi } from "@/lib/share-api";
 import { uploadToPresignedURL } from "@/lib/upload-presigned";
 import type {
-  CardAssetUpdateResponse,
   CardContentSlot,
   CardDetailResponse,
   ShareCardAccessMode,
@@ -43,14 +43,6 @@ type UseShareCardEditorArgs = {
   cardId?: string;
 };
 
-const initialAssetPending: AssetPendingMap = {
-  system_theme: null,
-  wechat_theme: null,
-  app: null,
-  character_persona: null,
-  world_book: null,
-  desktop_component: null,
-};
 
 function parseCardTagsInput(value: string): string[] {
   const seen = new Set<string>();
@@ -157,7 +149,7 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
   const [accessMode, setAccessMode] = useState<ShareCardAccessMode>("free");
   const [createMode, setCreateMode] = useState<CreateMode>("single");
   const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
+  const [coverChange, setCoverChange] = useState<"none" | "replace" | "delete">("none");
   const [slotItems, setSlotItems] = useState<SlotFileItem[]>([
     createEmptySlotItem(0, enabledSlotList),
   ]);
@@ -182,11 +174,6 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
   const [formError, setFormError] = useState("");
   const [submitMode, setSubmitMode] = useState<SubmitMode>(null);
   const [reviewSubmitPending, setReviewSubmitPending] = useState(false);
-  const [coverPending, setCoverPending] = useState<"replace" | "remove" | null>(
-    null,
-  );
-  const [assetPending, setAssetPending] =
-    useState<AssetPendingMap>(initialAssetPending);
 
   const isEditMode = mode === "edit";
 
@@ -229,12 +216,15 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
         }
 
         setLoadedCard(detail);
-        setEditCoverFile(null);
+        setCoverFile(null);
         setTitle(detail.card.title);
         setDescription(detail.card.description);
         setTags(mergeCardTags(detail.card.tags || []));
         setPublicChecked(detail.card.visibility === "public");
         setAccessMode(detail.card.accessMode ?? "free");
+        const initialItems = createSlotItemsFromAssets(detail.assets, enabledSlotList);
+        setSlotItems(initialItems);
+        setCreateMode(initialItems.length > 1 ? "bundle" : "single");
       } catch (error) {
         if (!active) {
           return;
@@ -254,7 +244,7 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
     return () => {
       active = false;
     };
-  }, [cardId, currentUser, isEditMode]);
+  }, [cardId, currentUser, isEditMode, enabledSlotList]);
 
   const pageTitle = mode === "edit" ? "编辑卡片" : "创建卡片";
   const pageDescription =
@@ -268,9 +258,6 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
   const previewDescription = composeSearchableSummary(description);
   const publishPending = submitMode !== null;
   const hasCoverOnCard = Boolean(loadedCard?.card.previewUrl?.includes("/cover/"));
-  const hasAssetPending =
-    coverPending !== null ||
-    Object.values(assetPending).some((value) => value !== null);
   const afterSuccessPath =
     mode === "edit" && cardId
       ? `/creator/cards/${encodeURIComponent(cardId)}/edit`
@@ -282,7 +269,6 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
       cardId &&
       loadedCard &&
       !publishPending &&
-      !hasAssetPending &&
       !reviewSubmitPending &&
       reviewStatus !== "pending",
   );
@@ -327,24 +313,28 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
   }, [coverPreviewUrl]);
 
   const previewImageFile = useMemo(() => {
-    if (mode === "edit") {
-      return null;
-    }
     if (isImageMime(coverFile)) {
       return coverFile;
     }
     for (const item of slotItems) {
-      if (isImageMime(item.file)) {
+      if (isImageMime(item.file) && !item.pendingDelete) {
         return item.file;
       }
     }
     return null;
-  }, [coverFile, mode, slotItems]);
+  }, [coverFile, slotItems]);
 
   const previewUrl = useMemo(() => {
     if (mode === "edit") {
-      if (editCoverFile) {
-        return URL.createObjectURL(editCoverFile);
+      if (coverChange === "replace" && coverFile) {
+        return URL.createObjectURL(coverFile);
+      }
+      if (coverChange === "delete" || !loadedCard?.card.previewUrl) {
+        if (previewImageFile) {
+          return URL.createObjectURL(previewImageFile);
+        }
+        const imageAsset = loadedCard?.assets.find((a) => a.mimeType.startsWith("image/"));
+        return imageAsset?.previewUrl ?? loadedCard?.card.previewUrl ?? "";
       }
       return loadedCard?.card.previewUrl ?? "";
     }
@@ -352,7 +342,7 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
       return "";
     }
     return URL.createObjectURL(previewImageFile);
-  }, [loadedCard?.card.previewUrl, mode, previewImageFile, editCoverFile]);
+  }, [loadedCard?.card.previewUrl, loadedCard?.assets, mode, previewImageFile, coverFile, coverChange]);
 
   useEffect(() => {
     return () => {
@@ -389,8 +379,18 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
 
   function removeSlotRow(index: number) {
     setSlotItems((current) => {
-      if (current.length <= 1) {
+      const item = current[index];
+      if (item?.pendingDelete) {
+        return current.map((it, idx) => (idx === index ? { ...it, pendingDelete: false } : it));
+      }
+      const isEffective = (it: SlotFileItem) => !it.pendingDelete && (Boolean(it.file) || Boolean(it.originalAsset));
+      const effectiveCount = current.filter(isEffective).length;
+      if (effectiveCount <= 1 && item && isEffective(item)) {
         return current;
+      }
+      if (mode === "edit" && item?.originalAsset) {
+        // 编辑模式下删除已有资产行时标记为待删除，而不是直接移除
+        return current.map((it, idx) => (idx === index ? { ...it, file: null, pendingDelete: true } : it));
       }
       const next = [...current];
       next.splice(index, 1);
@@ -410,12 +410,6 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
     setCoverFile(file);
   }
 
-  function handleCreateCoverChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0] ?? null;
-    event.target.value = "";
-    handleCreateCoverFile(file);
-  }
-
   function clearCreateCover() {
     setCoverFile(null);
   }
@@ -423,12 +417,36 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
   function handleCreateModeChange(nextMode: CreateMode) {
     setCreateMode(nextMode);
     if (nextMode === "single") {
-      setSlotItems((current) => [current[0] ?? createEmptySlotItem(0, enabledSlotList)]);
+      setSlotItems((current) => {
+        if (current.length <= 1) {
+          return current;
+        }
+        if (mode === "edit") {
+          // 编辑模式下保留第一行，已有资产标记为待删除，新添加但未保存的行直接移除
+          const first = current[0];
+          if (!first) {
+            return current;
+          }
+          const remaining = current.slice(1).filter((item) => item.originalAsset);
+          return [
+            { ...first, pendingDelete: false },
+            ...remaining.map((item) => ({ ...item, file: null, pendingDelete: true })),
+          ];
+        }
+        return [current[0] ?? createEmptySlotItem(0, enabledSlotList)];
+      });
       return;
     }
-    setSlotItems((current) =>
-      current.length > 0 ? current : [createEmptySlotItem(0, enabledSlotList)],
-    );
+    setSlotItems((current) => {
+      if (current.length === 0) {
+        return [createEmptySlotItem(0, enabledSlotList)];
+      }
+      if (mode === "edit") {
+        // 从 single 切回 bundle 时恢复所有待删除行
+        return current.map((item) => ({ ...item, pendingDelete: false }));
+      }
+      return current;
+    });
   }
 
   function handleAddTag() {
@@ -485,11 +503,28 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
         return;
       }
 
+      // 编辑模式下处理所有 slotItems（包括 pendingDelete），确保删除操作也能被提交
+      const effectiveItems = slotItems;
+      const duplicateSlots = findDuplicateSlots(effectiveItems.filter((item) => !item.pendingDelete));
+      if (duplicateSlots.length > 0) {
+        setFormError("同一张卡片内分类不能重复。");
+        return;
+      }
+
+      if (effectiveItems.some((item) => !item.file && !item.originalAsset)) {
+        setFormError("请为每个分类选择文件。");
+        return;
+      }
+
       setSubmitMode(status);
       setFormError("");
+      const errors: string[] = [];
 
       try {
-        const payload = await shareApi.updateCard(cardId, {
+        const settingsResponse = await shareApi.publicMediaStorageSettings();
+        const useObjectStorage = settingsResponse.storage_mode === "object_storage";
+
+        await shareApi.updateCard(cardId, {
           title: title.trim(),
           description: description.trim(),
           tags,
@@ -497,18 +532,129 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
           status,
           accessMode,
         });
-        setLoadedCard((current) =>
-          current
-            ? {
-                ...current,
-                card: payload.card,
+
+        if (coverChange === "replace" && coverFile) {
+          if (useObjectStorage) {
+            const presign = await shareApi.presignCardCoverReplace(
+              cardId,
+              coverFile.type || "application/octet-stream",
+              coverFile.size,
+            );
+            const result = await uploadToPresignedURL({
+              file: coverFile,
+              url: presign.url,
+              contentType: presign.content_type || coverFile.type || "application/octet-stream",
+            });
+            await shareApi.completeCardCoverReplace(cardId, {
+              object_key: presign.object_key,
+              version_id: presign.version_id,
+              etag: result.etag,
+              size: coverFile.size,
+              file_name: coverFile.name,
+              mime_type: coverFile.type || presign.content_type || "application/octet-stream",
+              namespace_id: presign.namespace_id,
+            });
+          } else {
+            await shareApi.replaceCardCover(cardId, coverFile);
+          }
+        } else if (coverChange === "delete" && hasCoverOnCard) {
+          await shareApi.deleteCardCover(cardId);
+        }
+
+        const { changes, deletes } = computeSlotChanges(effectiveItems);
+
+        for (const del of deletes) {
+          try {
+            await shareApi.deleteCardAsset(cardId, del.slot);
+          } catch (error) {
+            errors.push(`删除「${getSlotLabel(del.slot)}」失败：${getShareErrorMessage(error, "未知错误")}`);
+          }
+        }
+
+        for (const change of changes) {
+          try {
+            let uploadFile = change.file;
+
+            if (change.slot === "desktop_component" && loadedCard?.desktopComponent) {
+              const metadata = {
+                name: loadedCard.desktopComponent.name,
+                width: loadedCard.desktopComponent.width,
+                height: loadedCard.desktopComponent.height,
+                cornerRadius: loadedCard.desktopComponent.cornerRadius,
+                frosted: loadedCard.desktopComponent.frosted,
+                shadow: loadedCard.desktopComponent.shadow,
+                backgroundOpacity: loadedCard.desktopComponent.backgroundOpacity,
+              };
+              uploadFile = await createCompliantDesktopComponentFile(change.file, metadata);
+            }
+
+            if (change.originalAsset && change.originalAsset.slot !== change.slot) {
+              try {
+                await shareApi.deleteCardAsset(cardId, change.originalAsset.slot);
+              } catch (error) {
+                errors.push(
+                  `删除原分类「${getSlotLabel(change.originalAsset.slot)}」失败：${getShareErrorMessage(error, "未知错误")}`,
+                );
+                continue;
               }
-            : current,
-        );
-        router.push("/creator");
-        router.refresh();
+            }
+
+            if (useObjectStorage) {
+              const presign = await shareApi.presignCardAssetReplace(
+                cardId,
+                change.slot,
+                uploadFile.type || "application/octet-stream",
+                uploadFile.size,
+              );
+              const result = await uploadToPresignedURL({
+                file: uploadFile,
+                url: presign.url,
+                contentType: presign.content_type || uploadFile.type || "application/octet-stream",
+              });
+              await shareApi.completeCardAssetReplace(cardId, change.slot, {
+                object_key: presign.object_key,
+                version_id: presign.version_id,
+                etag: result.etag,
+                size: uploadFile.size,
+                file_name: uploadFile.name,
+                mime_type: uploadFile.type || presign.content_type || "application/octet-stream",
+                namespace_id: presign.namespace_id,
+              });
+            } else {
+              await shareApi.replaceCardAsset(cardId, change.slot, uploadFile);
+            }
+          } catch (error) {
+            errors.push(`更新「${getSlotLabel(change.slot)}」失败：${getShareErrorMessage(error, "未知错误")}`);
+          }
+        }
+
+        const freshDetail = await shareApi.cardDetail(cardId);
+        setLoadedCard(freshDetail);
+        setCoverChange("none");
+        setCoverFile(null);
+        setSlotItems(createSlotItemsFromAssets(freshDetail.assets, enabledSlotList));
+        setCreateMode(freshDetail.assets.length > 1 ? "bundle" : "single");
+
+        if (errors.length > 0) {
+          setFormError(errors.join("；"));
+        } else {
+          router.push("/creator");
+          router.refresh();
+        }
       } catch (error) {
-        setFormError(getShareErrorMessage(error, "更新卡片失败，请稍后重试。"));
+        setFormError(getShareErrorMessage(error, "保存卡片失败，请稍后重试。"));
+        try {
+          if (cardId) {
+            const freshDetail = await shareApi.cardDetail(cardId);
+            setLoadedCard(freshDetail);
+            setCoverChange("none");
+            setCoverFile(null);
+            setSlotItems(createSlotItemsFromAssets(freshDetail.assets, enabledSlotList));
+            setCreateMode(freshDetail.assets.length > 1 ? "bundle" : "single");
+          }
+        } catch {
+          // ignore refresh error
+        }
       } finally {
         setSubmitMode(null);
       }
@@ -696,195 +842,42 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
   }
 
   async function handleReplaceCover(file: File | null) {
-    if (!cardId || !file) {
+    if (!file) {
       return;
     }
     if (!file.type.startsWith("image/")) {
       setFormError("封面图仅支持图片文件。");
       return;
     }
-
-    setEditCoverFile(file);
-    setCoverPending("replace");
     setFormError("");
-    try {
-      const settingsResponse = await shareApi.publicMediaStorageSettings();
-      const useObjectStorage = settingsResponse.storage_mode === "object_storage";
-
-      let payload: CardAssetUpdateResponse;
-      if (useObjectStorage) {
-        const presign = await shareApi.presignCardCoverReplace(
-          cardId,
-          file.type || "application/octet-stream",
-          file.size,
-        );
-        const result = await uploadToPresignedURL({
-          file,
-          url: presign.url,
-          contentType: presign.content_type || file.type || "application/octet-stream",
-        });
-        const media: ShareUploadedMediaInfo = {
-          object_key: presign.object_key,
-          version_id: presign.version_id,
-          etag: result.etag,
-          size: file.size,
-          file_name: file.name,
-          mime_type: file.type || presign.content_type || "application/octet-stream",
-          namespace_id: presign.namespace_id,
-        };
-        payload = await shareApi.completeCardCoverReplace(cardId, media);
-      } else {
-        payload = await shareApi.replaceCardCover(cardId, file);
-      }
-
-      setLoadedCard((current) => {
-        if (!current) {
-          return current;
-        }
-        return {
-          ...current,
-          card: payload.card,
-          assets: payload.assets,
-        };
-      });
-    } catch (error) {
-      setFormError(getShareErrorMessage(error, "替换封面图失败，请稍后重试。"));
-    } finally {
-      setCoverPending(null);
+    setCoverFile(file);
+    if (mode === "edit") {
+      setCoverChange("replace");
     }
   }
 
   async function handleDeleteCover() {
-    if (!cardId || !loadedCard || !hasCoverOnCard) {
-      return;
-    }
-    const confirmed = await confirm({
-      title: "删除封面图",
-      description: "确认删除当前封面图吗？删除后将回退为分类文件预览。",
-      confirmText: "删除",
-      cancelText: "取消",
-      variant: "destructive",
-    });
-    if (!confirmed) {
-      return;
-    }
-
-    setCoverPending("remove");
-    setFormError("");
-    try {
-      const payload = await shareApi.deleteCardCover(cardId);
-      setLoadedCard((current) => {
-        if (!current) {
-          return current;
-        }
-        return {
-          ...current,
-          card: payload.card,
-          assets: payload.assets,
-        };
-      });
-      setEditCoverFile(null);
-    } catch (error) {
-      setFormError(getShareErrorMessage(error, "删除封面图失败，请稍后重试。"));
-    } finally {
-      setCoverPending(null);
-    }
-  }
-
-  async function handleReplaceAsset(slot: CardContentSlot, file: File | null) {
-    if (!cardId || !file) {
-      return;
-    }
-
-    setAssetPending((current) => ({ ...current, [slot]: "replace" }));
-    setFormError("");
-
-    try {
-      const settingsResponse = await shareApi.publicMediaStorageSettings();
-      const useObjectStorage = settingsResponse.storage_mode === "object_storage";
-
-      let payload: CardAssetUpdateResponse;
-      if (useObjectStorage) {
-        const presign = await shareApi.presignCardAssetReplace(
-          cardId,
-          slot,
-          file.type || "application/octet-stream",
-          file.size,
-        );
-        const result = await uploadToPresignedURL({
-          file,
-          url: presign.url,
-          contentType: presign.content_type || file.type || "application/octet-stream",
-        });
-        const media: ShareUploadedMediaInfo = {
-          object_key: presign.object_key,
-          version_id: presign.version_id,
-          etag: result.etag,
-          size: file.size,
-          file_name: file.name,
-          mime_type: file.type || presign.content_type || "application/octet-stream",
-          namespace_id: presign.namespace_id,
-        };
-        payload = await shareApi.completeCardAssetReplace(cardId, slot, media);
-      } else {
-        payload = await shareApi.replaceCardAsset(cardId, slot, file);
+    if (mode === "edit") {
+      if (!loadedCard || !hasCoverOnCard) {
+        return;
       }
-
-      setLoadedCard((current) => {
-        if (!current) {
-          return current;
-        }
-        return {
-          ...current,
-          card: payload.card,
-          assets: payload.assets,
-        };
+      const confirmed = await confirm({
+        title: "删除封面图",
+        description: "确认删除当前封面图吗？删除后将回退为分类文件预览。",
+        confirmText: "删除",
+        cancelText: "取消",
+        variant: "destructive",
       });
-    } catch (error) {
-      setFormError(getShareErrorMessage(error, "替换分类文件失败，请稍后重试。"));
-    } finally {
-      setAssetPending((current) => ({ ...current, [slot]: null }));
-    }
-  }
-
-  async function handleDeleteAsset(slot: CardContentSlot) {
-    if (!cardId || !loadedCard) {
-      return;
-    }
-    const existing = findAssetBySlot(loadedCard.assets, slot);
-    if (!existing) {
-      return;
-    }
-    const confirmed = await confirm({
-      title: "删除分类文件",
-      description: `确认删除分类「${getSlotLabel(slot)}」文件吗？删除后将无法恢复。`,
-      confirmText: "删除",
-      cancelText: "取消",
-      variant: "destructive",
-    });
-    if (!confirmed) {
+      if (!confirmed) {
+        return;
+      }
+      setCoverFile(null);
+      setCoverChange("delete");
+      setFormError("");
       return;
     }
 
-    setAssetPending((current) => ({ ...current, [slot]: "remove" }));
-    setFormError("");
-    try {
-      const payload = await shareApi.deleteCardAsset(cardId, slot);
-      setLoadedCard((current) => {
-        if (!current) {
-          return current;
-        }
-        return {
-          ...current,
-          card: payload.card,
-          assets: payload.assets,
-        };
-      });
-    } catch (error) {
-      setFormError(getShareErrorMessage(error, "删除分类文件失败，请稍后重试。"));
-    } finally {
-      setAssetPending((current) => ({ ...current, [slot]: null }));
-    }
+    clearCreateCover();
   }
 
   return {
@@ -921,7 +914,6 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
     removeSlotRow,
     handleCreateModeChange,
     coverPreviewUrl,
-    coverPending,
     coverFile,
     handleCreateCoverFile,
     clearCreateCover,
@@ -935,8 +927,6 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
     reviewSubmitPending,
     publishPending,
     hasCoverOnCard,
-    hasAssetPending,
-    assetPending,
     pageTitle,
     pageDescription,
     submitPrimaryLabel,
@@ -949,7 +939,5 @@ export function useShareCardEditor({ mode, cardId }: UseShareCardEditorArgs) {
     handleDelete,
     handleReplaceCover,
     handleDeleteCover,
-    handleReplaceAsset,
-    handleDeleteAsset,
   };
 }
