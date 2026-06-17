@@ -1,0 +1,21 @@
+{
+  "name": "baobaobaivault-docs",
+  "version": "1.0.0",
+  "description": "Baobaobai Vault 静态操作手册",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview"
+  },
+  "keywords": [
+    "baobaobaivault",
+    "docs"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "vitepress": "^1.6.3"
+  }
+}
