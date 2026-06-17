@@ -67,6 +67,7 @@ func (h *Handler) registerShareRoutes(r *gin.Engine) {
 			me.GET("/admin/reviews", h.shareAdminReviews)
 			me.POST("/admin/reviews/:cardId/approve", h.shareAdminApproveReview)
 			me.POST("/admin/reviews/:cardId/reject", h.shareAdminRejectReview)
+			me.POST("/admin/cards/:cardId/delist", h.shareAdminDelistCard)
 			me.GET("/system/storage/configs", h.shareSystemListStorageConfigs)
 			me.POST("/system/storage/configs", h.shareSystemCreateStorageConfig)
 			me.GET("/system/storage/configs/:id", h.shareSystemGetStorageConfig)

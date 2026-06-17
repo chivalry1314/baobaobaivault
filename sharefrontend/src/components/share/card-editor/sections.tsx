@@ -454,11 +454,29 @@ export function PublishActionsPanel(props: {
     handleDelete,
   } = props;
 
+  const isDelisted = loadedCard?.card.status === "delisted";
+  const isRejected = loadedCard?.card.reviewStatus === "rejected";
+  const reviewReason = loadedCard?.card.reviewReason?.trim();
+
   return (
     <section className="rounded-[1.4rem] border-2 border-[var(--outline)] bg-white p-4 shadow-sm sm:p-5">
       <div className="mb-3 border-b border-[var(--outline)]/20 pb-2">
         <h2 className="text-base font-black text-[var(--foreground)]">发布设置</h2>
       </div>
+
+      {mode === "edit" && loadedCard && reviewReason && (isDelisted || isRejected) ? (
+        <div className="mb-4 rounded-xl border-2 border-[#f3c8ad] bg-[#fff4ec] p-3">
+          <p className="text-xs font-black text-[#9a3412]">
+            {isDelisted ? "卡片已被管理员下架" : "卡片审核未通过"}
+          </p>
+          <p className="mt-1 text-[11px] font-bold text-[#9a3412]/90">
+            {isDelisted ? "下架原因" : "驳回原因"}：{reviewReason}
+          </p>
+          <p className="mt-1 text-[10px] font-bold text-[#9a3412]/75">
+            请根据上方原因修改卡片内容，确认无误后点击下方的「重新提交审核」。
+          </p>
+        </div>
+      ) : null}
 
       <div className="space-y-3">
         <section>
@@ -525,7 +543,13 @@ export function PublishActionsPanel(props: {
               onClick={handleSubmitReview}
               className="flex w-full items-center justify-center rounded-full border border-[var(--outline)]/20 bg-white py-2 text-xs font-black text-[var(--foreground)]/78 shadow-sm transition hover:bg-[var(--surface-container)] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {reviewSubmitPending ? <LoadingSpinner size="sm" inline label="提交审核中..." /> : "提交审核"}
+              {reviewSubmitPending ? (
+                <LoadingSpinner size="sm" inline label="提交审核中..." />
+              ) : loadedCard?.card.status === "delisted" || loadedCard?.card.reviewStatus === "rejected" ? (
+                "重新提交审核"
+              ) : (
+                "提交审核"
+              )}
             </button>
           ) : null}
 
@@ -553,7 +577,6 @@ export function PublishActionsPanel(props: {
           <p>卡片 ID：{loadedCard.card.id}</p>
           <p>当前状态：{getStatusLabel(loadedCard.card.status)}</p>
           <p>审核状态：{getReviewStatusLabel(loadedCard.card.reviewStatus)}</p>
-          {loadedCard.card.reviewReason ? <p>驳回原因：{loadedCard.card.reviewReason}</p> : null}
         </div>
       ) : (
         <div className="mt-3 space-y-1 text-[10px] font-bold text-[var(--foreground)]/50">

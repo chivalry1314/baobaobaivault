@@ -103,8 +103,12 @@ export function getStatusLabel(value: PlatformCard["status"]) {
       return "已发布";
     case "draft":
       return "草稿";
-    default:
+    case "delisted":
+      return "已下架";
+    case "archived":
       return "已归档";
+    default:
+      return value;
   }
 }
 

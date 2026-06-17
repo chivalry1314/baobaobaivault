@@ -161,6 +161,7 @@ export function CreatorCard({ item }: { item: DashboardCard }) {
     : item.hasAccessCode
       ? "已配置"
       : "未配置";
+  const isDelisted = item.card.status === "delisted";
 
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-[1.1rem] border border-[var(--outline)]/20 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md">
@@ -202,7 +203,11 @@ export function CreatorCard({ item }: { item: DashboardCard }) {
         <div className="mt-1.5 flex flex-wrap items-center gap-1">
           <AccessModeBadge mode={item.card.accessMode} compact />
           <StatusBadge>{getVisibilityLabel(item.card.visibility)}</StatusBadge>
-          <StatusBadge>{getStatusLabel(item.card.status)}</StatusBadge>
+          {isDelisted ? (
+            <DelistedBadge>{getStatusLabel(item.card.status)}</DelistedBadge>
+          ) : (
+            <StatusBadge>{getStatusLabel(item.card.status)}</StatusBadge>
+          )}
           <StatusBadge>{getReviewStatusLabel(item.card.reviewStatus)}</StatusBadge>
         </div>
 
@@ -321,6 +326,7 @@ export function FavoriteCard({
 
 export function HistoryItem({ item }: { item: DashboardCard }) {
   const editHref = `/creator/cards/${encodeURIComponent(item.card.id)}/edit`;
+  const isDelisted = item.card.status === "delisted";
 
   return (
     <Link
@@ -342,7 +348,11 @@ export function HistoryItem({ item }: { item: DashboardCard }) {
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex flex-wrap gap-1">
           <StatusBadge>{getVisibilityLabel(item.card.visibility)}</StatusBadge>
-          <StatusBadge>{getStatusLabel(item.card.status)}</StatusBadge>
+          {isDelisted ? (
+            <DelistedBadge>{getStatusLabel(item.card.status)}</DelistedBadge>
+          ) : (
+            <StatusBadge>{getStatusLabel(item.card.status)}</StatusBadge>
+          )}
           <StatusBadge>{getReviewStatusLabel(item.card.reviewStatus)}</StatusBadge>
         </div>
         <ChevronRightIcon className="hidden h-4 w-4 text-[var(--foreground)]/30 sm:block" />
@@ -354,6 +364,14 @@ export function HistoryItem({ item }: { item: DashboardCard }) {
 function StatusBadge({ children }: { children: ReactNode }) {
   return (
     <span className="inline-flex whitespace-nowrap rounded-full bg-[var(--surface-container-high)] px-1.5 py-0.5 text-[9px] font-black text-[var(--foreground)]/70">
+      {children}
+    </span>
+  );
+}
+
+function DelistedBadge({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-flex whitespace-nowrap rounded-full border border-[#f1c5cc] bg-[#fff5f7] px-1.5 py-0.5 text-[9px] font-black text-[#a31d3c]">
       {children}
     </span>
   );

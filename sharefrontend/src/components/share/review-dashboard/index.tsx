@@ -30,6 +30,7 @@ export function ShareReviewDashboard() {
     pagedItems,
     handleApprove,
     handleReject,
+    handleDelist,
     handleFilter,
   } = useShareReviewDashboard();
 
@@ -91,6 +92,7 @@ export function ShareReviewDashboard() {
                 pendingCardId={pendingCardId}
                 handleApprove={handleApprove}
                 handleReject={handleReject}
+                handleDelist={handleDelist}
                 page={page}
                 totalPages={totalPages}
                 setPage={setPage}

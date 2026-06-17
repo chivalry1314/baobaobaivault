@@ -41,13 +41,18 @@ export function composeSearchableSummary(text: string) {
 }
 
 export function getStatusLabel(status: CardDetailResponse["card"]["status"]) {
-  if (status === "published") {
-    return "已发布";
+  switch (status) {
+    case "published":
+      return "已发布";
+    case "draft":
+      return "草稿";
+    case "delisted":
+      return "已下架";
+    case "archived":
+      return "已归档";
+    default:
+      return status;
   }
-  if (status === "draft") {
-    return "草稿";
-  }
-  return "已归档";
 }
 
 export function getReviewStatusLabel(status: ShareReviewStatus) {

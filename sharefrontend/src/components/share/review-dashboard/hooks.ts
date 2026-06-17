@@ -91,6 +91,29 @@ export function useShareReviewDashboard() {
     }
   }
 
+  async function handleDelist(cardId: string) {
+    const reason = window.prompt("请输入下架原因（必填）：", "");
+    if (reason === null) {
+      return;
+    }
+    if (!reason.trim()) {
+      setActionError("下架原因不能为空。");
+      return;
+    }
+
+    setPendingCardId(cardId);
+    setActionError("");
+
+    try {
+      await shareApi.adminDelistCard(cardId, reason.trim());
+      await loadReviews(statusFilter);
+    } catch (error) {
+      setActionError(getShareErrorMessage(error, "下架失败，请稍后重试。"));
+    } finally {
+      setPendingCardId("");
+    }
+  }
+
   function handleFilter(nextFilter: ReviewFilter) {
     setStatusFilter(nextFilter);
   }
@@ -110,6 +133,7 @@ export function useShareReviewDashboard() {
     pagedItems,
     handleApprove,
     handleReject,
+    handleDelist,
     handleFilter,
   };
 }

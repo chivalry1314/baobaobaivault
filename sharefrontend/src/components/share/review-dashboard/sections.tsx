@@ -89,6 +89,7 @@ export function ReviewGrid(props: {
   pendingCardId: string;
   handleApprove: (cardId: string) => Promise<void>;
   handleReject: (cardId: string) => Promise<void>;
+  handleDelist: (cardId: string) => Promise<void>;
   page: number;
   totalPages: number;
   setPage: (next: number) => void;
@@ -98,6 +99,7 @@ export function ReviewGrid(props: {
     pendingCardId,
     handleApprove,
     handleReject,
+    handleDelist,
     page,
     totalPages,
     setPage,
@@ -109,7 +111,6 @@ export function ReviewGrid(props: {
         {pagedItems.map((item) => {
           const status = item.card.reviewStatus;
           const disabled = Boolean(pendingCardId) && pendingCardId === item.card.id;
-          const hideActions = status === "approved" || status === "rejected";
           return (
             <article key={item.card.id} className="group flex h-full flex-col overflow-hidden rounded-[1.1rem] border-2 border-[var(--outline)] bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
               <Link
@@ -150,7 +151,7 @@ export function ReviewGrid(props: {
                   </p>
                 ) : null}
 
-                {!hideActions ? (
+                {status === "pending" ? (
                   <div className="mt-auto flex items-center gap-2 pt-3">
                     <button
                       type="button"
@@ -169,10 +170,21 @@ export function ReviewGrid(props: {
                       驳回
                     </button>
                   </div>
+                ) : status === "approved" ? (
+                  <div className="mt-auto pt-3">
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => void handleDelist(item.card.id)}
+                      className="inline-flex w-full items-center justify-center rounded-full border border-[#f1c5cc] bg-white px-3 py-1.5 text-xs font-black text-[#cf425d] shadow-sm transition hover:border-[#cf425d] hover:bg-[#fff7f8] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      下架
+                    </button>
+                  </div>
                 ) : (
                   <div className="mt-auto pt-3">
                     <span className="inline-flex w-full items-center justify-center rounded-full border border-[var(--outline)]/15 bg-[var(--surface-container)] px-3 py-1.5 text-[10px] font-black text-[var(--foreground)]/55">
-                      已{status === "approved" ? "通过" : "驳回"}，无需操作
+                      已驳回，无需操作
                     </span>
                   </div>
                 )}

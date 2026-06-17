@@ -193,3 +193,56 @@ func (s *ShareService) RejectCard(ctx context.Context, operatorID, cardID, reaso
 	view := toShareCardView(&updated, assetsByCardID[updated.ID])
 	return &view, nil
 }
+
+func (s *ShareService) DelistCardByAdmin(ctx context.Context, operatorID, cardID, reason string) (*ShareCardView, error) {
+	if err := s.ensureShareManagerRole(ctx, operatorID); err != nil {
+		return nil, err
+	}
+	reason = strings.TrimSpace(reason)
+	if reason == "" {
+		return nil, ErrShareReviewReasonRequired
+	}
+
+	var updated model.SharePlatformCard
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var card model.SharePlatformCard
+		if err := tx.First(&card, "id = ?", strings.TrimSpace(cardID)).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrShareCardNotFound
+			}
+			return err
+		}
+
+		if card.Visibility != model.SharePlatformCardVisibilityPublic ||
+			card.Status != model.SharePlatformCardStatusPublished ||
+			card.ReviewStatus != model.SharePlatformCardReviewStatusApproved {
+			return ErrShareCardNotDelistable
+		}
+
+		now := time.Now().UTC()
+		card.Status = model.SharePlatformCardStatusDelisted
+		card.ReviewStatus = model.SharePlatformCardReviewStatusRejected
+		card.ReviewReason = "管理员下架：" + reason
+		card.ReviewedAt = &now
+		op := strings.TrimSpace(operatorID)
+		card.ReviewerExternalUserID = &op
+		card.UpdatedAt = now
+		if err := tx.Save(&card).Error; err != nil {
+			return err
+		}
+		updated = card
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	s.invalidateDiscoverCache(ctx)
+
+	assetsByCardID, err := s.listCardAssetsByCardIDs(ctx, []string{updated.ID})
+	if err != nil {
+		return nil, err
+	}
+	view := toShareCardView(&updated, assetsByCardID[updated.ID])
+	return &view, nil
+}

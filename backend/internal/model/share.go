@@ -23,6 +23,7 @@ const (
 	SharePlatformCardStatusDraft     = "draft"
 	SharePlatformCardStatusPublished = "published"
 	SharePlatformCardStatusArchived  = "archived"
+	SharePlatformCardStatusDelisted  = "delisted"
 
 	SharePlatformCardReviewStatusUnsubmitted = "unsubmitted"
 	SharePlatformCardReviewStatusPending     = "pending"

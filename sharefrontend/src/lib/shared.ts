@@ -82,7 +82,7 @@ export type PlatformCard = {
   description: string;
   tags: string[];
   visibility: "private" | "public";
-  status: "draft" | "published" | "archived";
+  status: "draft" | "published" | "archived" | "delisted";
   accessMode: ShareCardAccessMode;
   reviewStatus: ShareReviewStatus;
   reviewReason: string;

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/baobaobai/baobaobaivault/internal/model"
+	"github.com/baobaobai/baobaobaivault/internal/service"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -13,10 +14,12 @@ import (
 // writeAuditLog 记录一条管理操作审计日志；错误仅内部记录，不中断请求
 func (h *Handler) writeAuditLog(c *gin.Context, action, resource, resourceID, detail, status string) {
 	user, _ := c.Get(ctxShareUser)
-	shareUser, _ := user.(*model.ShareExternalUser)
 	var userID *string
-	if shareUser != nil {
-		userID = &shareUser.ID
+	if shareUser, ok := user.(*service.ShareSessionUser); ok && shareUser != nil {
+		id := shareUser.ID
+		userID = &id
+	} else if shareExternalUser, ok := user.(*model.ShareExternalUser); ok && shareExternalUser != nil {
+		userID = &shareExternalUser.ID
 	}
 
 	ip := c.ClientIP()

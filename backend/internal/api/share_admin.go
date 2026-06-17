@@ -96,6 +96,46 @@ func (h *Handler) shareAdminRejectReview(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"card": card})
 }
 
+func (h *Handler) shareAdminDelistCard(c *gin.Context) {
+	user, err := h.requireShareUser(c)
+	if err != nil {
+		jsonError(c, http.StatusUnauthorized, err)
+		return
+	}
+
+	cardID := c.Param("cardId")
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	card, err := h.shareService.DelistCardByAdmin(c.Request.Context(), user.ID, cardID, req.Reason)
+	if err != nil {
+		status := http.StatusBadRequest
+		switch {
+		case errors.Is(err, service.ErrShareUserNotFound),
+			errors.Is(err, service.ErrShareCardNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrShareForbiddenRole):
+			status = http.StatusForbidden
+		case errors.Is(err, service.ErrShareReviewReasonRequired),
+			errors.Is(err, service.ErrShareCardNotDelistable):
+			status = http.StatusBadRequest
+		default:
+			status = http.StatusInternalServerError
+		}
+		h.writeAuditLog(c, "delist", "card", cardID, req.Reason, "failure")
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	h.writeAuditLog(c, "delist", "card", cardID, req.Reason, "success")
+	c.JSON(http.StatusOK, gin.H{"card": card})
+}
+
 func (h *Handler) shareAdminUsers(c *gin.Context) {
 	user, err := h.requireShareUser(c)
 	if err != nil {

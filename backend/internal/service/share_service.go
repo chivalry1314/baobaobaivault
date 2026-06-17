@@ -57,6 +57,7 @@ var (
 	ErrShareUserNotFound                    = errors.New("user not found")
 	ErrShareCardNotFound                    = errors.New("card not found")
 	ErrShareCardForbidden                   = errors.New("card access denied")
+	ErrShareCardNotDelistable               = errors.New("card is not delistable")
 	ErrShareCardTitleRequired               = errors.New("card title is required")
 	ErrShareFileRequired                    = errors.New("upload file is required")
 	ErrShareFileTooLarge                    = errors.New("file exceeds max upload size")

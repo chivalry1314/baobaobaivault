@@ -145,6 +145,7 @@ const shareApiErrorMessages: Record<string, string> = {
   "desktop component file exceeds 2mb": "桌面组件文件不能超过 2MB",
   "invalid review status": "审核状态不正确",
   "review reason is required": "驳回时必须填写原因",
+  "card is not delistable": "该卡片当前状态不允许下架",
   "card not found": "卡片不存在",
   "card access denied": "没有该卡片权限",
   "user not found": "用户不存在",
@@ -627,7 +628,7 @@ export const shareApi = {
       description: string;
       tags: string[];
       visibility: "private" | "public";
-      status: "draft" | "published" | "archived";
+      status: PlatformCard["status"];
       accessMode?: ShareCardAccessMode;
     },
   ) {
@@ -767,6 +768,16 @@ export const shareApi = {
     });
   },
 
+  adminDelistCard(cardId: string, reason: string) {
+    return request<{ card: PlatformCard }>(`${API_ROOT}/me/admin/cards/${encodeURIComponent(cardId)}/delist`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ reason }),
+    });
+  },
+
   cardAccessCode(cardId: string) {
     return request<{ config: CardAccessCodeConfig }>(
       `${API_ROOT}/me/cards/${encodeURIComponent(cardId)}/access-code`,
@@ -781,7 +792,7 @@ export const shareApi = {
     input: {
       accessMode?: ShareCardAccessMode;
       visibility?: "private" | "public";
-      status?: "draft" | "published" | "archived";
+      status?: PlatformCard["status"];
       code: string;
       expireDays: number;
       usageLimit: number;
