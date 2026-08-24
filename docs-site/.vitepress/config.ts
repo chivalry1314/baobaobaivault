@@ -37,6 +37,7 @@ export default defineConfig({
             {
               text: '功能操作手册',
               items: [
+                { text: '系统操作手册', link: '/guide/operation' },
                 { text: '存储到媒体上传工作流', link: '/guide/storage-workflow' }
               ]
             }
